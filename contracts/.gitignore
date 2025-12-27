@@ -1,0 +1,16 @@
+node_modules
+.env
+coverage
+artifacts
+cache
+typechain
+typechain-types
+hardhat-network-helper-log.json
+error.txt
+FreelanceEscrow.json
+FreelanceEscrow.sol.bak
+hardhat.config.js.bak
+package.json.bak
+*.bak
+temp-hh
+h-init
