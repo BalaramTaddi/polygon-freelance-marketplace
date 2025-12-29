@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAccount, useReadContract, useSignMessage } from 'wagmi';
-import { Wallet, Briefcase, CheckCircle, Clock, Save, User } from 'lucide-react';
+import { Wallet, Briefcase, CheckCircle, Clock, Save, User, Award, PlusCircle } from 'lucide-react';
 import FreelanceEscrowABI from '../contracts/FreelanceEscrow.json';
 import { CONTRACT_ADDRESS } from '../constants';
 import { api } from '../services/api';
@@ -62,86 +62,139 @@ function Dashboard() {
 
     return (
         <div>
-            <h1 style={{ marginBottom: '30px' }}>Dashboard</h1>
+            <section className="hero">
+                <h1>Workspace for <span className="gradient-text">Creators</span></h1>
+                <p>
+                    {profile.name ? `Welcome back, ${profile.name}. ` : 'Welcome to PolyLance. '}
+                    Manage your decentralized career, track earnings, and explore new opportunities on Polygon.
+                </p>
+                <div style={{ marginTop: '24px', display: 'flex', gap: '12px' }}>
+                    <div className="badge" style={{ borderColor: 'var(--primary)', color: 'var(--primary)', border: '1px solid' }}>
+                        {profile.skills ? 'Freelancer' : 'Client'}
+                    </div>
+                    <div className="badge">Verified Account</div>
+                </div>
+            </section>
 
             <div className="grid">
-                <div className="glass-card">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div className="glass-card stat-card">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
                         <div>
-                            <p style={{ color: 'var(--text-muted)' }}>Total Jobs</p>
-                            <h2 style={{ fontSize: '2rem' }}>{jobCount?.toString() || '0'}</h2>
+                            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: '500' }}>TOTAL CONTRACTS</p>
+                            <div className="stat-value">{jobCount?.toString() || '0'}</div>
+                            <p style={{ color: '#10b981', fontSize: '0.8rem' }}>+12% from last month</p>
                         </div>
-                        <Briefcase size={32} color="var(--primary)" />
+                        <Briefcase size={24} color="var(--primary)" />
                     </div>
                 </div>
 
-                <div className="glass-card">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div className="glass-card stat-card" style={{ borderLeft: '4px solid #f59e0b' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
                         <div>
-                            <p style={{ color: 'var(--text-muted)' }}>Active Jobs</p>
-                            <h2 style={{ fontSize: '2rem' }}>0</h2>
+                            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: '500' }}>ACTIVE MILESTONES</p>
+                            <div className="stat-value">0</div>
+                            <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>No pending actions</p>
                         </div>
-                        <Clock size={32} color="#f59e0b" />
+                        <Clock size={24} color="#f59e0b" />
                     </div>
                 </div>
 
-                <div className="glass-card">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div className="glass-card stat-card" style={{ borderLeft: '4px solid #10b981' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
                         <div>
-                            <p style={{ color: 'var(--text-muted)' }}>Completed</p>
-                            <h2 style={{ fontSize: '2rem' }}>0</h2>
+                            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: '500' }}>TOTAL EARNED</p>
+                            <div className="stat-value">{profile.totalEarned?.toFixed(2) || '0.00'} <span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>MATIC</span></div>
+                            <p style={{ color: '#10b981', fontSize: '0.8rem' }}>Securely held in escrow</p>
                         </div>
-                        <CheckCircle size={32} color="#10b981" />
+                        <CheckCircle size={24} color="#10b981" />
                     </div>
                 </div>
             </div>
 
-            <div className="grid" style={{ marginTop: '40px' }}>
+            <div style={{ marginTop: '20px', display: 'flex', gap: '15px' }}>
+                <div className="glass-card" style={{ flex: 1, padding: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <Award size={20} color="var(--primary)" />
+                    <div>
+                        <div style={{ fontWeight: 600 }}>{profile.completedJobs || 0} Jobs Completed</div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Proven track record on-chain</div>
+                    </div>
+                </div>
+                <div className="glass-card" style={{ flex: 1, padding: '15px', border: '1px solid var(--primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }} onClick={() => window.location.hash = `portfolio`}>
+                    <User size={20} color="var(--primary)" />
+                    <div>
+                        <div style={{ fontWeight: 600 }}>Public Portfolio</div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--primary)' }}>View your Proof-of-Work gallery →</div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="grid" style={{ marginTop: '40px', gridTemplateColumns: '1.5fr 1fr' }}>
                 <div className="glass-card">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-                        <User size={24} color="var(--primary)" />
-                        <h3 style={{ margin: 0 }}>My Profile</h3>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '30px' }}>
+                        <User size={20} color="var(--primary)" />
+                        <h3 style={{ margin: 0 }}>Professional Profile</h3>
                     </div>
                     <form onSubmit={handleSaveProfile}>
-                        <div style={{ marginBottom: '15px' }}>
-                            <label style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Display Name</label>
-                            <input
-                                type="text"
-                                className="input-field"
-                                value={profile.name}
-                                onChange={e => setProfile({ ...profile, name: e.target.value })}
-                                placeholder="Your Name"
-                            />
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                            <div>
+                                <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: '600' }}>DISPLAY NAME</label>
+                                <input
+                                    type="text"
+                                    className="input-field"
+                                    value={profile.name}
+                                    onChange={e => setProfile({ ...profile, name: e.target.value })}
+                                    placeholder="e.g. Satoshi Nakamoto"
+                                />
+                            </div>
+                            <div>
+                                <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: '600' }}>SPECIALIZATION</label>
+                                <input
+                                    type="text"
+                                    className="input-field"
+                                    value={profile.skills}
+                                    onChange={e => setProfile({ ...profile, skills: e.target.value })}
+                                    placeholder="e.g. Fullstack Developer"
+                                />
+                            </div>
                         </div>
-                        <div style={{ marginBottom: '15px' }}>
-                            <label style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Expertise / Skills</label>
-                            <input
-                                type="text"
-                                className="input-field"
-                                value={profile.skills}
-                                onChange={e => setProfile({ ...profile, skills: e.target.value })}
-                                placeholder="Solidity, React, UI/UX"
-                            />
-                        </div>
-                        <div style={{ marginBottom: '20px' }}>
-                            <label style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Bio</label>
+                        <div style={{ marginBottom: '30px' }}>
+                            <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: '600' }}>BIO</label>
                             <textarea
                                 className="input-field"
-                                style={{ minHeight: '80px' }}
+                                style={{ minHeight: '120px' }}
                                 value={profile.bio}
                                 onChange={e => setProfile({ ...profile, bio: e.target.value })}
-                                placeholder="Tell clients about yourself..."
+                                placeholder="Describe your background and professional experience..."
                             />
                         </div>
-                        <button type="submit" className="btn-primary" disabled={isSaving} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <Save size={18} /> {isSaving ? 'Saving...' : 'Save Profile'}
+                        <button type="submit" className="btn-primary" disabled={isSaving} style={{ width: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Save size={18} /> {isSaving ? 'Syncing Profile...' : 'Sync to Database'}
                         </button>
                     </form>
                 </div>
 
                 <div className="glass-card">
-                    <h3>Recent Activity</h3>
-                    <p style={{ color: 'var(--text-muted)', marginTop: '20px' }}>No recent activity found.</p>
+                    <h3 style={{ marginBottom: '20px' }}>Recent Activity</h3>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <div className="activity-item">
+                            <div className="activity-icon">
+                                <Wallet size={18} color="var(--primary)" />
+                            </div>
+                            <div>
+                                <p style={{ fontSize: '0.9rem', marginBottom: '4px' }}>Wallet Connected Successfully</p>
+                                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Just now • Polygon Network</p>
+                            </div>
+                        </div>
+                        <div className="activity-item" style={{ opacity: 0.5 }}>
+                            <div className="activity-icon">
+                                <PlusCircle size={18} />
+                            </div>
+                            <div>
+                                <p style={{ fontSize: '0.9rem', marginBottom: '4px' }}>Welcome to PolyLance</p>
+                                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Get started by exploring jobs</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

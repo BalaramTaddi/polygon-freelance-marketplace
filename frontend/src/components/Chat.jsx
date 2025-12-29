@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useClient, useConversations, useMessages, useSendMessage, useStreamMessages } from '@xmtp/react-sdk';
+import { motion } from 'framer-motion';
 import { useEthersSigner } from '../hooks/useEthersSigner';
 import { useAccount } from 'wagmi';
 import { MessageSquare, Send, User, Loader2 } from 'lucide-react';
@@ -68,34 +69,41 @@ export default function Chat() {
                         +
                     </button>
                 </div>
-                <div style={{ overflowY: 'auto', flex: 1 }}>
-                    {conversations.map((conv) => (
-                        <div
+                <div style={{ overflowY: 'auto', flex: 1, paddingRight: '5px' }}>
+                    {conversations.map((conv, i) => (
+                        <motion.div
                             key={conv.peerAddress}
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: i * 0.05 }}
                             onClick={() => setSelectedConversation(conv)}
                             style={{
-                                padding: '10px',
-                                marginBottom: '5px',
-                                borderRadius: '8px',
+                                padding: '12px 16px',
+                                marginBottom: '8px',
+                                borderRadius: '12px',
                                 cursor: 'pointer',
-                                background: selectedConversation?.peerAddress === conv.peerAddress ? 'rgba(138, 43, 226, 0.2)' : 'rgba(255,255,255,0.05)',
-                                color: selectedConversation?.peerAddress === conv.peerAddress ? 'var(--primary)' : 'inherit'
+                                background: selectedConversation?.peerAddress === conv.peerAddress ? 'rgba(138, 43, 226, 0.15)' : 'rgba(255,255,255,0.03)',
+                                border: '1px solid',
+                                borderColor: selectedConversation?.peerAddress === conv.peerAddress ? 'var(--primary)' : 'transparent',
+                                color: selectedConversation?.peerAddress === conv.peerAddress ? 'var(--primary)' : 'inherit',
+                                transition: 'all 0.2s ease'
                             }}
                         >
-                            <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>
-                                {conv.peerAddress.slice(0, 6)}...{conv.peerAddress.slice(-4)}
+                            <div style={{ fontSize: '0.85rem', fontWeight: '600' }}>
+                                {conv.peerAddress.slice(0, 8)}...{conv.peerAddress.slice(-6)}
                             </div>
-                        </div>
+                        </motion.div>
                     ))}
                 </div>
             </div>
 
-            <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', padding: 0 }}>
+            <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', padding: 0, overflow: 'hidden' }}>
                 {selectedConversation ? (
                     <MessageContainer conversation={selectedConversation} />
                 ) : (
-                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
-                        Select a conversation to start chatting
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+                        <MessageSquare size={48} style={{ opacity: 0.1, marginBottom: '20px' }} />
+                        <p>Select a conversation to start chatting</p>
                     </div>
                 )}
             </div>
@@ -121,26 +129,36 @@ function MessageContainer({ conversation }) {
 
     return (
         <>
-            <div style={{ padding: '15px', borderBottom: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.02)' }}>
-                <strong>Chat with {conversation.peerAddress.slice(0, 6)}...{conversation.peerAddress.slice(-4)}</strong>
+            <div style={{ padding: '20px', borderBottom: '1px solid var(--glass-border)', background: 'rgba(255,255,255,0.01)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div className="activity-icon" style={{ width: '32px', height: '32px' }}>
+                        <User size={16} />
+                    </div>
+                    <strong>{conversation.peerAddress.slice(0, 8)}...{conversation.peerAddress.slice(-6)}</strong>
+                </div>
             </div>
-            <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {messages.map((msg) => {
+            <div style={{ flex: 1, overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {messages.map((msg, i) => {
                     const isMe = msg.senderAddress.toLowerCase() === address.toLowerCase();
                     return (
-                        <div
+                        <motion.div
                             key={msg.id}
+                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            transition={{ duration: 0.2 }}
                             style={{
                                 alignSelf: isMe ? 'flex-end' : 'flex-start',
-                                background: isMe ? 'var(--primary)' : 'rgba(255,255,255,0.1)',
-                                padding: '10px 15px',
-                                borderRadius: isMe ? '15px 15px 0 15px' : '15px 15px 15px 0',
-                                maxWidth: '70%',
-                                fontSize: '0.9rem'
+                                background: isMe ? 'linear-gradient(135deg, var(--primary), #4d0099)' : 'var(--glass-bg)',
+                                padding: '12px 18px',
+                                borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+                                border: isMe ? 'none' : '1px solid var(--glass-border)',
+                                maxWidth: '75%',
+                                fontSize: '0.95rem',
+                                boxShadow: isMe ? '0 4px 15px rgba(138, 43, 226, 0.2)' : 'none'
                             }}
                         >
                             {msg.content}
-                        </div>
+                        </motion.div>
                     );
                 })}
             </div>

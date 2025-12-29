@@ -1,5 +1,6 @@
 import React from 'react';
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { motion } from 'framer-motion';
 import { Briefcase, CheckCircle, ExternalLink, RefreshCcw } from 'lucide-react';
 import FreelanceEscrowABI from '../contracts/FreelanceEscrow.json';
 import { formatEther } from 'viem';
@@ -8,7 +9,9 @@ import { api } from '../services/api';
 import UserLink from './UserLink';
 
 
-function JobsList() {
+const statusLabels = ['Created', 'Accepted', 'Ongoing', 'Disputed', 'Completed', 'Cancelled'];
+
+function JobsList({ onUserClick }) {
     const { address } = useAccount();
     const [filter, setFilter] = React.useState('All');
     const { data: jobCount } = useReadContract({
@@ -41,10 +44,21 @@ function JobsList() {
 
             <div className="grid">
                 {count === 0 ? (
-                    <p style={{ color: 'var(--text-muted)' }}>No jobs found on this contract.</p>
+                    <div className="glass-card" style={{ textAlign: 'center', padding: '60px', gridColumn: '1 / -1' }}>
+                        <Briefcase size={48} style={{ color: 'var(--text-muted)', marginBottom: '20px', opacity: 0.5 }} />
+                        <h3 style={{ color: 'var(--text-muted)' }}>No jobs published yet</h3>
+                        <p style={{ color: 'var(--text-muted)', marginTop: '8px' }}>Be the first to post a new gig on the marketplace.</p>
+                    </div>
                 ) : (
                     Array.from({ length: count }).map((_, i) => (
-                        <JobCard key={i + 1} jobId={i + 1} categoryFilter={filter} />
+                        <motion.div
+                            key={i + 1}
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: i * 0.1 }}
+                        >
+                            <JobCard jobId={i + 1} categoryFilter={filter} onUserClick={onUserClick} />
+                        </motion.div>
                     ))
                 )}
             </div>
@@ -52,7 +66,7 @@ function JobsList() {
     );
 }
 
-function JobCard({ jobId, categoryFilter }) {
+function JobCard({ jobId, categoryFilter, onUserClick }) {
     const { address } = useAccount();
     const [metadata, setMetadata] = React.useState(null);
     const { data: job, refetch } = useReadContract({
@@ -60,6 +74,12 @@ function JobCard({ jobId, categoryFilter }) {
         abi: FreelanceEscrowABI.abi,
         functionName: 'jobs',
         args: [BigInt(jobId)],
+    });
+
+    const { data: arbitrator } = useReadContract({
+        address: CONTRACT_ADDRESS,
+        abi: FreelanceEscrowABI.abi,
+        functionName: 'arbitrator',
     });
 
     const { data: hash, writeContract, isPending } = useWriteContract();
@@ -83,16 +103,27 @@ function JobCard({ jobId, categoryFilter }) {
 
     if (!job) return null;
 
-    const [id, client, freelancer, amount, status, resultUri, paid] = job;
+    const [id, client, freelancer, amount, freelancerStake, status, resultUri, paid] = job;
 
     // Filter logic
     if (categoryFilter !== 'All' && metadata?.category !== categoryFilter) {
         return null;
     }
-    const statusLabels = ['Created', 'Ongoing', 'Completed', 'Disputed', 'Cancelled'];
 
     const isClient = address?.toLowerCase() === client.toLowerCase();
     const isFreelancer = address?.toLowerCase() === freelancer.toLowerCase();
+    const isArbitrator = address?.toLowerCase() === arbitrator?.toLowerCase();
+
+    const handleAccept = () => {
+        const stake = (amount * 10n) / 100n;
+        writeContract({
+            address: CONTRACT_ADDRESS,
+            abi: FreelanceEscrowABI.abi,
+            functionName: 'acceptJob',
+            args: [BigInt(jobId)],
+            value: stake,
+        });
+    };
 
     const handleRelease = () => {
         writeContract({
@@ -114,10 +145,29 @@ function JobCard({ jobId, categoryFilter }) {
         });
     };
 
+    const handleResolve = (winnerAddr) => {
+        const freelancerPay = winnerAddr.toLowerCase() === freelancer.toLowerCase() ? (amount + freelancerStake) : 0n;
+        writeContract({
+            address: CONTRACT_ADDRESS,
+            abi: FreelanceEscrowABI.abi,
+            functionName: 'resolveDispute',
+            args: [BigInt(jobId), winnerAddr, freelancerPay],
+        });
+    };
+
+    const handleDispute = () => {
+        writeContract({
+            address: CONTRACT_ADDRESS,
+            abi: FreelanceEscrowABI.abi,
+            functionName: 'dispute',
+            args: [BigInt(jobId)],
+        });
+    };
+
     return (
         <div className="glass-card">
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px' }}>
-                <span className="badge">{statusLabels[status]}</span>
+                <span className={`badge ${status === 3 ? 'dispute-badge' : ''}`}>{statusLabels[status]}</span>
                 <span style={{ fontWeight: '600' }}>{formatEther(amount)} MATIC</span>
             </div>
 
@@ -133,8 +183,8 @@ function JobCard({ jobId, categoryFilter }) {
             </p>
 
             <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '15px' }}>
-                <p>Client: <UserLink address={client} /></p>
-                <p>Freelancer: <UserLink address={freelancer} /></p>
+                <p style={{ cursor: 'pointer' }} onClick={() => onUserClick(client)}>Client: <UserLink address={client} /></p>
+                <p style={{ cursor: 'pointer' }} onClick={() => onUserClick(freelancer)}>Freelancer: <UserLink address={freelancer} /></p>
             </div>
 
             {resultUri && (
@@ -146,42 +196,48 @@ function JobCard({ jobId, categoryFilter }) {
                 >
                     <ExternalLink size={14} /> View Work Submission
                 </a>
-            )
-            }
+            )}
 
-            <div style={{ display: 'flex', gap: '10px' }}>
-                {isFreelancer && status < 2 && (
-                    <button
-                        onClick={handleSubmit}
-                        className="btn-primary"
-                        style={{ flex: 1 }}
-                        disabled={isPending || isConfirming}
-                    >
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                {isFreelancer && status === 0 && (
+                    <button onClick={handleAccept} className="btn-primary" style={{ flex: 1 }} disabled={isPending || isConfirming}>
+                        {isPending || isConfirming ? 'Staking...' : 'Accept & Stake (10%)'}
+                    </button>
+                )}
+
+                {isFreelancer && (status === 1 || status === 2) && (
+                    <button onClick={handleSubmit} className="btn-primary" style={{ flex: 1 }} disabled={isPending || isConfirming}>
                         {isPending || isConfirming ? 'Processing...' : 'Submit Work'}
                     </button>
                 )}
 
-                {isClient && status === 1 && (
-                    <button
-                        onClick={handleRelease}
-                        className="btn-primary"
-                        style={{ flex: 1, background: 'linear-gradient(135deg, #10b981, #059669)' }}
-                        disabled={isPending || isConfirming}
-                    >
+                {isClient && status === 2 && (
+                    <button onClick={handleRelease} className="btn-primary" style={{ flex: 1, background: 'linear-gradient(135deg, #10b981, #059669)' }} disabled={isPending || isConfirming}>
                         {isPending || isConfirming ? 'Releasing...' : 'Approve & Pay'}
                     </button>
                 )}
+
+                {(isClient || isFreelancer) && (status === 1 || status === 2) && (
+                    <button onClick={handleDispute} className="btn-secondary" style={{ flex: 1, borderColor: '#ef4444', color: '#ef4444' }} disabled={isPending || isConfirming}>
+                        Open Dispute
+                    </button>
+                )}
+
+                {isArbitrator && status === 3 && (
+                    <div style={{ width: '100%', display: 'flex', gap: '10px', marginTop: '10px' }}>
+                        <button onClick={() => handleResolve(client)} className="btn-secondary" style={{ flex: 1 }}>Refund Client</button>
+                        <button onClick={() => handleResolve(freelancer)} className="btn-primary" style={{ flex: 1 }}>Pay Freelancer</button>
+                    </div>
+                )}
             </div>
 
-            {
-                status === 2 && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#10b981', marginTop: '10px' }}>
-                        <CheckCircle size={18} />
-                        <span>Payment Released & NFT Minted</span>
-                    </div>
-                )
-            }
-        </div >
+            {status === 4 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#10b981', marginTop: '10px' }}>
+                    <CheckCircle size={18} />
+                    <span>Success: Funds & Stake Distributed</span>
+                </div>
+            )}
+        </div>
     );
 }
 

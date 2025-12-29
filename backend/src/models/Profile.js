@@ -5,6 +5,8 @@ const profileSchema = new mongoose.Schema({
     name: { type: String },
     bio: { type: String },
     skills: { type: String },
+    totalEarned: { type: Number, default: 0 },
+    completedJobs: { type: Number, default: 0 },
     nonce: { type: String },
 }, { timestamps: true });
 

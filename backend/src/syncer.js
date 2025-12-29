@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { JobMetadata } from './models/JobMetadata.js';
+import { Profile } from './models/Profile.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -49,6 +50,47 @@ export async function startSyncer() {
                 }
             }
         },
+    });
+
+    // Watch for FundsReleased (Reputation update)
+    client.watchEvent({
+        address: CONTRACT_ADDRESS,
+        event: parseAbiItem('event FundsReleased(uint256 indexed jobId, address indexed freelancer, uint256 amount, uint256 nftId)'),
+        onLogs: async (logs) => {
+            for (const log of logs) {
+                try {
+                    const { freelancer, amount } = log.args;
+                    const maticAmount = Number(amount) / 1e18;
+                    console.log(`Job Completed! Updating reputation for ${freelancer}: +${maticAmount} MATIC`);
+
+                    await Profile.findOneAndUpdate(
+                        { address: freelancer.toLowerCase() },
+                        {
+                            $inc: { totalEarned: maticAmount, completedJobs: 1 }
+                        },
+                        { upsert: true, new: true }
+                    );
+                } catch (error) {
+                    console.error('Error handling FundsReleased:', error);
+                }
+            }
+        }
+    });
+
+    // Watch for JobDisputed
+    client.watchEvent({
+        address: CONTRACT_ADDRESS,
+        event: parseAbiItem('event JobDisputed(uint256 indexed jobId)'),
+        onLogs: async (logs) => {
+            for (const log of logs) {
+                try {
+                    const { jobId } = log.args;
+                    console.log(`Dispute Signal: Job ${jobId} enters dispute phase.`);
+                } catch (error) {
+                    console.error('Error handling JobDisputed:', error);
+                }
+            }
+        }
     });
 
     console.log(`Watching events for contract at ${CONTRACT_ADDRESS}`);

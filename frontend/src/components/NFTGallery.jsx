@@ -1,5 +1,6 @@
 import React from 'react';
 import { useAccount, useReadContract } from 'wagmi';
+import { motion } from 'framer-motion';
 import { Award, ExternalLink } from 'lucide-react';
 import FreelanceEscrowABI from '../contracts/FreelanceEscrow.json';
 import { CONTRACT_ADDRESS } from '../constants';
@@ -19,21 +20,24 @@ function NFTGallery() {
             </div>
 
             {!isConnected ? (
-                <p style={{ color: 'var(--text-muted)' }}>Please connect your wallet to view your certificates.</p>
+                <div className="glass-card" style={{ textAlign: 'center', padding: '60px' }}>
+                    <p style={{ color: 'var(--text-muted)' }}>Please connect your wallet to view your certificates.</p>
+                </div>
             ) : (
                 <div className="grid">
-                    <NFTCard
-                        title="UI Design - Mobile App"
-                        jobId="1"
-                        date="Dec 24, 2025"
-                        image="https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=800&q=80"
-                    />
-                    <NFTCard
-                        title="Smart Contract Audit"
-                        jobId="2"
-                        date="Dec 20, 2025"
-                        image="https://images.unsplash.com/photo-1639762681485-074b7f938ba0?auto=format&fit=crop&w=800&q=80"
-                    />
+                    {[
+                        { title: "UI Design - Mobile App", jobId: "1", date: "Dec 24, 2025", image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=800&q=80" },
+                        { title: "Smart Contract Audit", jobId: "2", date: "Dec 20, 2025", image: "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?auto=format&fit=crop&w=800&q=80" }
+                    ].map((nft, i) => (
+                        <motion.div
+                            key={i}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: i * 0.1 }}
+                        >
+                            <NFTCard {...nft} />
+                        </motion.div>
+                    ))}
                 </div>
             )}
         </div>

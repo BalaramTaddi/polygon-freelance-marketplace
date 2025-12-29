@@ -33,6 +33,22 @@ export function NotificationManager() {
         },
     });
 
+    // Watch JobAccepted
+    useWatchContractEvent({
+        address: CONTRACT_ADDRESS,
+        abi: FreelanceEscrowABI.abi,
+        eventName: 'JobAccepted',
+        onLogs(logs) {
+            logs.forEach(() => {
+                toast.success('Job Accepted & Stake Secured!', {
+                    icon: '🛡️',
+                    duration: 5000,
+                });
+                refreshData();
+            });
+        },
+    });
+
     // Watch WorkSubmitted
     useWatchContractEvent({
         address: CONTRACT_ADDRESS,

@@ -118,6 +118,35 @@ app.post('/api/jobs', async (req, res) => {
     }
 });
 
+app.get('/api/leaderboard', async (req, res) => {
+    try {
+        const topFreelancers = await Profile.find({ totalEarned: { $gt: 0 } })
+            .sort({ totalEarned: -1 })
+            .limit(10)
+            .select('address name bio skills totalEarned completedJobs');
+        res.json(topFreelancers);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/api/portfolios/:address', async (req, res) => {
+    const { address } = req.params;
+    try {
+        const profile = await Profile.findOne({ address: address.toLowerCase() });
+        const jobs = await JobMetadata.find({
+            $or: [
+                { client: address.toLowerCase() },
+                { freelancer: address.toLowerCase() }
+            ]
+        }).sort({ createdAt: -1 });
+
+        res.json({ profile, jobs });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 if (process.env.NODE_ENV !== 'test') {
     app.listen(PORT, () => {
         console.log(`Server running on port ${PORT}`);
