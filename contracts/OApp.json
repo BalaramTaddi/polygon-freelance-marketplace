@@ -1,0 +1,55 @@
+{
+  "abi": [
+    {
+      "inputs": [],
+      "name": "lzEndpoint",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint32",
+          "name": "",
+          "type": "uint32"
+        }
+      ],
+      "name": "peers",
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint32",
+          "name": "_eid",
+          "type": "uint32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "_peer",
+          "type": "bytes32"
+        }
+      ],
+      "name": "setPeer",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "bytecode": ""
+}
