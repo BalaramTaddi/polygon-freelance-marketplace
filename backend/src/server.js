@@ -121,17 +121,17 @@ app.post('/api/jobs', async (req, res) => {
 app.get('/api/leaderboard', async (req, res) => {
     try {
         const topFreelancers = await Profile.find({ totalEarned: { $gt: 0 } })
-            .sort({ totalEarned: -1 })
+            .sort({ reputationScore: -1 })
             .limit(10)
-            .select('address name bio skills totalEarned completedJobs');
+            .select('address name bio skills totalEarned completedJobs reputationScore ratingSum ratingCount');
 
-        const leadersWithRatings = await Promise.all(topFreelancers.map(async (leader) => {
-            const jobs = await JobMetadata.find({ freelancer: leader.address, rating: { $gt: 0 } });
-            const avgRating = jobs.length > 0
-                ? jobs.reduce((acc, j) => acc + j.rating, 0) / jobs.length
-                : 0;
-            return { ...leader.toObject(), avgRating };
-        }));
+        const leadersWithRatings = topFreelancers.map(leader => {
+            const avgRating = leader.ratingCount > 0 ? (leader.ratingSum / leader.ratingCount) : 0;
+            return {
+                ...leader.toObject(),
+                avgRating: avgRating
+            };
+        });
 
         res.json(leadersWithRatings);
     } catch (error) {

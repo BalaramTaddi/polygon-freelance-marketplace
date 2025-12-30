@@ -15,6 +15,12 @@ PolyLance is a high-performance, professional freelance ecosystem built on the P
 - **💬 Real-Time Messaging**: Secure wallet-to-wallet chat powered by XMTP.
 - **🔍 Advanced Search**: Filter jobs by category, budget, and search queries.
 
+## 📸 Interface Preview
+
+| Dashboard | Job Market | Create Job |
+|-----------|------------|------------|
+| ![Dashboard](assets/dashboard.png) | ![Jobs](assets/jobs_list.png) | ![Create](assets/create_job.png) |
+
 ## 🛠️ Technology Stack
 
 - **Frontend**: React, Vite, Framer Motion, Lucide React, Tailwind CSS (Vanilla CSS focus).
@@ -69,6 +75,31 @@ The `FreelanceEscrow.sol` contract manages the job lifecycle:
 2. **Acceptance**: Freelancer stakes 10% as a commitment bond.
 3. **Execution**: Work is submitted via IPFS/metadata URI.
 4. **Finalization**: Client releases funds, freelancer gets stake back + payment, and an NFT is minted.
+
+### Architecture Loop
+
+```mermaid
+sequenceDiagram
+    actor Client
+    actor Freelancer
+    participant Contract as FreelanceEscrow
+    participant Token as ERC20 (USDC/DAI)
+
+    Client->>Contract: createJob(token, amount)
+    Note right of Client: Funds Locked
+    
+    Freelancer->>Contract: acceptJob(jobId)
+    Freelancer->>Token: approve(stake)
+    Note right of Freelancer: 10% Stake Locked
+    
+    Freelancer->>Contract: submitWork(ipfsURI)
+    
+    Client->>Contract: releaseFunds(jobId)
+    Contract->>Freelancer: Transfer Payment + Stake
+    Contract->>Freelancer: Mint NFT (Proof-of-Work)
+    
+    Client->>Contract: submitReview(rating, comment)
+```
 
 ## 🛡️ Security
 

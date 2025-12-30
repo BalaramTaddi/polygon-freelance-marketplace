@@ -1,4 +1,6 @@
-require("@nomicfoundation/hardhat-toolbox");
+// require("@nomicfoundation/hardhat-toolbox");
+require("@nomicfoundation/hardhat-ethers");
+require("@openzeppelin/hardhat-upgrades");
 require("dotenv").config();
 
 /** @type import('hardhat/config').HardhatUserConfig */
@@ -11,11 +13,16 @@ module.exports = {
         polygon_amoy: {
             url: process.env.RPC_URL || "",
             accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+        },
+        polygon_mainnet: {
+            url: process.env.POLYGON_MAINNET_RPC_URL || "https://polygon-rpc.com",
+            accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
         }
     },
     etherscan: {
         apiKey: {
-            polygon_amoy: process.env.POLYGONSCAN_API_KEY || ""
+            polygon_amoy: process.env.POLYGONSCAN_API_KEY || "",
+            polygon: process.env.POLYGONSCAN_API_KEY || ""
         },
         customChains: [
             {

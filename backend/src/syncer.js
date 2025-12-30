@@ -86,6 +86,27 @@ export async function startSyncer() {
                 try {
                     const { jobId } = log.args;
                     console.log(`Dispute Signal: Job ${jobId} enters dispute phase.`);
+
+                    const job = await client.readContract({
+                        address: CONTRACT_ADDRESS,
+                        abi: abi,
+                        functionName: 'jobs',
+                        args: [jobId]
+                    });
+                    const freelancer = job[2];
+
+                    const profile = await Profile.findOne({ address: freelancer.toLowerCase() });
+                    if (profile) {
+                        profile.disputedJobs += 1;
+
+                        const avgRating = profile.ratingCount > 0 ? profile.ratingSum / profile.ratingCount : 0;
+                        const disputeRate = profile.completedJobs > 0 ? profile.disputedJobs / profile.completedJobs : 0;
+                        const score = (profile.totalEarned) * (avgRating / 5) * (Math.max(0, 1 - disputeRate));
+                        profile.reputationScore = Math.floor(score * 10);
+
+                        await profile.save();
+                        console.log(`Updated reputation for ${freelancer} (Dispute)`);
+                    }
                 } catch (error) {
                     console.error('Error handling JobDisputed:', error);
                 }
@@ -107,6 +128,28 @@ export async function startSyncer() {
                         { rating: Number(rating), review: comment },
                         { upsert: true }
                     );
+
+                    const job = await client.readContract({
+                        address: CONTRACT_ADDRESS,
+                        abi: abi,
+                        functionName: 'jobs',
+                        args: [jobId]
+                    });
+                    const freelancer = job[2];
+
+                    const profile = await Profile.findOne({ address: freelancer.toLowerCase() });
+                    if (profile) {
+                        profile.ratingSum += Number(rating);
+                        profile.ratingCount += 1;
+
+                        const avgRating = profile.ratingCount > 0 ? profile.ratingSum / profile.ratingCount : 0;
+                        const disputeRate = profile.completedJobs > 0 ? profile.disputedJobs / profile.completedJobs : 0;
+                        const score = (profile.totalEarned) * (avgRating / 5) * (Math.max(0, 1 - disputeRate));
+                        profile.reputationScore = Math.floor(score * 10);
+
+                        await profile.save();
+                        console.log(`Updated reputation for ${freelancer} (Review: ${rating})`);
+                    }
                 } catch (error) {
                     console.error('Error handling ReviewSubmitted:', error);
                 }

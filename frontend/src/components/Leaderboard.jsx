@@ -34,8 +34,8 @@ function Leaderboard() {
                             <th style={{ padding: '20px', textAlign: 'left', color: 'var(--text-muted)' }}>RANK</th>
                             <th style={{ padding: '20px', textAlign: 'left', color: 'var(--text-muted)' }}>CREATOR</th>
                             <th style={{ padding: '20px', textAlign: 'left', color: 'var(--text-muted)' }}>SPECIALIZATION</th>
-                            <th style={{ padding: '20px', textAlign: 'left', color: 'var(--text-muted)' }}>REPUTATION</th>
-                            <th style={{ padding: '20px', textAlign: 'right', color: 'var(--text-muted)' }}>STRIKE RATE</th>
+                            <th style={{ padding: '20px', textAlign: 'left', color: 'var(--text-muted)' }}>RATING</th>
+                            <th style={{ padding: '20px', textAlign: 'right', color: 'var(--text-muted)' }}>SCORE</th>
                             <th style={{ padding: '20px', textAlign: 'right', color: 'var(--text-muted)' }}>TOTAL EARNED</th>
                         </tr>
                     </thead>
@@ -97,8 +97,9 @@ function Leaderboard() {
                                         )}
                                     </td>
                                     <td style={{ padding: '20px', textAlign: 'right' }}>
-                                        <div style={{ fontWeight: 600 }}>{leader.completedJobs} Jobs</div>
-                                        <div style={{ fontSize: '0.7rem', color: '#10b981' }}>100% SUCCESS</div>
+                                        <div style={{ fontWeight: 700, fontSize: '1.1rem', color: '#f59e0b' }}>
+                                            {leader.reputationScore || 0}
+                                        </div>
                                     </td>
                                     <td style={{ padding: '20px', textAlign: 'right' }}>
                                         <div style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--primary)' }}>

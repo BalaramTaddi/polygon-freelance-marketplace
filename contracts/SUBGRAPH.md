@@ -9,6 +9,7 @@ type Job @entity {
   id: ID!
   client: Bytes!
   freelancer: Bytes!
+  token: Bytes! # address(0) or ERC20
   amount: BigInt!
   status: Int!
   milestones: [Milestone!]! @derivedFrom(field: "job")

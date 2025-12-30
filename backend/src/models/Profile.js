@@ -7,6 +7,10 @@ const profileSchema = new mongoose.Schema({
     skills: { type: String },
     totalEarned: { type: Number, default: 0 },
     completedJobs: { type: Number, default: 0 },
+    disputedJobs: { type: Number, default: 0 },
+    ratingSum: { type: Number, default: 0 },
+    ratingCount: { type: Number, default: 0 },
+    reputationScore: { type: Number, default: 0 },
     nonce: { type: String },
 }, { timestamps: true });
 

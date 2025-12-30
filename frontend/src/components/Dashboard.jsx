@@ -91,11 +91,11 @@ function Dashboard() {
                 <div className="glass-card stat-card" style={{ borderLeft: '4px solid #f59e0b' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
                         <div>
-                            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: '500' }}>ACTIVE MILESTONES</p>
-                            <div className="stat-value">0</div>
-                            <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>No pending actions</p>
+                            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: '500' }}>REPUTATION SCORE</p>
+                            <div className="stat-value">{profile.reputationScore || 0}</div>
+                            <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Top {profile.reputationScore > 500 ? '1%' : '10%'} of talent</p>
                         </div>
-                        <Clock size={24} color="#f59e0b" />
+                        <Award size={24} color="#f59e0b" />
                     </div>
                 </div>
 
