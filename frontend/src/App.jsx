@@ -87,6 +87,15 @@ function App() {
             >
               <MessageSquare size={18} /> Messenger
             </button>
+            <a
+              href="https://github.com/BalaramTaddi"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-nav"
+              style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.95rem' }}
+            >
+              <Github size={18} /> Contribute
+            </a>
             <div style={{ marginLeft: '10px', borderLeft: '1px solid var(--glass-border)', paddingLeft: '24px' }}>
               <ConnectButton showBalance={false} chainStatus="icon" accountStatus="avatar" />
             </div>
