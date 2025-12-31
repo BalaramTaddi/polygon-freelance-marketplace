@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { Briefcase, PlusCircle, LayoutDashboard, Ticket, MessageSquare, Trophy, User, Github } from 'lucide-react';
+import { Briefcase, PlusCircle, LayoutDashboard, Ticket, MessageSquare, Trophy, User, Github, Server } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Dashboard from './components/Dashboard';
 import CreateJob from './components/CreateJob';
@@ -94,7 +94,16 @@ function App() {
               className="btn-nav"
               style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.95rem' }}
             >
-              <Github size={18} /> Contribute
+              <Github size={18} /> Frontend
+            </a>
+            <a
+              href="https://share.google/X2qPUjX6Oyr3rVVj9"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-nav"
+              style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.95rem' }}
+            >
+              <Server size={18} /> Backend Credits
             </a>
             <div style={{ marginLeft: '10px', borderLeft: '1px solid var(--glass-border)', paddingLeft: '24px' }}>
               <ConnectButton showBalance={false} chainStatus="icon" accountStatus="avatar" />
