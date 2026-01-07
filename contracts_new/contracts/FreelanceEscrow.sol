@@ -1,5 +1,7 @@
-// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
+
+import "@openzeppelin/contracts/utils/Base64.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
 
 import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721URIStorageUpgradeable.sol";
@@ -9,6 +11,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -30,6 +33,17 @@ interface IFreelanceSBT {
     function safeMint(address to, string memory uri) external;
 }
 
+interface IFreelancerReputation {
+    function levelUp(address to, uint256 id, uint256 amount) external;
+}
+
+interface IArbitrable {
+    event Dispute(IArbitrator indexed _arbitrator, uint256 indexed _disputeID, uint256 _metaEvidenceID, uint256 _evidenceID);
+    event Evidence(IArbitrator indexed _arbitrator, uint256 indexed _evidenceID, address indexed _party, string _evidence);
+    event Ruling(IArbitrator indexed _arbitrator, uint256 indexed _disputeID, uint256 _ruling);
+    function rule(uint256 _disputeID, uint256 _ruling) external;
+}
+
 interface IArbitrator {
     function createDispute(uint256 _choices, bytes calldata _extraData) external payable returns (uint256 disputeID);
     function arbitrationCost(bytes calldata _extraData) external view returns (uint256 cost);
@@ -39,13 +53,14 @@ contract FreelanceEscrow is
     Initializable, 
     ERC721URIStorageUpgradeable, 
     ERC2981Upgradeable, 
-    OwnableUpgradeable, 
     AccessControlUpgradeable,
+    OwnableUpgradeable, 
     ReentrancyGuardUpgradeable, 
     PausableUpgradeable,
     UUPSUpgradeable,
     IAny2EVMMessageReceiver,
-    OApp
+    OApp,
+    IArbitrable
 {
     using SafeERC20 for IERC20;
 
@@ -59,6 +74,7 @@ contract FreelanceEscrow is
     address public insurancePool;
     address public polyToken;
     address public sbtContract;
+    address public reputationContract;
     address public vault;
     uint256 public constant REWARD_AMOUNT = 100 * 10**18;
     uint256 public platformFeeBps; // e.g., 250 for 2.5%
@@ -111,6 +127,7 @@ contract FreelanceEscrow is
         bool paid;
         uint256 deadline;
         uint256 milestoneCount;
+        uint256 categoryId;
     }
 
     struct Application {
@@ -151,6 +168,7 @@ contract FreelanceEscrow is
     event InsurancePaid(uint256 indexed jobId, uint256 amount);
     event RefundClaimed(address indexed user, address indexed token, uint256 indexed amount);
     event VaultUpdated(address indexed oldVault, address indexed newVault);
+    event DisputeResolvedManual(uint256 indexed jobId, uint256 freelancerAmount, uint256 clientAmount);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -186,38 +204,38 @@ contract FreelanceEscrow is
         platformFeeBps = 250; // 2.5% default
     }
 
-    function setSBTContract(address _sbt) external onlyOwner {
-        sbtContract = _sbt;
+    function setReputationContract(address _reputation) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        reputationContract = _reputation;
     }
 
-    function setTokenWhitelist(address token, bool allowed) external onlyOwner {
+    function setTokenWhitelist(address token, bool allowed) external onlyRole(MANAGER_ROLE) {
         whitelistedTokens[token] = allowed;
     }
 
-    function setInsurancePool(address _pool) external onlyOwner {
+    function setInsurancePool(address _pool) external onlyRole(DEFAULT_ADMIN_ROLE) {
         insurancePool = _pool;
     }
 
-    function setPolyToken(address _token) external onlyOwner {
+    function setPolyToken(address _token) external onlyRole(DEFAULT_ADMIN_ROLE) {
         polyToken = _token;
     }
 
-    function setVault(address _vault) external onlyOwner {
+    function setVault(address _vault) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (_vault == address(0)) revert InvalidAddress();
         emit VaultUpdated(vault, _vault);
         vault = _vault;
     }
 
-    function setPlatformFee(uint256 _bps) external onlyOwner {
+    function setPlatformFee(uint256 _bps) external onlyRole(MANAGER_ROLE) {
         if (_bps > 1000) revert FeeTooHigh();
         platformFeeBps = _bps;
     }
 
-    function pause() external onlyOwner {
+    function pause() external onlyRole(MANAGER_ROLE) {
         _pause();
     }
 
-    function unpause() external onlyOwner {
+    function unpause() external onlyRole(MANAGER_ROLE) {
         _unpause();
     }
 
@@ -232,11 +250,63 @@ contract FreelanceEscrow is
             return super._msgSender();
         }
     }
+
+    function _msgData() internal view virtual override(ContextUpgradeable) returns (bytes calldata) {
+        if (msg.sender == _trustedForwarder && _trustedForwarder != address(0)) {
+            return msg.data[:msg.data.length - 20];
+        } else {
+            return super._msgData();
+        }
+    }
     
-    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+    function _authorizeUpgrade(address newImplementation) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
 
     function supportsInterface(bytes4 interfaceId) public view override(ERC721URIStorageUpgradeable, ERC2981Upgradeable, AccessControlUpgradeable) returns (bool) {
         return interfaceId == type(IAny2EVMMessageReceiver).interfaceId || super.supportsInterface(interfaceId);
+    }
+
+    function tokenURI(uint256 tokenId) public view override(ERC721URIStorageUpgradeable) returns (string memory) {
+        _requireOwned(tokenId);
+        Job storage job = jobs[tokenId];
+        
+        string memory imageURI = string(abi.encodePacked(
+            "data:image/svg+xml;base64,", 
+            Base64.encode(bytes(_generateSVG(tokenId, job.categoryId, job.amount)))
+        ));
+
+        string memory json = string(abi.encodePacked(
+            '{"name": "PolyLance Job #', Strings.toString(tokenId), 
+            '", "description": "Proof of Work for PolyLance Marketplace", "image": "', imageURI, 
+            '", "attributes": [{"trait_type": "Category", "value": "', _getCategoryName(job.categoryId), 
+            '"}, {"trait_type": "Budget", "value": "', Strings.toString(job.amount), '"}]}'
+        ));
+
+        return string(abi.encodePacked("data:application/json;base64,", Base64.encode(bytes(json))));
+    }
+
+    function _generateSVG(uint256 jobId, uint256 categoryId, uint256 amount) internal view returns (string memory) {
+        string memory category = _getCategoryName(categoryId);
+        string memory jobIdStr = Strings.toString(jobId);
+        string memory amountStr = Strings.toString(amount);
+
+        return string(abi.encodePacked(
+            '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">',
+            '<rect width="100%" height="100%" fill="#1a1c2c"/>',
+            '<defs><linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#4f46e5"/><stop offset="100%" style="stop-color:#9333ea"/></linearGradient></defs>',
+            '<circle cx="200" cy="200" r="150" fill="url(#grad)" opacity="0.8"/>',
+            '<text x="50%" y="40%" text-anchor="middle" fill="white" font-family="Arial" font-size="24" font-weight="bold">POLYLANCE WORK</text>',
+            '<text x="50%" y="55%" text-anchor="middle" fill="white" font-family="Arial" font-size="18">Job #', jobIdStr, '</text>',
+            '<text x="50%" y="65%" text-anchor="middle" fill="#fbbf24" font-family="Arial" font-size="20">', category, '</text>',
+            '<text x="50%" y="75%" text-anchor="middle" fill="white" font-family="Arial" font-size="16">Budget: ', amountStr, '</text></svg>'
+        ));
+    }
+
+    function _getCategoryName(uint256 categoryId) internal pure returns (string memory) {
+        if (categoryId == 1) return "Development";
+        if (categoryId == 2) return "Design";
+        if (categoryId == 3) return "Marketing";
+        if (categoryId == 4) return "Writing";
+        return "General";
     }
 
     function ccipReceive(Client.Any2EVMMessage calldata message) external override {
@@ -245,11 +315,11 @@ contract FreelanceEscrow is
         address sender = abi.decode(message.sender, (address));
         if (!allowlistedSenders[sender]) revert NotAuthorized();
 
-        (address freelancer, string memory ipfsHash, uint256 deadline) = abi.decode(message.data, (address, string, uint256));
+        (address freelancer, string memory ipfsHash, uint256 deadline, uint256 categoryId) = abi.decode(message.data, (address, string, uint256, uint256));
         address token = message.destTokenAmounts[0].token;
         uint256 amount = message.destTokenAmounts[0].amount;
 
-        _createJobInternal(sender, freelancer, token, amount, ipfsHash, deadline);
+        _createJobInternal(sender, freelancer, token, amount, ipfsHash, deadline, categoryId);
         emit CCIPMessageReceived(message.messageId, message.sourceChainSelector, sender);
     }
 
@@ -259,7 +329,8 @@ contract FreelanceEscrow is
         address token,
         uint256 amount,
         string memory _ipfsHash,
-        uint256 deadline
+        uint256 deadline,
+        uint256 categoryId
     ) internal {
         if (freelancer != address(0) && freelancer == client) revert SelfHiring();
 
@@ -276,7 +347,8 @@ contract FreelanceEscrow is
             ipfsHash: _ipfsHash,
             paid: false,
             deadline: deadline,
-            milestoneCount: 0
+            milestoneCount: 0,
+            categoryId: categoryId
         });
 
         emit JobCreated(jobCount, client, freelancer, amount, deadline);
@@ -294,7 +366,8 @@ contract FreelanceEscrow is
         address token, 
         uint256 amount, 
         string memory _ipfsHash,
-        uint256 durationDays
+        uint256 durationDays,
+        uint256 categoryId
     ) external payable whenNotPaused nonReentrant {
         if (token != address(0)) {
             if (!whitelistedTokens[token]) revert TokenNotWhitelisted();
@@ -304,7 +377,7 @@ contract FreelanceEscrow is
         }
         
         uint256 deadline = durationDays > 0 ? block.timestamp + (durationDays * 1 days) : 0;
-        _createJobInternal(_msgSender(), freelancer, token, amount, _ipfsHash, deadline);
+        _createJobInternal(_msgSender(), freelancer, token, amount, _ipfsHash, deadline, categoryId);
     }
 
     function createJobWithMilestones(
@@ -313,7 +386,8 @@ contract FreelanceEscrow is
         uint256 amount,
         string memory _ipfsHash,
         uint256[] memory milestoneAmounts,
-        string[] memory milestoneIpfsHashes
+        string[] memory milestoneIpfsHashes,
+        uint256 categoryId
     ) external payable whenNotPaused nonReentrant {
         uint256 totalMilestoneAmount = 0;
         uint256 len = milestoneAmounts.length;
@@ -331,7 +405,7 @@ contract FreelanceEscrow is
         }
 
         uint256 deadline = 0; 
-        _createJobInternal(_msgSender(), freelancer, token, amount, _ipfsHash, deadline);
+        _createJobInternal(_msgSender(), freelancer, token, amount, _ipfsHash, deadline, categoryId);
         
         uint256 jobId = jobCount;
         jobs[jobId].milestoneCount = len;
@@ -449,6 +523,10 @@ contract FreelanceEscrow is
         _safeMint(job.freelancer, tokenId);
         _setTokenURI(tokenId, job.ipfsHash);
         
+        if (reputationContract != address(0)) {
+            IFreelancerReputation(reputationContract).levelUp(job.freelancer, job.categoryId, 1);
+        }
+
         _rewardParties(jobId);
 
         emit FundsReleased(jobId, job.freelancer, totalPayout, tokenId);
@@ -506,6 +584,14 @@ contract FreelanceEscrow is
         if (sender != job.client && sender != job.freelancer) revert NotAuthorized();
 
         job.status = JobStatus.Arbitration;
+        
+        // Kleros Integration: If arbitrator is external, create dispute there
+        if (arbitrator != owner()) {
+            uint256 disputeID = IArbitrator(arbitrator).createDispute{value: msg.value}(2, ""); 
+            disputeIdToJobId[disputeID] = jobId;
+            emit Dispute(IArbitrator(arbitrator), disputeID, jobId, jobId);
+        }
+
         emit DisputeRaised(jobId, _msgSender());
     }
 
@@ -558,9 +644,35 @@ contract FreelanceEscrow is
         } else { // Pay Freelancer
             job.status = JobStatus.Completed;
             _sendFunds(job.freelancer, job.token, job.amount + job.freelancerStake);
-            _rewardParties(jobId);
         }
-        emit Ruling(msg.sender, _disputeID, _ruling);
+        emit Ruling(IArbitrator(msg.sender), _disputeID, _ruling);
+    }
+
+    /**
+     * @dev Manually resolve a dispute by splitting funds.
+     * @param jobId The job to resolve.
+     * @param freelancerShareBps The portion (in basis points) to give to the freelancer.
+     */
+    function resolveDisputeManual(uint256 jobId, uint256 freelancerShareBps) external onlyRole(ARBITRATOR_ROLE) nonReentrant {
+        if (freelancerShareBps > 10000) revert InvalidAmount();
+        Job storage job = jobs[jobId];
+        if (job.status != JobStatus.Arbitration) revert InvalidStatus();
+
+        uint256 totalEscrow = job.amount + job.freelancerStake;
+        uint256 freelancerAmount = (totalEscrow * freelancerShareBps) / 10000;
+        uint256 clientAmount = totalEscrow - freelancerAmount;
+
+        job.status = JobStatus.Completed;
+        job.paid = true;
+
+        if (freelancerAmount > 0) {
+            _sendFunds(job.freelancer, job.token, freelancerAmount);
+        }
+        if (clientAmount > 0) {
+            _sendFunds(job.client, job.token, clientAmount);
+        }
+
+        emit DisputeResolvedManual(jobId, freelancerAmount, clientAmount);
     }
 
     function _sendFunds(address to, address token, uint256 amount) internal {

@@ -21,6 +21,7 @@ function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [portfolioAddress, setPortfolioAddress] = useState(null);
   const [chatPeerAddress, setChatPeerAddress] = useState(null);
+  const [isGasless, setIsGasless] = useState(false);
 
   const onSelectChat = (peer) => {
     setChatPeerAddress(peer);
@@ -34,8 +35,8 @@ function App() {
 
     switch (activeTab) {
       case 'dashboard': return <Dashboard />;
-      case 'jobs': return <JobsList onUserClick={(addr) => setPortfolioAddress(addr)} onSelectChat={onSelectChat} />;
-      case 'create': return <CreateJob onJobCreated={() => setActiveTab('jobs')} />;
+      case 'jobs': return <JobsList gasless={isGasless} onUserClick={(addr) => setPortfolioAddress(addr)} onSelectChat={onSelectChat} />;
+      case 'create': return <CreateJob gasless={isGasless} onJobCreated={() => setActiveTab('jobs')} />;
       case 'nfts': return <NFTGallery />;
       case 'chat': return <Chat initialPeerAddress={chatPeerAddress} onClearedAddress={() => setChatPeerAddress(null)} />;
       case 'leaderboard': return <Leaderboard />;
@@ -95,6 +96,37 @@ function App() {
           >
             <MessageSquare size={18} /> Messenger
           </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '0 16px', borderLeft: '1px solid var(--glass-border)', marginLeft: '10px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+              <span style={{ fontSize: '0.6rem', fontWeight: 'bold', textTransform: 'uppercase', opacity: 0.5, letterSpacing: '0.5px' }}>Gasless</span>
+              <button
+                onClick={() => setIsGasless(!isGasless)}
+                style={{
+                  background: isGasless ? 'var(--primary)' : 'rgba(255,255,255,0.1)',
+                  border: '1px solid var(--glass-border)',
+                  width: '32px',
+                  height: '16px',
+                  borderRadius: '10px',
+                  position: 'relative',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  padding: 0
+                }}
+              >
+                <div style={{
+                  position: 'absolute',
+                  top: '1px',
+                  left: isGasless ? '17px' : '1px',
+                  width: '12px',
+                  height: '12px',
+                  borderRadius: '50%',
+                  background: 'white',
+                  transition: 'all 0.3s ease',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                }} />
+              </button>
+            </div>
+          </div>
           <div style={{ marginLeft: '10px', borderLeft: '1px solid var(--glass-border)', paddingLeft: '24px' }}>
             <ConnectButton.Custom>
               {({

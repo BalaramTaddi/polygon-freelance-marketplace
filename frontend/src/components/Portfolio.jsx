@@ -1,8 +1,11 @@
+import React, { useState, useEffect } from 'react';
 import { User, Briefcase, MapPin, Link as LinkIcon, Award, ExternalLink, Globe, Github, Twitter, Zap, Coins } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useReadContract } from 'wagmi';
 import { erc20Abi, formatEther } from 'viem';
 import { POLY_TOKEN_ADDRESS } from '../constants';
+import { api } from '../services/api';
+import Reputation3D from './Reputation3D';
 
 function Portfolio({ address, onBack }) {
     const [data, setData] = useState(null);
@@ -48,8 +51,8 @@ function Portfolio({ address, onBack }) {
                 {/* Profile Sidebar */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
                     <div className="glass-card" style={{ textAlign: 'center', padding: '40px 20px' }}>
-                        <div className="activity-icon" style={{ width: '100px', height: '100px', margin: '0 auto 20px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--primary), var(--accent-purple))' }}>
-                            <User size={48} color="#fff" />
+                        <div style={{ width: '100%', height: '200px', margin: '0 auto 10px' }}>
+                            <Reputation3D level={Math.floor((profile.reputationScore || 0) / 100) + 1} />
                         </div>
                         <h2 style={{ fontSize: '1.8rem', marginBottom: '8px' }}>{profile.name || 'Anonymous Creator'}</h2>
 

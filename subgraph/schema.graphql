@@ -27,4 +27,14 @@ type User @entity {
   id: ID! # address
   jobsAsClient: [Job!]! @derivedFrom(field: "client")
   jobsAsFreelancer: [Job!]! @derivedFrom(field: "freelancer")
+  profile: FreelancerProfile @derivedFrom(field: "user")
+}
+
+type FreelancerProfile @entity {
+  id: ID! # address
+  user: User!
+  totalEarned: BigInt!
+  averageRating: BigDecimal!
+  jobsCompleted: BigInt!
+  totalRatingPoints: BigInt!
 }

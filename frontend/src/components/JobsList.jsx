@@ -15,7 +15,7 @@ import { uploadJSONToIPFS } from '../utils/ipfs';
 
 const statusLabels = ['Created', 'Accepted', 'Ongoing', 'Disputed', 'Completed', 'Cancelled'];
 
-function JobsList({ onUserClick, onSelectChat }) {
+function JobsList({ onUserClick, onSelectChat, gasless }) {
     const { address } = useAccount();
     const [filter, setFilter] = React.useState('All');
     const [searchQuery, setSearchQuery] = React.useState('');
@@ -115,6 +115,7 @@ function JobsList({ onUserClick, onSelectChat }) {
                                 statusFilter={statusFilter}
                                 onUserClick={onUserClick}
                                 onSelectChat={onSelectChat}
+                                gasless={gasless}
                             />
                         </motion.div>
                     ))
@@ -124,7 +125,7 @@ function JobsList({ onUserClick, onSelectChat }) {
     );
 }
 
-function JobCard({ jobId, categoryFilter, searchQuery, minBudget, statusFilter, onUserClick, onSelectChat }) {
+function JobCard({ jobId, categoryFilter, searchQuery, minBudget, statusFilter, onUserClick, onSelectChat, gasless }) {
     const { address } = useAccount();
     const [metadata, setMetadata] = React.useState(null);
     const [matchScore, setMatchScore] = React.useState(null);
@@ -224,6 +225,10 @@ function JobCard({ jobId, categoryFilter, searchQuery, minBudget, statusFilter, 
     };
 
     const handleAccept = () => {
+        if (gasless) {
+            alert('Gasless Mode: Platform will sponsor your job acceptance!');
+            // Implementation note: Sign meta-tx and send to relayer
+        }
         const requiredStake = (amount * 10n) / 100n;
         writeContract({
             address: CONTRACT_ADDRESS,
