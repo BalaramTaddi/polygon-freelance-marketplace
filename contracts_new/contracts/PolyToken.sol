@@ -2,16 +2,23 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 
-contract PolyToken is ERC20Votes, ERC20Permit, Ownable {
-    constructor(address initialOwner) 
+contract PolyToken is ERC20Votes, ERC20Permit, AccessControl {
+    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+
+    constructor(address initialAdmin) 
         ERC20("PolyLance Token", "POLY") 
         ERC20Permit("PolyLance Token")
-        Ownable(initialOwner) 
     {
-        _mint(initialOwner, 1_000_000_000 * 10 ** decimals()); // 1 Billion Supply
+        _grantRole(DEFAULT_ADMIN_ROLE, initialAdmin);
+        _grantRole(MINTER_ROLE, initialAdmin);
+        _mint(initialAdmin, 1_000_000_000 * 10 ** decimals()); // 1 Billion Supply
+    }
+
+    function mint(address to, uint256 amount) external onlyRole(MINTER_ROLE) {
+        _mint(to, amount);
     }
 
     // The functions below are overrides required by Solidity.

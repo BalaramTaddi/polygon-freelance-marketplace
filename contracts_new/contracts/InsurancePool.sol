@@ -2,6 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
@@ -9,8 +10,10 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  * @notice Collects fees from jobs and provides a safety net for disputes.
  */
 contract InsurancePool is Ownable {
+    using SafeERC20 for IERC20;
+
     mapping(address => uint256) public balances;
-    uint256 public totalInsurancePool;
+    mapping(address => uint256) public totalInsurancePool; // Tracks total deposits per token
 
     event FundsAdded(address indexed token, uint256 amount);
     event PayoutExecuted(address indexed token, address indexed recipient, uint256 amount);
@@ -22,16 +25,17 @@ contract InsurancePool is Ownable {
      */
     function deposit(address token, uint256 amount) external {
         if (token == address(0)) {
-            // This would be called via receive() or a specific payable function if we used native
             revert("Use depositNative");
         }
-        IERC20(token).transferFrom(msg.sender, address(this), amount);
+        IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
         balances[token] += amount;
+        totalInsurancePool[token] += amount;
         emit FundsAdded(token, amount);
     }
 
     function depositNative() external payable {
         balances[address(0)] += msg.value;
+        totalInsurancePool[address(0)] += msg.value;
         emit FundsAdded(address(0), msg.value);
     }
 
@@ -46,7 +50,7 @@ contract InsurancePool is Ownable {
             (bool success, ) = payable(to).call{value: amount}("");
             require(success, "Native payout failed");
         } else {
-            IERC20(token).transfer(to, amount);
+            IERC20(token).safeTransfer(to, amount);
         }
 
         emit PayoutExecuted(token, to, amount);
@@ -54,5 +58,6 @@ contract InsurancePool is Ownable {
 
     receive() external payable {
         balances[address(0)] += msg.value;
+        totalInsurancePool[address(0)] += msg.value;
     }
 }
