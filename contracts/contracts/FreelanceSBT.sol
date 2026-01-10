@@ -5,32 +5,51 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
+/**
+ * @title IERC5192
+ * @notice Interface for Minimal Soulbound NFTs as per ERC-5192.
+ */
 interface IERC5192 {
+    /// @notice Emitted when a token is locked (cannot be transferred)
     event Locked(uint256 tokenId);
+    /// @notice Emitted when a token is unlocked (can be transferred)
     event Unlocked(uint256 tokenId);
+    /// @notice Returns the locking status of an NFT
     function locked(uint256 tokenId) external view returns (bool);
 }
 
 /**
  * @title FreelanceSBT
- * @dev Soulbound Token (non-transferable) for freelancer reputation and ratings.
- * Each token representing a successfully completed job and its associated rating.
+ * @author PolyLance Team
+ * @notice Soulbound Token (non-transferable) for freelancer reputation and ratings.
+ * @dev Implements ERC-721 with non-transferability (Soulbound) and ERC-5192 locking events.
+ * Tokens represent completed jobs and their associated persistent ratings.
  */
 contract FreelanceSBT is ERC721, ERC721URIStorage, AccessControl, IERC5192 {
+    /// @notice Role authorized to mint reputation tokens (usually the Escrow contract)
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+    
+    /// @dev Counter for unique reputation token IDs
     uint256 private _nextTokenId;
 
+    /// @notice Error thrown when a transfer of a Soulbound token is attempted
     error SoulboundTokenNonTransferable();
 
+    /**
+     * @notice Initializes the FreelanceSBT contract
+     * @param defaultAdmin Address for the primary administrator
+     * @param minter Initial address granted the MINTER_ROLE
+     */
     constructor(address defaultAdmin, address minter) ERC721("Freelance Reputation", "FREP") {
         _grantRole(DEFAULT_ADMIN_ROLE, defaultAdmin);
         _grantRole(MINTER_ROLE, minter);
     }
 
     /**
-     * @dev Mints a reputation token to a freelancer.
-     * @param to The freelancer address.
-     * @param uri The IPFS hash (CID) of the job metadata and rating.
+     * @notice Mints a reputation token (Soulbound) to a freelancer
+     * @dev Only callable by addresses with MINTER_ROLE
+     * @param to The freelancer's wallet address
+     * @param uri IPFS CID containing job completion and rating metadata
      */
     function safeMint(address to, string memory uri) public onlyRole(MINTER_ROLE) {
         uint256 tokenId = _nextTokenId++;
@@ -40,8 +59,8 @@ contract FreelanceSBT is ERC721, ERC721URIStorage, AccessControl, IERC5192 {
     }
 
     /**
-     * @dev Overrides the _update function to prevent any transfers after minting.
-     * Only allow minting (from address(0)) and burning (to address(0)).
+     * @dev Internal hook to prevent transfers (Soulbound logic)
+     * Reverts if 'from' and 'to' are both non-zero (indicating a transfer rather than mint/burn)
      */
     function _update(address to, uint256 tokenId, address auth) internal override returns (address) {
         address from = _ownerOf(tokenId);
@@ -51,13 +70,22 @@ contract FreelanceSBT is ERC721, ERC721URIStorage, AccessControl, IERC5192 {
         return super._update(to, tokenId, auth);
     }
 
+    /**
+     * @notice Checks if a token is locked as per ERC-5192
+     * @param tokenId The ID of the token to check
+     * @return bool Always returns true for minted tokens in this SBT implementation
+     */
     function locked(uint256 tokenId) external view override returns (bool) {
-        require(_ownerOf(tokenId) != address(0), "Nonexistent token");
+        if (_ownerOf(tokenId) == address(0)) revert("Nonexistent token");
         return true;
     }
 
     // --- Overrides required by Solidity ---
 
+    /**
+     * @notice Returns the URI for a given token ID
+     * @param tokenId The ID of the token
+     */
     function tokenURI(uint256 tokenId)
         public
         view
@@ -67,6 +95,10 @@ contract FreelanceSBT is ERC721, ERC721URIStorage, AccessControl, IERC5192 {
         return super.tokenURI(tokenId);
     }
 
+    /**
+     * @notice Standard interface support check
+     * @param interfaceId The interface identifier
+     */
     function supportsInterface(bytes4 interfaceId)
         public
         view

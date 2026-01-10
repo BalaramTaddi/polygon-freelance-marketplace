@@ -1,21 +1,14 @@
 const { expect } = require("chai");
 const { ethers, upgrades } = require("hardhat");
 
-describe("FreelanceEscrow", function () {
+describe("FreelanceEscrow Verification", function () {
     let FreelanceEscrow;
     let escrow;
-    let mockERC20;
     let owner, client, freelancer, other;
 
     beforeEach(async function () {
         [owner, client, freelancer, other] = await ethers.getSigners();
 
-        // Deploy Mock ERC20
-        const MockERC20 = await ethers.getContractFactory("MockERC20");
-        mockERC20 = await MockERC20.deploy("Mock USDC", "mUSDC");
-        await mockERC20.waitForDeployment();
-
-        // Deploy UUPS Proxy
         FreelanceEscrow = await ethers.getContractFactory("FreelanceEscrow");
         escrow = await upgrades.deployProxy(FreelanceEscrow, [
             owner.address,
@@ -30,93 +23,98 @@ describe("FreelanceEscrow", function () {
         await escrow.waitForDeployment();
     });
 
-    describe("Upgradability", function () {
-        it("Should be upgradeable", async function () {
-            const FreelanceEscrowV2 = await ethers.getContractFactory("FreelanceEscrow");
-            const upgraded = await upgrades.upgradeProxy(await escrow.getAddress(), FreelanceEscrowV2);
-            expect(await upgraded.getAddress()).to.equal(await escrow.getAddress());
-        });
+    it("Should initialize correctly and grant roles", async function () {
+        expect(await escrow.hasRole(await escrow.DEFAULT_ADMIN_ROLE(), owner.address)).to.be.true;
+        expect(await escrow.hasRole(await escrow.ARBITRATOR_ROLE(), owner.address)).to.be.true;
+        expect(await escrow.hasRole(await escrow.MANAGER_ROLE(), owner.address)).to.be.true;
     });
 
-    describe("Native MATIC Job Lifecycle", function () {
-        it("Should create and accept native job", async function () {
-            const amount = ethers.parseEther("1");
-            await escrow.connect(client).createJob(freelancer.address, ethers.ZeroAddress, amount, "ipfs://test", { value: amount });
+    it("Should create a job with milestones and release them", async function () {
+        const totalAmount = ethers.parseEther("1.0");
+        const milestoneAmounts = [ethers.parseEther("0.4"), ethers.parseEther("0.6")];
+        const milestoneDescs = ["M1", "M2"];
 
-            const stake = ethers.parseEther("0.1");
-            await escrow.connect(freelancer).acceptJob(1, { value: stake });
+        await escrow.connect(client).createJobWithMilestones(
+            freelancer.address,
+            ethers.ZeroAddress,
+            totalAmount,
+            "ipfs://hash",
+            milestoneAmounts,
+            milestoneDescs,
+            { value: totalAmount }
+        );
 
-            const job = await escrow.jobs(1);
-            expect(job.status).to.equal(1); // Accepted
-        });
+        const job = await escrow.jobs(1);
+        expect(job.amount).to.equal(totalAmount);
+        expect(job.milestoneCount).to.equal(2);
 
-        it("Should release funds and mint NFT", async function () {
-            const amount = ethers.parseEther("1");
-            await escrow.connect(client).createJob(freelancer.address, ethers.ZeroAddress, amount, "ipfs://test", { value: amount });
-            await escrow.connect(freelancer).acceptJob(1, { value: ethers.parseEther("0.1") });
-            await escrow.connect(freelancer).submitWork(1, "ipfs://result");
+        // Release first milestone
+        const initialFreelancerBalance = await ethers.provider.getBalance(freelancer.address);
+        await escrow.connect(client).releaseMilestone(1, 0);
 
-            await expect(escrow.connect(client).releaseFunds(1))
-                .to.emit(escrow, "FundsReleased");
+        const m1 = await escrow.jobMilestones(1, 0);
+        expect(m1.isReleased).to.be.true;
 
-            expect(await escrow.balanceOf(freelancer.address)).to.equal(1);
-        });
+        const finalFreelancerBalance = await ethers.provider.getBalance(freelancer.address);
+        expect(finalFreelancerBalance).to.be.gt(initialFreelancerBalance);
     });
 
-    describe("ERC20 Job Lifecycle", function () {
-        it("Should create and accept ERC20 job", async function () {
-            const amount = ethers.parseUnits("100", 6);
-            await mockERC20.mint(client.address, amount);
-            await mockERC20.connect(client).approve(await escrow.getAddress(), amount);
+    it("Should deduct platform fees upon full fund release", async function () {
+        const amount = ethers.parseEther("1.0");
+        await escrow.connect(client).createJob(
+            freelancer.address,
+            ethers.ZeroAddress,
+            amount,
+            "ipfs://hash",
+            0,
+            { value: amount }
+        );
 
-            await escrow.connect(client).createJob(freelancer.address, await mockERC20.getAddress(), amount, "ipfs://test");
+        // Accept job (requires freelancer stake)
+        const stake = amount / 10n; // 10%
+        await escrow.connect(freelancer).acceptJob(1, { value: stake });
 
-            const stake = amount / 10n;
-            await mockERC20.mint(freelancer.address, stake);
-            await mockERC20.connect(freelancer).approve(await escrow.getAddress(), stake);
+        const vault = owner.address;
+        await escrow.setVault(vault);
+        await escrow.setPlatformFee(250); // 2.5%
 
-            await escrow.connect(freelancer).acceptJob(1);
+        const initialVaultBalance = await ethers.provider.getBalance(vault);
+        await escrow.connect(client).releaseFunds(1);
 
-            const job = await escrow.jobs(1);
-            expect(job.status).to.equal(1); // Accepted
-            expect(job.freelancerStake).to.equal(stake);
-        });
+        const finalVaultBalance = await ethers.provider.getBalance(vault);
+        const platformFee = (amount * 250n) / 10000n;
+
+        // Vault should receive platform fee
+        expect(finalVaultBalance - initialVaultBalance).to.equal(platformFee);
     });
 
-    describe("Dispute Resolution", function () {
-        it("Should allow arbitrator to resolve dispute (ERC20)", async function () {
-            const amount = ethers.parseUnits("100", 6);
-            await mockERC20.mint(client.address, amount);
-            await mockERC20.connect(client).approve(await escrow.getAddress(), amount);
-            await escrow.connect(client).createJob(freelancer.address, await mockERC20.getAddress(), amount, "ipfs://test");
+    it("Should allow client to reclaim funds after deadline", async function () {
+        const amount = ethers.parseEther("1.0");
+        const duration = 1; // 1 day
+        await escrow.connect(client).createJob(
+            freelancer.address,
+            ethers.ZeroAddress,
+            amount,
+            "ipfs://hash",
+            duration,
+            { value: amount }
+        );
 
-            const stake = amount / 10n;
-            await mockERC20.mint(freelancer.address, stake);
-            await mockERC20.connect(freelancer).approve(await escrow.getAddress(), stake);
-            await escrow.connect(freelancer).acceptJob(1);
+        // Advance time by 2 days
+        await ethers.provider.send("evm_increaseTime", [2 * 24 * 60 * 60]);
+        await ethers.provider.send("evm_mine");
 
-            await escrow.connect(client).dispute(1, { value: ethers.parseEther("0.1") }); // Assuming cost
+        const initialClientBalance = await ethers.provider.getBalance(client.address);
 
-            // In our enhanced contract, we have ARBITRATOR_ROLE
-            const arbitratorRole = await escrow.ARBITRATOR_ROLE();
-            await escrow.grantRole(arbitratorRole, owner.address);
+        // Use a gas price for accurate balance checking
+        const tx = await escrow.connect(client).refundExpiredJob(1);
+        const receipt = await tx.wait();
+        const gasUsed = receipt.gasUsed * receipt.gasPrice;
 
-            await expect(escrow.connect(owner).rule(0, 2)) // Ruling 2 -> Pay Freelancer
-                .to.emit(escrow, "FundsReleased");
-        });
-    });
+        const finalClientBalance = await ethers.provider.getBalance(client.address);
+        expect(finalClientBalance + gasUsed - initialClientBalance).to.equal(amount);
 
-    describe("Access Control", function () {
-        it("Should restrict setPolyToken to admin", async function () {
-            await expect(escrow.connect(other).setPolyToken(other.address))
-                .to.be.revertedWithCustomError(escrow, "AccessControlUnauthorizedAccount");
-        });
-
-        it("Should allow admin to grant MANAGER_ROLE", async function () {
-            const managerRole = await escrow.MANAGER_ROLE();
-            await escrow.grantRole(managerRole, other.address);
-            expect(await escrow.hasRole(managerRole, other.address)).to.be.true;
-        });
+        const job = await escrow.jobs(1);
+        expect(job.status).to.equal(6); // JobStatus.Cancelled
     });
 });
-

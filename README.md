@@ -64,25 +64,81 @@ VITE_CONTRACT_ADDRESS=your_deployed_address
 ## 🛡️ Security
 PolyLance has undergone initial security auditing. See [AUDIT.md](contracts/AUDIT.md) for detailed findings and remediation steps.
 
-## 📜 Contract Architecture
+## 🏗️ Technical Architecture
+
+PolyLance is designed with a modular, upgradeable architecture to ensure long-term sustainability and security.
+
+### System Overview (Mermaid)
+
 ```mermaid
-sequenceDiagram
-    actor Client
-    actor Freelancer
-    participant Contract as FreelanceEscrow
+graph TD
+    User[Freelancer / Client] -->|Connect| Frontend[React + Vite + Wagmi]
+    Frontend -->|Interacts| Escrow[FreelanceEscrow Proxy]
     
-    Client->>Contract: createJob(token, amount)
-    Note right of Client: Funds Locked
-    
-    Freelancer->>Contract: acceptJob(jobId)
-    Note right of Freelancer: 10% Stake Locked
-    
-    Freelancer->>Contract: submitWork(ipfsURI)
-    
-    Client->>Contract: releaseFunds(jobId)
-    Contract->>Freelancer: Transfer Payment + Stake
-    Contract->>Freelancer: Mint NFT (Proof-of-Work)
+    subgraph "Core Smart Contracts (Polygon)"
+        Escrow -->|Mint Proof-of-Work| ERC721[FWORK NFT]
+        Escrow -->|Rewards| PolyToken[POLY Utility Token]
+        Escrow -->|SBT Rewards| SBT[PolyCompletionSBT]
+        Escrow -->|Fee Collection| Insurance[InsurancePool]
+        Escrow -->|Levels| Reputation[FreelancerReputation]
+    end
+
+    subgraph "External Integrations"
+        Escrow -->|Dispute Resolution| Kleros[Kleros Arbitrator]
+        Escrow -->|Price Feeds| Chainlink[Chainlink Oracles]
+        Escrow -->|Cross-Chain jobs| CCIP[Chainlink CCIP]
+        Frontend -->|Messaging| XMTP[XMTP Network]
+    end
+
+    subgraph "Data & Indexing"
+        Escrow -.->|Events| Subgraph[The Graph / Subgraph]
+        Subgraph -.->|Query| Frontend
+    end
 ```
 
+### Job Lifecycle
+
+1.  **Creation**: Client creates a job, locking funds (MATIC/USDC/DAI) in the `FreelanceEscrow` contract.
+2.  **Application**: Freelancers apply by providing a 5% commitment stake.
+3.  **Selection**: Client picks a freelancer. Selected freelancer's stake remains locked (upped to 10%), while others are refunded.
+4.  **Submission**: Freelancer submits work via IPFS hash.
+5.  **Completion**: Client approves work. Funds are released, any remaining stake is returned, and a **Proof-of-Work NFT** + **Completion SBT** are minted.
+6.  **Dispute**: If conflict arises, either party can trigger arbitration.
+
+## 🛡️ Security Features
+
+-   **Proxy Pattern**: UUPS (Universal Upgradeable Proxy Standard) for contract maintainability.
+-   **Role-Based Access Control**: Granular roles for `ARBITRATOR`, `MANAGER`, and `ADMIN`.
+-   **Emergency Stop**: Pausalbe mechanism for critical functions.
+-   **Reentrancy Protection**: Industry-standard guards on all state-changing functions.
+-   **Meta-Transactions**: Support for gasless interactions via ERC-2771.
+
+## 🚀 Deployment & Development
+
+### Local Setup
+
+1. **Install Dependencies**
+   ```bash
+   npm install
+   cd contracts && npm install
+   cd ../frontend && npm install
+   ```
+
+2. **Environment Variables**
+   Copy `.env.example` to `.env` in the `contracts` and `frontend` directories.
+
+3. **Run Tests**
+   ```bash
+   cd contracts
+   npx hardhat test
+   ```
+
+4. **Start Development Frontend**
+   ```bash
+   cd frontend
+   npm run dev
+   ```
+
 ## 📄 License
+
 Distributed under the MIT License. See `LICENSE` for more information.

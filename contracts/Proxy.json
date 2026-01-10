@@ -1,9 +1,0 @@
-{
-  "abi": [
-    {
-      "stateMutability": "payable",
-      "type": "fallback"
-    }
-  ],
-  "bytecode": ""
-}

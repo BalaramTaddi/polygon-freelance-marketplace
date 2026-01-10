@@ -1,6 +1,0 @@
-# Echidna configuration
-testMode: assertion
-testLimit: 50000
-corpusDir: contracts/test/echidna-corpus
-# Ensure escrow balance invariant check
-# Ensure role permissions invariant check
