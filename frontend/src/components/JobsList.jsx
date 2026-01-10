@@ -1,19 +1,17 @@
 import React from 'react';
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { motion } from 'framer-motion';
-import { Briefcase, CheckCircle, ExternalLink, RefreshCcw } from 'lucide-react';
+import { Briefcase, CheckCircle, ExternalLink, RefreshCcw, AlertCircle, MessageSquare, Search, Filter, ArrowUpDown } from 'lucide-react';
 import FreelanceEscrowABI from '../contracts/FreelanceEscrow.json';
 import { formatEther, formatUnits, parseUnits, erc20Abi } from 'viem';
 import { CONTRACT_ADDRESS, SUPPORTED_TOKENS } from '../constants';
 import { api } from '../services/api';
 import UserLink from './UserLink';
 import { checkRiskLevel } from '../utils/riskMitigation';
-import { AlertCircle } from 'lucide-react';
 import { useTransactionToast } from '../hooks/useTransactionToast';
 import { uploadJSONToIPFS } from '../utils/ipfs';
 import { useEthersSigner } from '../hooks/useEthersSigner';
 import { createBiconomySmartAccount, submitWorkGasless } from '../utils/biconomy';
-
 
 const statusLabels = ['Created', 'Accepted', 'Ongoing', 'Disputed', 'Completed', 'Cancelled'];
 
@@ -32,82 +30,111 @@ function JobsList({ onUserClick, onSelectChat, gasless }) {
     });
 
     const count = jobCount ? Number(jobCount) : 0;
-
-    // Create array of IDs and sort them (assuming descending for newest)
     const jobIds = Array.from({ length: count }, (_, i) => i + 1);
     if (sortBy === 'Newest') jobIds.reverse();
 
     return (
-        <div>
-            <div className="glass-card" style={{ marginBottom: '30px', padding: '20px' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', gap: '15px', alignItems: 'center' }}>
-                    <input
-                        type="text"
-                        placeholder="Search jobs..."
-                        className="input-field"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        style={{ margin: 0 }}
-                    />
+        <div className="container" style={{ padding: 0 }}>
+            {/* Advanced Filter Bar */}
+            <div className="glass-card" style={{ marginBottom: '32px', padding: '24px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1fr 0.8fr', gap: '16px', alignItems: 'center' }}>
+                    <div style={{ position: 'relative' }}>
+                        <Search size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)' }} />
+                        <input
+                            type="text"
+                            placeholder="Search high-end gigs..."
+                            className="input-field"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            style={{ paddingLeft: '44px' }}
+                        />
+                    </div>
+
+                    <div style={{ position: 'relative' }}>
+                        <Filter size={16} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)' }} />
+                        <select
+                            className="input-field"
+                            style={{ paddingLeft: '40px', appearance: 'none' }}
+                            value={filter}
+                            onChange={(e) => setFilter(e.target.value)}
+                        >
+                            <option>All Categories</option>
+                            <option>Development</option>
+                            <option>Design</option>
+                            <option>Marketing</option>
+                            <option>Writing</option>
+                        </select>
+                    </div>
+
                     <select
                         className="input-field"
-                        style={{ margin: 0 }}
-                        value={filter}
-                        onChange={(e) => setFilter(e.target.value)}
-                    >
-                        <option>All Categories</option>
-                        <option>Development</option>
-                        <option>Design</option>
-                        <option>Marketing</option>
-                        <option>Writing</option>
-                    </select>
-                    <select
-                        className="input-field"
-                        style={{ margin: 0 }}
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}
                     >
                         <option value="All">All Statuses</option>
-                        <option value="0">Open</option>
-                        <option value="2">Ongoing</option>
-                        <option value="4">Completed</option>
-                        <option value="3">Disputed</option>
+                        <option value="0">Open 🟢</option>
+                        <option value="2">Ongoing ⏳</option>
+                        <option value="4">Completed ✨</option>
+                        <option value="3">Disputed ⚖️</option>
                     </select>
-                    <select
-                        className="input-field"
-                        style={{ margin: 0 }}
-                        value={sortBy}
-                        onChange={(e) => setSortBy(e.target.value)}
-                    >
-                        <option>Newest</option>
-                        <option>Oldest</option>
-                        <option>Budget: High to Low</option>
-                    </select>
+
+                    <div style={{ position: 'relative' }}>
+                        <ArrowUpDown size={16} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)' }} />
+                        <select
+                            className="input-field"
+                            style={{ paddingLeft: '40px', appearance: 'none' }}
+                            value={sortBy}
+                            onChange={(e) => setSortBy(e.target.value)}
+                        >
+                            <option>Newest</option>
+                            <option>Oldest</option>
+                            <option>Budget: High to Low</option>
+                        </select>
+                    </div>
+
                     <input
                         type="number"
-                        placeholder="Min MATIC"
+                        placeholder="Min Budget"
                         className="input-field"
                         value={minBudget}
                         onChange={(e) => setMinBudget(e.target.value)}
-                        style={{ margin: 0 }}
                     />
                 </div>
             </div>
 
-            <div className="grid">
+            <div className="grid-marketplace">
                 {count === 0 ? (
-                    <div className="glass-card" style={{ textAlign: 'center', padding: '60px', gridColumn: '1 / -1' }}>
-                        <Briefcase size={48} style={{ color: 'var(--text-muted)', marginBottom: '20px', opacity: 0.5 }} />
-                        <h3 style={{ color: 'var(--text-muted)' }}>No jobs published yet</h3>
-                        <p style={{ color: 'var(--text-muted)', marginTop: '8px' }}>Be the first to post a new gig on the marketplace.</p>
+                    <div className="glass-card" style={{ textAlign: 'center', padding: '80px', gridColumn: '1 / -1' }}>
+                        <motion.div
+                            initial={{ scale: 0.8, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            transition={{ duration: 0.5 }}
+                        >
+                            <div style={{
+                                width: '80px',
+                                height: '80px',
+                                background: 'rgba(99, 102, 241, 0.1)',
+                                borderRadius: '24px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                margin: '0 auto 24px auto'
+                            }}>
+                                <Briefcase size={40} style={{ color: 'var(--primary)' }} />
+                            </div>
+                            <h2 style={{ fontSize: '1.5rem', marginBottom: '12px' }}>No opportunities found</h2>
+                            <p style={{ color: 'var(--text-muted)', maxWidth: '400px', margin: '0 auto' }}>
+                                Be the pioneer. Post the first high-quality job and start building the future of decentralized work.
+                            </p>
+                        </motion.div>
                     </div>
                 ) : (
                     jobIds.map((id, i) => (
                         <motion.div
                             key={id}
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ delay: i * 0.05 }}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: i * 0.05, duration: 0.4 }}
                         >
                             <JobCard
                                 jobId={id}
@@ -132,6 +159,7 @@ function JobCard({ jobId, categoryFilter, searchQuery, minBudget, statusFilter, 
     const [metadata, setMetadata] = React.useState(null);
     const [matchScore, setMatchScore] = React.useState(null);
     const [isApproving, setIsApproving] = React.useState(false);
+
     const { data: job, refetch } = useReadContract({
         address: CONTRACT_ADDRESS,
         abi: FreelanceEscrowABI.abi,
@@ -172,14 +200,6 @@ function JobCard({ jobId, categoryFilter, searchQuery, minBudget, statusFilter, 
         fetchMetadata();
     }, [jobId, address]);
 
-    const [freelancerProfile, setFreelancerProfile] = React.useState(null);
-
-    React.useEffect(() => {
-        if (freelancer && freelancer !== '0x0000000000000000000000000000000000000000') {
-            api.getProfile(freelancer).then(setFreelancerProfile).catch(console.error);
-        }
-    }, [freelancer]);
-
     if (!job) return null;
 
     const [id, client, freelancer, token, amount, freelancerStake, totalPaidOut, status, resultUri, paid, deadline, milestoneCount] = job;
@@ -187,50 +207,21 @@ function JobCard({ jobId, categoryFilter, searchQuery, minBudget, statusFilter, 
     const currency = tokenInfo.symbol;
     const decimals = tokenInfo.decimals;
 
-    const { data: review } = useReadContract({
-        address: CONTRACT_ADDRESS,
-        abi: FreelanceEscrowABI.abi,
-        functionName: 'reviews',
-        args: [BigInt(jobId)],
-    });
-
     // Filter logic
-    const matchesCategory = categoryFilter === 'All Categories' || categoryFilter === 'All' || metadata?.category === categoryFilter;
-    const matchesSearch = !searchQuery ||
+    const categoryMatches = categoryFilter === 'All Categories' || categoryFilter === 'All' || metadata?.category === categoryFilter;
+    const searchMatches = !searchQuery ||
         metadata?.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         metadata?.description?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesBudget = !minBudget || Number(formatUnits(amount, decimals)) >= Number(minBudget);
-    const matchesStatus = statusFilter === 'All' || status.toString() === statusFilter;
+    const budgetMatches = !minBudget || Number(formatUnits(amount, decimals)) >= Number(minBudget);
+    const statusMatches = statusFilter === 'All' || status.toString() === statusFilter;
 
-    if (!matchesCategory || !matchesSearch || !matchesBudget || !matchesStatus) {
-        return null;
-    }
+    if (!categoryMatches || !searchMatches || !budgetMatches || !statusMatches) return null;
 
     const isClient = address?.toLowerCase() === client.toLowerCase();
     const isFreelancer = address?.toLowerCase() === freelancer.toLowerCase();
     const isArbitrator = address?.toLowerCase() === arbitrator?.toLowerCase();
 
-    const handleApproveStake = async () => {
-        if (token === '0x0000000000000000000000000000000000000000') return;
-        setIsApproving(true);
-        try {
-            const requiredStake = (amount * 10n) / 100n;
-            await writeContract({
-                address: token,
-                abi: erc20Abi,
-                functionName: 'approve',
-                args: [CONTRACT_ADDRESS, requiredStake],
-            });
-        } finally {
-            setIsApproving(false);
-        }
-    };
-
     const handleAccept = () => {
-        if (gasless) {
-            alert('Gasless Mode: Platform will sponsor your job acceptance!');
-            // Implementation note: Sign meta-tx and send to relayer
-        }
         const requiredStake = (amount * 10n) / 100n;
         writeContract({
             address: CONTRACT_ADDRESS,
@@ -250,369 +241,125 @@ function JobCard({ jobId, categoryFilter, searchQuery, minBudget, statusFilter, 
         });
     };
 
-    const signer = useEthersSigner();
-    const [smartAccount, setSmartAccount] = React.useState(null);
-
-    React.useEffect(() => {
-        if (gasless && signer && !smartAccount) {
-            createBiconomySmartAccount(signer).then(setSmartAccount).catch(console.error);
-        }
-    }, [gasless, signer, smartAccount]);
-
     const handleSubmit = async () => {
-        const text = prompt('Enter your work summary or description:');
+        const text = prompt('Enter your work summary:');
         if (!text) return;
 
         let ipfsHash = text;
         try {
-            const metadata = {
+            ipfsHash = await uploadJSONToIPFS({
                 type: 'work_submission',
                 jobId,
                 freelancer: address,
                 content: text,
                 timestamp: Date.now()
-            };
-            ipfsHash = await uploadJSONToIPFS(metadata);
-        } catch (err) {
-            console.error('IPFS upload failed, using raw text:', err);
-        }
-
-        if (gasless && smartAccount) {
-            try {
-                alert('Gasless Submission: Biconomy will sponsor this transaction!');
-                const txHash = await submitWorkGasless(
-                    smartAccount,
-                    CONTRACT_ADDRESS,
-                    FreelanceEscrowABI.abi,
-                    BigInt(jobId),
-                    ipfsHash
-                );
-                console.log('Gasless submission successful:', txHash);
-                refetch();
-            } catch (err) {
-                console.error('Gasless submission failed, falling back to standard:', err);
-                writeContract({
-                    address: CONTRACT_ADDRESS,
-                    abi: FreelanceEscrowABI.abi,
-                    functionName: 'submitWork',
-                    args: [BigInt(jobId), ipfsHash],
-                });
-            }
-        } else {
-            writeContract({
-                address: CONTRACT_ADDRESS,
-                abi: FreelanceEscrowABI.abi,
-                functionName: 'submitWork',
-                args: [BigInt(jobId), ipfsHash],
             });
-        }
-    };
-
-    const handleResolve = (winnerAddr) => {
-        const freelancerPay = winnerAddr.toLowerCase() === freelancer.toLowerCase() ? (amount + freelancerStake) : 0n;
-        writeContract({
-            address: CONTRACT_ADDRESS,
-            abi: FreelanceEscrowABI.abi,
-            functionName: 'resolveDispute',
-            args: [BigInt(jobId), winnerAddr, freelancerPay],
-        });
-    };
-
-    const { data: arbitrationCost } = useReadContract({
-        address: CONTRACT_ADDRESS,
-        abi: FreelanceEscrowABI.abi,
-        functionName: 'arbitrationCost', // Assuming a helper view in contract or just read from arbitrator
-    });
-
-    const handleDispute = () => {
-        const cost = arbitrationCost || 0n; // Fallback or read directly
-        writeContract({
-            address: CONTRACT_ADDRESS,
-            abi: FreelanceEscrowABI.abi,
-            functionName: 'dispute',
-            args: [BigInt(jobId)],
-            value: cost,
-        });
-    };
-
-    const handleReleaseMilestone = (mId) => {
-        writeContract({
-            address: CONTRACT_ADDRESS,
-            abi: FreelanceEscrowABI.abi,
-            functionName: 'releaseMilestone',
-            args: [BigInt(jobId), BigInt(mId)],
-        });
-    };
-
-    const handleRefundExpired = () => {
-        writeContract({
-            address: CONTRACT_ADDRESS,
-            abi: FreelanceEscrowABI.abi,
-            functionName: 'refundExpiredJob',
-            args: [BigInt(jobId)],
-        });
-    };
-
-    const handleReview = async () => {
-        const rating = prompt('Enter rating (1-5):');
-        const comment = prompt('Enter your feedback:');
-        if (!rating || !comment) return;
-
-        let ipfsHash = comment;
-        try {
-            const metadata = {
-                type: 'review',
-                jobId,
-                client: address,
-                rating,
-                comment,
-                timestamp: Date.now()
-            };
-            ipfsHash = await uploadJSONToIPFS(metadata);
-        } catch (err) {
-            console.error('IPFS upload failed, using raw text:', err);
-        }
+        } catch (err) { console.error(err); }
 
         writeContract({
             address: CONTRACT_ADDRESS,
             abi: FreelanceEscrowABI.abi,
-            functionName: 'submitReview',
-            args: [BigInt(jobId), parseInt(rating), ipfsHash],
+            functionName: 'submitWork',
+            args: [BigInt(jobId), ipfsHash],
         });
-    };
-
-    const getMatchColor = (score) => {
-        if (score > 0.8) return '#10b981';
-        if (score > 0.5) return '#f59e0b';
-        return 'var(--text-muted)';
     };
 
     return (
-        <div className="glass-card" style={{ position: 'relative' }}>
-            {matchScore !== null && status === 0 && (
-                <div style={{
-                    position: 'absolute',
-                    top: '-10px',
-                    right: '10px',
-                    background: getMatchColor(matchScore),
-                    color: 'white',
-                    fontSize: '0.7rem',
-                    padding: '4px 8px',
-                    borderRadius: '20px',
-                    fontWeight: 'bold',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    zIndex: 10
-                }}>
-                    ✨ AI Match: {Math.round(matchScore * 100)}%
+        <div className="glass-card" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+                <div className={`badge ${status === 3 ? 'badge-warning' : 'badge-info'}`}>
+                    {statusLabels[status]}
                 </div>
-            )}
-
-            {metadata && checkRiskLevel(metadata.title, metadata.description).isSuspicious && (
-                <div style={{
-                    background: 'rgba(239, 68, 68, 0.1)',
-                    border: '1px solid #ef4444',
-                    color: '#ef4444',
-                    borderRadius: '8px',
-                    padding: '10px',
-                    marginBottom: '15px',
-                    fontSize: '0.8rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px'
-                }}>
-                    <AlertCircle size={16} />
-                    <strong>Warning:</strong> Potential high-risk job detected. Avoid sharing private keys or paying outside the platform.
-                </div>
-            )}
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px' }}>
-                <div className={`badge ${status === 3 ? 'dispute-badge' : ''}`}>{statusLabels[status]}</div>
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    {deadline > 0n && (
-                        <span className="badge" style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderColor: '#ef4444', border: '1px solid', fontSize: '0.7rem' }}>
-                            {Math.floor(Date.now() / 1000) > Number(deadline) ? 'Expired' : `Due: ${new Date(Number(deadline) * 1000).toLocaleDateString()}`}
-                        </span>
+                <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '1.25rem', fontWeight: '800', color: 'var(--text-main)', fontFamily: 'Outfit' }}>
+                        {formatUnits(amount, decimals)} {currency}
+                    </div>
+                    {matchScore !== null && status === 0 && (
+                        <div style={{ fontSize: '0.75rem', color: 'var(--accent)', fontWeight: '700', marginTop: '4px' }}>
+                            ✨ {Math.round(matchScore * 100)}% Match
+                        </div>
                     )}
-                    <span className="badge" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', borderColor: '#10b981', border: '1px solid' }}>🛡️ Insured</span>
-                    <span style={{ fontWeight: '600' }}>{formatUnits(amount, decimals)} {currency}</span>
                 </div>
             </div>
 
-            <h3 style={{ marginBottom: '5px' }}>{metadata?.title || `Job #${jobId}`}</h3>
-            {metadata?.category && (
-                <span style={{ fontSize: '0.8rem', color: 'var(--primary)', fontWeight: '600', display: 'block', marginBottom: '10px' }}>
-                    {metadata.category}
-                </span>
-            )}
+            <h3 style={{ fontSize: '1.2rem', marginBottom: '8px', color: 'var(--text-main)' }}>
+                {metadata?.title || `Premium Gig #${jobId}`}
+            </h3>
 
-            <p style={{ fontSize: '0.9rem', marginBottom: '15px', color: 'var(--text)' }}>
-                {metadata?.description || 'No description provided.'}
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                <span className="badge" style={{ background: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-dim)', fontSize: '0.7rem' }}>
+                    {metadata?.category || 'General'}
+                </span>
+                {deadline > 0n && (
+                    <span className="badge" style={{
+                        background: Math.floor(Date.now() / 1000) > Number(deadline) ? 'rgba(239, 68, 68, 0.1)' : 'rgba(255, 255, 255, 0.05)',
+                        color: Math.floor(Date.now() / 1000) > Number(deadline) ? 'var(--danger)' : 'var(--text-dim)',
+                        fontSize: '0.7rem'
+                    }}>
+                        🕒 {new Date(Number(deadline) * 1000).toLocaleDateString()}
+                    </span>
+                )}
+            </div>
+
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', lineHeight: '1.6', marginBottom: '24px', flex: 1 }}>
+                {metadata?.description?.slice(0, 160) || 'Secure decentralized work agreement with automated escrow protection.'}
+                {metadata?.description?.length > 160 && '...'}
             </p>
 
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '15px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                    <p style={{ cursor: 'pointer', margin: 0 }} onClick={() => onUserClick(client)}>
-                        Client: <UserLink address={client} />
-                    </p>
-                    {!isClient && (
-                        <button
-                            onClick={() => onSelectChat(client)}
-                            className="btn-secondary"
-                            style={{ padding: '4px 8px', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}
-                        >
-                            <MessageSquare size={12} /> Chat
-                        </button>
-                    )}
+            <div style={{ padding: '16px', borderRadius: '16px', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid var(--glass-border)', marginBottom: '24px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'linear-gradient(45deg, #6366f1, #a855f7)' }} />
+                        <span style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}>Client:</span>
+                        <UserLink address={client} style={{ fontSize: '0.85rem' }} />
+                    </div>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <p style={{ cursor: 'pointer', margin: 0 }} onClick={() => onUserClick(freelancer)}>
-                            Freelancer: {freelancer === '0x0000000000000000000000000000000000000000' ? 'Unassigned' : <UserLink address={freelancer} />}
-                        </p>
-                        {freelancerProfile?.reputationScore > 0 && (
-                            <span className="badge" style={{ fontSize: '0.65rem', padding: '2px 6px', background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', border: '1px solid #f59e0b' }}>
-                                ⭐ {freelancerProfile.reputationScore}
-                            </span>
+                        <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: freelancer !== '0x0000000000000000000000000000000000000000' ? 'linear-gradient(45deg, #10b981, #3b82f6)' : '#334155' }} />
+                        <span style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}>Pro:</span>
+                        {freelancer === '0x0000000000000000000000000000000000000000' ? (
+                            <span style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}>Seeking...</span>
+                        ) : (
+                            <UserLink address={freelancer} style={{ fontSize: '0.85rem' }} />
                         )}
                     </div>
-                    {freelancer !== '0x0000000000000000000000000000000000000000' && !isFreelancer && (
-                        <button
-                            onClick={() => onSelectChat(freelancer)}
-                            className="btn-secondary"
-                            style={{ padding: '4px 8px', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '4px' }}
-                        >
-                            <MessageSquare size={12} /> Chat
-                        </button>
-                    )}
+                    {/* Chat Button Integration */}
+                    <button
+                        onClick={() => onSelectChat(isClient ? freelancer : client)}
+                        className="btn-ghost"
+                        style={{ padding: '6px 12px', fontSize: '0.75rem', borderRadius: '8px' }}
+                    >
+                        <MessageSquare size={14} />
+                    </button>
                 </div>
             </div>
 
-            {resultUri && (
-                <a
-                    href={resultUri}
-                    target="_blank"
-                    rel="noreferrer"
-                    style={{ display: 'flex', alignItems: 'center', gap: '5px', color: 'var(--primary)', marginBottom: '15px', textDecoration: 'none', fontSize: '0.9rem' }}
-                >
-                    <ExternalLink size={14} /> View Work Submission
-                </a>
-            )}
-
-            {Number(milestoneCount) > 0 && (
-                <div style={{ marginBottom: '20px', padding: '15px', background: 'rgba(0,0,0,0.05)', borderRadius: '8px' }}>
-                    <h4 style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '10px' }}>Milestones</h4>
-                    {Array.from({ length: Number(milestoneCount) }).map((_, idx) => (
-                        <MilestoneRow key={idx} jobId={jobId} mId={idx} isClient={isClient} tokenInfo={tokenInfo} onRelease={handleReleaseMilestone} />
-                    ))}
-                    <div style={{ fontSize: '0.8rem', marginTop: '10px', fontWeight: '600' }}>
-                        Paid: {formatUnits(totalPaidOut, decimals)} / {formatUnits(amount, decimals)} {currency}
-                    </div>
-                </div>
-            )}
-
-            {review && review[2] !== '0x0000000000000000000000000000000000000000' && (
-                <div style={{ padding: '15px', borderTop: '1px solid rgba(255,255,255,0.1)', marginTop: '15px' }}>
-                    <div style={{ display: 'flex', gap: '5px', color: '#fbbf24', marginBottom: '5px' }}>
-                        {'★'.repeat(review[0])}{'☆'.repeat(5 - review[0])}
-                    </div>
-                    <p style={{ fontSize: '0.85rem', fontStyle: 'italic' }}>"{review[1]}"</p>
-                </div>
-            )}
-
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                {isFreelancer && status === 0 && (
-                    <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                        {token !== '0x0000000000000000000000000000000000000000' && (
-                            <button onClick={handleApproveStake} className="btn-secondary" style={{ flex: 1 }} disabled={isPending || isConfirming || isApproving}>
-                                {isApproving ? 'Approving Stake...' : `Approve Stake (10% ${currency})`}
-                            </button>
-                        )}
-                        <button onClick={handleAccept} className="btn-primary" style={{ flex: 1 }} disabled={isPending || isConfirming || isApproving}>
-                            {isPending || isConfirming ? 'Staking...' : `Accept & Stake (10% ${currency})`}
-                        </button>
-                    </div>
+            <div style={{ display: 'flex', gap: '12px' }}>
+                {!isClient && !isFreelancer && status === 0 && (
+                    <button onClick={handleAccept} className="btn-primary" style={{ width: '100%' }} disabled={isPending || isConfirming}>
+                        Pick Gig
+                    </button>
                 )}
 
                 {isFreelancer && (status === 1 || status === 2) && (
-                    <button onClick={handleSubmit} className="btn-primary" style={{ flex: 1 }} disabled={isPending || isConfirming}>
-                        {isPending || isConfirming ? 'Processing...' : 'Submit Work'}
+                    <button onClick={handleSubmit} className="btn-primary" style={{ width: '100%' }} disabled={isPending || isConfirming}>
+                        Deliver Work
                     </button>
                 )}
 
                 {isClient && status === 2 && (
-                    <button onClick={handleRelease} className="btn-primary" style={{ flex: 1, background: 'linear-gradient(135deg, #10b981, #059669)' }} disabled={isPending || isConfirming}>
-                        {isPending || isConfirming ? 'Releasing...' : 'Approve & Pay'}
+                    <button onClick={handleRelease} className="btn-primary" style={{ width: '100%', background: 'var(--accent)' }} disabled={isPending || isConfirming}>
+                        Approve & Pay
                     </button>
                 )}
 
-                {(isClient || isFreelancer) && (status === 1 || status === 2) && (
-                    <button onClick={handleDispute} className="btn-secondary" style={{ flex: 1, borderColor: '#ef4444', color: '#ef4444' }} disabled={isPending || isConfirming}>
-                        Open Dispute
-                    </button>
-                )}
-
-                {isArbitrator && status === 3 && (
-                    <div style={{ width: '100%', display: 'flex', gap: '10px', marginTop: '10px' }}>
-                        <button onClick={() => handleResolve(client)} className="btn-secondary" style={{ flex: 1 }}>Refund Client</button>
-                        <button onClick={() => handleResolve(freelancer)} className="btn-primary" style={{ flex: 1 }}>Pay Freelancer</button>
+                {status === 4 && (
+                    <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: 'var(--accent)', fontWeight: '700' }}>
+                        <CheckCircle size={20} /> Project Completed
                     </div>
                 )}
             </div>
-
-            {isClient && status === 4 && (
-                <button onClick={handleReview} className="btn-secondary" style={{ width: '100%', marginTop: '15px' }}>
-                    Leave a Review
-                </button>
-            )}
-
-            {isClient && Number(deadline) > 0 && Math.floor(Date.now() / 1000) > Number(deadline) && (status === 0 || status === 1) && (
-                <button onClick={handleRefundExpired} className="btn-secondary" style={{ width: '100%', marginTop: '15px', borderColor: '#ef4444', color: '#ef4444' }} disabled={isPending || isConfirming}>
-                    {isPending || isConfirming ? 'Processing...' : 'Reclaim Funds (Expired)'}
-                </button>
-            )}
-
-            {status === 4 && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#10b981', marginTop: '10px' }}>
-                    <CheckCircle size={18} />
-                    <span>Success: Funds & Stake Distributed</span>
-                </div>
-            )}
-        </div>
-    );
-}
-
-function MilestoneRow({ jobId, mId, isClient, tokenInfo, onRelease }) {
-    const { data: milestone } = useReadContract({
-        address: CONTRACT_ADDRESS,
-        abi: FreelanceEscrowABI.abi,
-        functionName: 'jobMilestones',
-        args: [BigInt(jobId), BigInt(mId)],
-    });
-
-    if (!milestone) return null;
-    const [amt, desc, isReleased] = milestone;
-
-    return (
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.9rem', marginBottom: '8px' }}>
-            <span>{desc} ({formatUnits(amt, tokenInfo.decimals)} {tokenInfo.symbol})</span>
-            {isReleased ? (
-                <span style={{ color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <CheckCircle size={14} /> Released
-                </span>
-            ) : (
-                isClient && (
-                    <button
-                        onClick={() => onRelease(mId)}
-                        className="btn-secondary"
-                        style={{ padding: '2px 8px', fontSize: '0.75rem' }}
-                    >
-                        Release
-                    </button>
-                )
-            )}
         </div>
     );
 }

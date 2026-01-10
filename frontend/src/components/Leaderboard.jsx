@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../services/api';
-import { Trophy, Medal, Award, ExternalLink, User } from 'lucide-react';
+import { Trophy, Medal, Award, ExternalLink, User, Star, TrendingUp } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 function Leaderboard() {
@@ -14,114 +14,124 @@ function Leaderboard() {
         });
     }, []);
 
-    if (loading) return <div style={{ textAlign: 'center', padding: '100px' }}>Loading the Hall of Fame...</div>;
+    if (loading) return (
+        <div style={{ textAlign: 'center', padding: '160px' }}>
+            <Loader2 className="animate-spin" size={48} style={{ margin: '0 auto 24px auto', color: 'var(--primary)' }} />
+            <h3 style={{ color: 'var(--text-dim)' }}>Synchronizing Hall of Fame...</h3>
+        </div>
+    );
 
     return (
-        <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
-            <div style={{ textAlign: 'center', marginBottom: '60px' }}>
-                <h1 style={{ fontSize: '3rem', marginBottom: '16px' }}>
-                    Hall of <span className="gradient-text">Fame</span>
-                </h1>
-                <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem' }}>
-                    Top performing creators and freelancers on the Polygon network.
-                </p>
+        <div className="container" style={{ maxWidth: '1200px', padding: '40px 0' }}>
+            <div style={{ textAlign: 'center', marginBottom: '80px' }}>
+                <motion.div
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ duration: 0.5 }}
+                >
+                    <h1 style={{ fontSize: '3.5rem', marginBottom: '16px', background: 'linear-gradient(to right, #fff, var(--primary), var(--secondary))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontFamily: 'Outfit' }}>
+                        The PolyLance Elite
+                    </h1>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '1.2rem', maxWidth: '600px', margin: '0 auto' }}>
+                        Celebrating the world's most trusted decentralized creators and their mission-critical contributions.
+                    </p>
+                </motion.div>
             </div>
 
-            <div className="glass-card" style={{ padding: '0', overflow: 'hidden' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                        <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--glass-border)' }}>
-                            <th style={{ padding: '20px', textAlign: 'left', color: 'var(--text-muted)' }}>RANK</th>
-                            <th style={{ padding: '20px', textAlign: 'left', color: 'var(--text-muted)' }}>CREATOR</th>
-                            <th style={{ padding: '20px', textAlign: 'left', color: 'var(--text-muted)' }}>SPECIALIZATION</th>
-                            <th style={{ padding: '20px', textAlign: 'left', color: 'var(--text-muted)' }}>RATING</th>
-                            <th style={{ padding: '20px', textAlign: 'right', color: 'var(--text-muted)' }}>SCORE</th>
-                            <th style={{ padding: '20px', textAlign: 'right', color: 'var(--text-muted)' }}>TOTAL EARNED</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {leaders.length === 0 ? (
-                            <tr>
-                                <td colSpan="6" style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                                    No records found. Be the first to reach the top!
-                                </td>
+            <div className="glass-card" style={{ padding: '0', overflow: 'hidden', border: '1px solid var(--glass-border)' }}>
+                <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                            <tr style={{ background: 'rgba(255,255,255,0.01)', borderBottom: '1px solid var(--glass-border)' }}>
+                                <th style={{ padding: '24px', textAlign: 'left', color: 'var(--text-dim)', fontSize: '0.8rem', letterSpacing: '0.1em' }}>RANKING</th>
+                                <th style={{ padding: '24px', textAlign: 'left', color: 'var(--text-dim)', fontSize: '0.8rem', letterSpacing: '0.1em' }}>CREATOR</th>
+                                <th style={{ padding: '24px', textAlign: 'left', color: 'var(--text-dim)', fontSize: '0.8rem', letterSpacing: '0.1em' }}>EXPERTISE</th>
+                                <th style={{ padding: '24px', textAlign: 'left', color: 'var(--text-dim)', fontSize: '0.8rem', letterSpacing: '0.1em' }}>RATING</th>
+                                <th style={{ padding: '24px', textAlign: 'right', color: 'var(--text-dim)', fontSize: '0.8rem', letterSpacing: '0.1em' }}>REP SCORE</th>
+                                <th style={{ padding: '24px', textAlign: 'right', color: 'var(--text-dim)', fontSize: '0.8rem', letterSpacing: '0.1em' }}>TOTAL VOLUME</th>
                             </tr>
-                        ) : (
-                            leaders.map((leader, index) => (
-                                <motion.tr
-                                    key={leader.address}
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: index * 0.1 }}
-                                    style={{ borderBottom: '1px solid var(--glass-border)' }}
-                                    className="leaderboard-row"
-                                >
-                                    <td style={{ padding: '20px' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                            {index === 0 && <Trophy size={20} color="#fbbf24" />}
-                                            {index === 1 && <Medal size={20} color="#94a3b8" />}
-                                            {index === 2 && <Award size={20} color="#b45309" />}
-                                            <span style={{ fontWeight: 700, fontSize: '1.2rem', opacity: index > 2 ? 0.3 : 1 }}>
-                                                {index + 1}
-                                            </span>
-                                        </div>
+                        </thead>
+                        <tbody>
+                            {leaders.length === 0 ? (
+                                <tr>
+                                    <td colSpan="6" style={{ padding: '80px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                                        The leaderboard is awaiting its first legends.
                                     </td>
-                                    <td style={{ padding: '20px' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                            <div className="activity-icon" style={{ width: '40px', height: '40px' }}>
-                                                <User size={18} />
-                                            </div>
-                                            <div>
-                                                <div style={{ fontWeight: 600 }}>{leader.name || 'Anonymous Creator'}</div>
-                                                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                                                    {leader.address.slice(0, 6)}...{leader.address.slice(-4)}
+                                </tr>
+                            ) : (
+                                leaders.map((leader, index) => (
+                                    <motion.tr
+                                        key={leader.address}
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: index * 0.05 }}
+                                        style={{ borderBottom: '1px solid var(--glass-border)', transition: 'background 0.3s' }}
+                                        className="leaderboard-row"
+                                    >
+                                        <td style={{ padding: '24px' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                <div style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    {index === 0 && <Trophy size={24} style={{ color: '#fbbf24', filter: 'drop-shadow(0 0 8px rgba(251, 191, 36, 0.4))' }} />}
+                                                    {index === 1 && <Medal size={24} style={{ color: '#cbd5e1' }} />}
+                                                    {index === 2 && <Award size={24} style={{ color: '#b45309' }} />}
+                                                    {index > 2 && <span style={{ fontWeight: 800, color: 'var(--text-dim)', opacity: 0.5 }}>{index + 1}</span>}
                                                 </div>
                                             </div>
-                                        </div>
-                                    </td>
-                                    <td style={{ padding: '20px' }}>
-                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                                            {leader.skills?.split(',').slice(0, 2).map((s, i) => (
-                                                <span key={i} className="badge" style={{ fontSize: '0.7rem' }}>{s.trim()}</span>
-                                            )) || <span className="badge" style={{ fontSize: '0.7rem' }}>Explorer</span>}
-                                        </div>
-                                    </td>
-                                    <td style={{ padding: '20px' }}>
-                                        {leader.avgRating > 0 ? (
-                                            <div style={{ color: '#fbbf24', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                {'★'.repeat(Math.round(leader.avgRating))}
-                                                <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>({leader.avgRating.toFixed(1)})</span>
+                                        </td>
+                                        <td style={{ padding: '24px' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                                <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'linear-gradient(45deg, var(--primary), var(--secondary))', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    <User size={24} color="white" />
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-main)', fontFamily: 'Outfit' }}>{leader.name || 'Elite Member'}</div>
+                                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)', fontFamily: 'monospace' }}>
+                                                        {leader.address.slice(0, 10)}...{leader.address.slice(-6)}
+                                                    </div>
+                                                </div>
                                             </div>
-                                        ) : (
-                                            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>No ratings yet</span>
-                                        )}
-                                    </td>
-                                    <td style={{ padding: '20px', textAlign: 'right' }}>
-                                        <div style={{ fontWeight: 700, fontSize: '1.1rem', color: '#f59e0b' }}>
-                                            {leader.reputationScore || 0}
-                                        </div>
-                                    </td>
-                                    <td style={{ padding: '20px', textAlign: 'right' }}>
-                                        <div style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--primary)' }}>
-                                            {leader.totalEarned.toFixed(2)} <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>MATIC</span>
-                                        </div>
-                                    </td>
-                                </motion.tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
+                                        </td>
+                                        <td style={{ padding: '24px' }}>
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                                {leader.skills?.split(',').slice(0, 2).map((s, i) => (
+                                                    <span key={i} className="badge" style={{ background: 'rgba(99, 102, 241, 0.08)', color: 'var(--primary)', border: '1px solid rgba(99, 102, 241, 0.2)' }}>{s.trim().toUpperCase()}</span>
+                                                )) || <span className="badge" style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-dim)' }}>CREATOR</span>}
+                                            </div>
+                                        </td>
+                                        <td style={{ padding: '24px' }}>
+                                            {leader.avgRating > 0 ? (
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                    <Star size={14} style={{ fill: '#fbbf24', color: '#fbbf24' }} />
+                                                    <span style={{ fontWeight: 700, color: 'var(--text-main)' }}>{leader.avgRating.toFixed(1)}</span>
+                                                </div>
+                                            ) : (
+                                                <span style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}>—</span>
+                                            )}
+                                        </td>
+                                        <td style={{ padding: '24px', textAlign: 'right' }}>
+                                            <div style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
+                                                <TrendingUp size={16} />
+                                                {leader.reputationScore || 0}
+                                            </div>
+                                        </td>
+                                        <td style={{ padding: '24px', textAlign: 'right' }}>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-main)', fontFamily: 'Outfit' }}>
+                                                {leader.totalEarned.toLocaleString()} <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)', fontWeight: 500 }}>USDC</span>
+                                            </div>
+                                        </td>
+                                    </motion.tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
-            <style dangerouslySetInnerHTML={{
-                __html: `
-                .leaderboard-row {
-                    transition: background 0.3s ease;
-                }
+            <style sx={{ display: 'none' }}>{`
                 .leaderboard-row:hover {
-                    background: rgba(138, 43, 226, 0.05);
+                    background: rgba(255, 255, 255, 0.02) !important;
                 }
-            ` }} />
+            `}</style>
         </div>
     );
 }

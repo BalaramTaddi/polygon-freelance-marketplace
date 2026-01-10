@@ -7,10 +7,6 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
  * @title InsurancePool
- * @notice Collects fees from jobs and provides a safety net for disputes.
- */
-/**
- * @title InsurancePool
  * @author PolyLance Team
  * @notice Collects fees from jobs and provides a safety net for disputes.
  * @dev Manages both Native (MATIC) and ERC20 token balances for insurance payouts.
