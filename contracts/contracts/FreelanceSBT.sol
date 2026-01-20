@@ -5,18 +5,7 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
-/**
- * @title IERC5192
- * @notice Interface for Minimal Soulbound NFTs as per ERC-5192.
- */
-interface IERC5192 {
-    /// @notice Emitted when a token is locked (cannot be transferred)
-    event Locked(uint256 tokenId);
-    /// @notice Emitted when a token is unlocked (can be transferred)
-    event Unlocked(uint256 tokenId);
-    /// @notice Returns the locking status of an NFT
-    function locked(uint256 tokenId) external view returns (bool);
-}
+import "./interfaces/IERC5192.sol";
 
 /**
  * @title FreelanceSBT
@@ -53,8 +42,11 @@ contract FreelanceSBT is ERC721, ERC721URIStorage, AccessControl, IERC5192 {
      */
     function safeMint(address to, string memory uri) public onlyRole(MINTER_ROLE) {
         uint256 tokenId = _nextTokenId++;
-        _safeMint(to, tokenId);
+        
+        // Metadata update before mint to ensure consistency
         _setTokenURI(tokenId, uri);
+        _safeMint(to, tokenId);
+        
         emit Locked(tokenId);
     }
 

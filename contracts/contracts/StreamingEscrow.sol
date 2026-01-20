@@ -60,6 +60,7 @@ contract StreamingEscrow is ReentrancyGuard, AccessControl {
     error InsufficientBalance();
 
     constructor(address _reputationContract, address admin, address _feeCollector) {
+        if (_reputationContract == address(0) || admin == address(0) || _feeCollector == address(0)) revert Unauthorized();
         reputationContract = FreelancerReputation(_reputationContract);
         feeCollector = _feeCollector;
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
@@ -70,6 +71,7 @@ contract StreamingEscrow is ReentrancyGuard, AccessControl {
      * @notice Updates the address that receives platform fees.
      */
     function setFeeCollector(address _feeCollector) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (_feeCollector == address(0)) revert Unauthorized();
         feeCollector = _feeCollector;
         emit FeeCollectorUpdated(_feeCollector);
     }
@@ -89,6 +91,7 @@ contract StreamingEscrow is ReentrancyGuard, AccessControl {
         uint256 startTime,
         uint256 stopTime
     ) external nonReentrant returns (uint256) {
+        if (recipient == address(0) || tokenAddress == address(0)) revert Unauthorized();
         if (deposit == 0) revert InvalidDeposit();
         if (startTime < block.timestamp) startTime = block.timestamp;
         if (stopTime <= startTime) revert InvalidTimeRange();
@@ -96,8 +99,9 @@ contract StreamingEscrow is ReentrancyGuard, AccessControl {
         uint256 duration = stopTime - startTime;
         if (deposit < duration) revert InvalidDeposit(); // Need at least 1 unit per second
 
-        uint256 ratePerSecond = deposit / duration;
-        uint256 actualDeposit = ratePerSecond * duration; // Adjust for rounding
+        // Avoid divide-before-multiply by ensuring transfer matches exactly what can be streamed
+        uint256 actualDeposit = deposit - (deposit % duration);
+        uint256 ratePerSecond = actualDeposit / duration;
 
         IERC20(tokenAddress).safeTransferFrom(msg.sender, address(this), actualDeposit);
 

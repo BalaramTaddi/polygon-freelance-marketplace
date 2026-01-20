@@ -5,6 +5,8 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/Base64.sol";
+import "./interfaces/IFreelanceSBT.sol";
+import "./interfaces/IERC5192.sol";
 
 /**
  * @title PolyCompletionSBT
@@ -13,7 +15,7 @@ import "@openzeppelin/contracts/utils/Base64.sol";
  * @dev These tokens are non-transferable (Soulbound) and serve as on-chain proof of successful delivery.
  * Metadata is generated on-chain as a Base64-encoded JSON object.
  */
-contract PolyCompletionSBT is ERC721, Ownable {
+contract PolyCompletionSBT is ERC721, Ownable, IFreelanceSBT, IERC5192 {
     using Strings for uint256;
 
     /// @dev Counter for tracking the next token ID to be minted
@@ -41,10 +43,7 @@ contract PolyCompletionSBT is ERC721, Ownable {
     /// @notice Maps token ID to its certificate metadata
     mapping(uint256 => CertificateData) public certificateDetails;
 
-    /// @notice Emitted when a token is locked as per ERC-5192
-    event Locked(uint256 tokenId);
-    /// @notice Emitted when a token is unlocked as per ERC-5192 (Not used in this implementation)
-    event Unlocked(uint256 tokenId);
+
 
     /// @notice Error thrown when an unauthorized address attempts to mint
     error NotMarketplace();
@@ -62,6 +61,7 @@ contract PolyCompletionSBT is ERC721, Ownable {
         ERC721("PolyLance Proof of Contribution", "PLPC") 
         Ownable(initialOwner) 
     {
+        if (initialOwner == address(0) || _marketplace == address(0)) revert Soulbound();
         marketplace = _marketplace;
     }
 
@@ -71,6 +71,7 @@ contract PolyCompletionSBT is ERC721, Ownable {
      * @param _marketplace New marketplace address
      */
     function setMarketplace(address _marketplace) external onlyOwner {
+        if (_marketplace == address(0)) revert Soulbound();
         marketplace = _marketplace;
     }
 
@@ -94,7 +95,6 @@ contract PolyCompletionSBT is ERC721, Ownable {
         if (msg.sender != marketplace) revert NotMarketplace();
         
         uint256 tokenId = ++_nextTokenId;
-        _safeMint(to, tokenId);
         
         certificateDetails[tokenId] = CertificateData({
             categoryId: categoryId,
@@ -103,6 +103,8 @@ contract PolyCompletionSBT is ERC721, Ownable {
             jobId: jobId,
             client: client
         });
+
+        _safeMint(to, tokenId);
 
         emit Locked(tokenId);
         return tokenId;

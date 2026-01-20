@@ -10,19 +10,8 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./FreelanceRenderer.sol";
 
-interface IArbitrator {
-    function createDispute(uint256 _choices, bytes calldata _extraData) external payable returns (uint256 disputeID);
-    function arbitrationCost(bytes calldata _extraData) external view returns (uint256 cost);
-}
-
-interface IArbitrable {
-    event Ruling(IArbitrator indexed _arbitrator, uint256 indexed _disputeID, uint256 _ruling);
-    function rule(uint256 _disputeID, uint256 _ruling) external;
-}
-
-interface IFreelanceSBT {
-    function mintContribution(address to, uint16 categoryId, uint8 rating, uint256 jobId, address client) external returns (uint256);
-}
+import "./interfaces/IFreelanceSBT.sol";
+import "./interfaces/IArbitrator.sol";
 
 /**
  * @title FreelanceEscrow
@@ -75,13 +64,15 @@ contract FreelanceEscrow is Initializable, ERC721Upgradeable, AccessControlUpgra
     error InvalidStatus();
     error AlreadyPaid();
     error InvalidMilestone();
+    error InvalidAddress();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
     }
 
-    function initialize(address admin, address forwarder) public initializer {
+    function initialize(address admin, address forwarder, address _sbt, address _entry) public initializer {
+        if (admin == address(0) || forwarder == address(0) || _sbt == address(0) || _entry == address(0)) revert InvalidAddress();
         __ERC721_init("FreelanceWork", "FWORK");
         __AccessControl_init();
         __ReentrancyGuard_init();
@@ -91,6 +82,23 @@ contract FreelanceEscrow is Initializable, ERC721Upgradeable, AccessControlUpgra
         _grantRole(MANAGER_ROLE, admin);
         trustedForwarder = forwarder;
         arbitrator = admin;
+        sbtContract = _sbt;
+        entryPoint = _entry;
+    }
+
+    function setSBTContract(address _sbt) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (_sbt == address(0)) revert InvalidAddress();
+        sbtContract = _sbt;
+    }
+
+    function setEntryPoint(address _entry) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (_entry == address(0)) revert InvalidAddress();
+        entryPoint = _entry;
+    }
+
+    function setArbitrator(address _arb) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (_arb == address(0)) revert InvalidAddress();
+        arbitrator = _arb;
     }
 
     struct CreateParams {
@@ -157,17 +165,25 @@ contract FreelanceEscrow is Initializable, ERC721Upgradeable, AccessControlUpgra
         if (_msgSender() != job.client) revert NotAuthorized();
         if (job.paid) revert AlreadyPaid();
 
+        uint256 payout = job.amount - job.totalPaidOut;
+        
+        // State updates before external calls
         job.paid = true;
         job.status = JobStatus.Completed;
         job.rating = rating;
+        job.totalPaidOut += payout;
 
-        uint256 payout = job.amount - job.totalPaidOut;
-        if (payout > 0) _sendFunds(job.freelancer, job.token, payout);
-
+        // Mint before sending funds
         _safeMint(job.freelancer, jobId);
         if (sbtContract != address(0)) {
-            IFreelanceSBT(sbtContract).mintContribution(job.freelancer, job.categoryId, rating, jobId, job.client);
+            uint256 sbtId = IFreelanceSBT(sbtContract).mintContribution(job.freelancer, job.categoryId, rating, jobId, job.client);
+            (sbtId); // Silence unused variable warning
         }
+
+        if (payout > 0) {
+            _sendFunds(job.freelancer, job.token, payout);
+        }
+
         emit FundsReleased(jobId, job.freelancer, payout);
     }
 
@@ -191,13 +207,17 @@ contract FreelanceEscrow is Initializable, ERC721Upgradeable, AccessControlUpgra
         uint256 jobId = disputeIdToJobId[dId];
         Job storage job = jobs[jobId];
 
+        uint256 payout = job.amount - job.totalPaidOut;
+        // MUST update state BEFORE external calls to avoid reentrancy
+        job.totalPaidOut += payout;
+
         if (ruling == 1) { // Client
             job.status = JobStatus.Cancelled;
-            _sendFunds(job.client, job.token, job.amount - job.totalPaidOut);
+            _sendFunds(job.client, job.token, payout);
         } else { // Freelancer
             job.status = JobStatus.Completed;
-            _sendFunds(job.freelancer, job.token, job.amount - job.totalPaidOut);
             _safeMint(job.freelancer, jobId);
+            _sendFunds(job.freelancer, job.token, payout);
         }
         emit Ruling(IArbitrator(arbitrator), dId, ruling);
     }

@@ -26,7 +26,9 @@ contract InsurancePool is Ownable {
      * @notice Deploys the insurance pool
      * @param initialOwner Address of the pool administrator
      */
-    constructor(address initialOwner) Ownable(initialOwner) {}
+    constructor(address initialOwner) Ownable(initialOwner) {
+        require(initialOwner != address(0), "Zero address");
+    }
 
     /**
      * @notice Allows the Escrow contract to deposit ERC20 fees
@@ -59,6 +61,7 @@ contract InsurancePool is Ownable {
      * @param amount Payout amount
      */
     function payout(address token, address to, uint256 amount) external onlyOwner {
+        require(to != address(0), "Zero address");
         require(balances[token] >= amount, "Insufficient pool funds");
         balances[token] -= amount;
         
