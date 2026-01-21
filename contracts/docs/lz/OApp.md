@@ -14,6 +14,14 @@ address lzEndpoint
 mapping(uint32 => bytes32) peers
 ```
 
+### constructor
+
+```solidity
+constructor(address _owner) internal
+```
+
+_Constructor for OApp, initializing it with an owner._
+
 ### __OApp_init
 
 ```solidity

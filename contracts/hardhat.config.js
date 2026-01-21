@@ -1,7 +1,5 @@
-require("@nomicfoundation/hardhat-ethers");
 require("@nomicfoundation/hardhat-toolbox");
-// require("@openzeppelin/hardhat-upgrades");
-require("solidity-docgen");
+require("@openzeppelin/hardhat-upgrades");
 require("dotenv").config();
 
 /** @type import('hardhat/config').HardhatUserConfig */
@@ -11,7 +9,6 @@ module.exports = {
             {
                 version: "0.8.20",
                 settings: {
-                    viaIR: true,
                     optimizer: {
                         enabled: true,
                         runs: 200
@@ -25,7 +22,7 @@ module.exports = {
                     evmVersion: "cancun",
                     optimizer: {
                         enabled: true,
-                        runs: 1
+                        runs: 200
                     }
                 }
             }
@@ -33,6 +30,7 @@ module.exports = {
     },
     networks: {
         hardhat: {
+            hardfork: "shanghai"
         },
         polygon_amoy: {
             url: process.env.POLYGON_AMOY_RPC_URL || "https://rpc-amoy.polygon.technology/",

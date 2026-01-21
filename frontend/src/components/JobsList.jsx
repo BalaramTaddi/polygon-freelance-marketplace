@@ -33,10 +33,19 @@ function JobsList({ onUserClick, onSelectChat, gasless }) {
     const jobIds = Array.from({ length: count }, (_, i) => i + 1);
     if (sortBy === 'Newest') jobIds.reverse();
 
+    const isLoading = jobCount === undefined;
+
     return (
         <div className="container" style={{ padding: 0 }}>
             {/* Advanced Filter Bar */}
-            <div className="glass-card" style={{ marginBottom: '32px', padding: '24px' }}>
+            <header className="mb-12">
+                <h1 className="text-5xl font-black mb-4 tracking-tighter">Global <span className="gradient-text">Opportunities</span></h1>
+                <p className="text-text-muted font-medium opacity-80 max-w-xl">
+                    Discover and secure high-value contracts on the most efficient freelance protocol.
+                </p>
+            </header>
+
+            <div className="glass-card !border-white/5 hover:border-primary/20" style={{ marginBottom: '32px', padding: '24px' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1fr 0.8fr', gap: '16px', alignItems: 'center' }}>
                     <div style={{ position: 'relative' }}>
                         <Search size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)' }} />
@@ -103,7 +112,11 @@ function JobsList({ onUserClick, onSelectChat, gasless }) {
             </div>
 
             <div className="grid-marketplace">
-                {count === 0 ? (
+                {isLoading ? (
+                    Array.from({ length: 6 }).map((_, i) => (
+                        <div key={i} className="glass-card skeleton skeleton-card !bg-white/5 opacity-50" />
+                    ))
+                ) : count === 0 ? (
                     <div className="glass-card" style={{ textAlign: 'center', padding: '80px', gridColumn: '1 / -1' }}>
                         <motion.div
                             initial={{ scale: 0.8, opacity: 0 }}

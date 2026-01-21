@@ -10,7 +10,7 @@ import "./interfaces/IERC5192.sol";
 
 /**
  * @title PolyCompletionSBT
- * @author PolyLance Team
+ * @author Akhil Muvva
  * @notice Soulbound Token (ERC-5192) for Job Completion Certificates on PolyLance.
  * @dev These tokens are non-transferable (Soulbound) and serve as on-chain proof of successful delivery.
  * Metadata is generated on-chain as a Base64-encoded JSON object.

@@ -354,36 +354,60 @@ function MessageContainer({ conversation, address, contractContext, loadingConte
             <AnimatePresence>
                 {contractContext && (
                     <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
                         style={{
-                            padding: '16px 20px',
-                            background: 'linear-gradient(135deg, rgba(138, 43, 226, 0.1), rgba(75, 0, 130, 0.1))',
-                            borderBottom: '1px solid var(--glass-border)',
+                            margin: '12px 20px',
+                            padding: '16px 24px',
+                            background: 'rgba(255, 255, 255, 0.02)',
+                            borderRadius: '20px',
+                            border: '1px solid var(--glass-border)',
                             display: 'flex',
-                            gap: '20px',
+                            gap: '24px',
                             alignItems: 'center',
-                            fontSize: '0.9rem'
+                            backdropFilter: 'blur(10px)',
+                            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)'
                         }}
                     >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <FileText size={16} style={{ color: 'var(--primary)' }} />
-                            <span style={{ color: 'var(--text-muted)' }}>Job #{contractContext.jobId}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div style={{ padding: '8px', borderRadius: '10px', background: 'rgba(139, 92, 246, 0.1)' }}>
+                                <FileText size={18} className="text-primary" />
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', fontWeight: 'bold', textTransform: 'uppercase' }}>Active Project</span>
+                                <span style={{ fontWeight: '700' }}>#{contractContext.jobId}</span>
+                            </div>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <DollarSign size={16} style={{ color: '#10b981' }} />
-                            <span>{(parseFloat(contractContext.amount) / 1e18).toFixed(2)} MATIC</span>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div style={{ padding: '8px', borderRadius: '10px', background: 'rgba(16, 185, 129, 0.1)' }}>
+                                <DollarSign size={18} style={{ color: '#10b981' }} />
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', fontWeight: 'bold', textTransform: 'uppercase' }}>Budget</span>
+                                <span style={{ fontWeight: '700' }}>{(parseFloat(contractContext.amount) / 1e18).toFixed(2)} MATIC</span>
+                            </div>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <CheckCircle2 size={16} style={{ color: getStatusColor(contractContext.status) }} />
-                            <span style={{ color: getStatusColor(contractContext.status), fontWeight: '600' }}>
-                                {contractContext.status}
-                            </span>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div style={{ padding: '8px', borderRadius: '10px', background: `${getStatusColor(contractContext.status)}15` }}>
+                                <CheckCircle2 size={18} style={{ color: getStatusColor(contractContext.status) }} />
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', fontWeight: 'bold', textTransform: 'uppercase' }}>Status</span>
+                                <span style={{ color: getStatusColor(contractContext.status), fontWeight: '700' }}>{contractContext.status}</span>
+                            </div>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <Clock size={16} style={{ color: '#f59e0b' }} />
-                            <span style={{ color: 'var(--text-muted)' }}>{formatDeadline(contractContext.deadline)}</span>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginLeft: 'auto' }}>
+                            <div style={{ padding: '8px', borderRadius: '10px', background: 'rgba(245, 158, 11, 0.1)' }}>
+                                <Clock size={18} style={{ color: '#f59e0b' }} />
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', fontWeight: 'bold', textTransform: 'uppercase' }}>Deadline</span>
+                                <span style={{ fontWeight: '700' }}>{formatDeadline(contractContext.deadline)}</span>
+                            </div>
                         </div>
                     </motion.div>
                 )}
@@ -398,7 +422,6 @@ function MessageContainer({ conversation, address, contractContext, loadingConte
             </AnimatePresence>
 
             <div style={{ flex: 1, overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {isLoading && <div style={{ textAlign: 'center' }}><Loader2 className="animate-spin" /></div>}
                 {messages.map((msg, i) => {
                     const isMe = msg.senderAddress.toLowerCase() === address.toLowerCase();
                     return (
@@ -409,16 +432,30 @@ function MessageContainer({ conversation, address, contractContext, loadingConte
                             transition={{ duration: 0.2 }}
                             style={{
                                 alignSelf: isMe ? 'flex-end' : 'flex-start',
-                                background: isMe ? 'linear-gradient(135deg, var(--primary), #4d0099)' : 'var(--glass-bg)',
-                                padding: '12px 18px',
-                                borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+                                background: isMe ? 'linear-gradient(135deg, var(--primary), var(--secondary))' : 'rgba(255, 255, 255, 0.03)',
+                                padding: '12px 20px',
+                                borderRadius: isMe ? '24px 24px 4px 24px' : '24px 24px 24px 4px',
                                 border: isMe ? 'none' : '1px solid var(--glass-border)',
-                                maxWidth: '75%',
+                                maxWidth: '70%',
                                 fontSize: '0.95rem',
-                                boxShadow: isMe ? '0 4px 15px rgba(138, 43, 226, 0.2)' : 'none'
+                                color: isMe ? 'white' : 'var(--text-main)',
+                                boxShadow: isMe ? '0 10px 20px -5px var(--primary-glow)' : 'none',
+                                position: 'relative'
                             }}
                         >
-                            {msg.content}
+                            <div style={{ wordBreak: 'break-word', lineHeight: '1.5', fontWeight: '500' }}>
+                                {msg.content}
+                            </div>
+                            <div style={{
+                                fontSize: '0.65rem',
+                                opacity: 0.6,
+                                marginTop: '6px',
+                                textAlign: isMe ? 'right' : 'left',
+                                fontWeight: '700'
+                            }}>
+                                {new Date(msg.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                {isMe && ' · Sent'}
+                            </div>
                         </motion.div>
                     );
                 })}

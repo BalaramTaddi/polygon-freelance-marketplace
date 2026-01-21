@@ -38,21 +38,26 @@ describe("PolyLance Production Suite", function () {
         sbt = await SBTFactory.deploy(owner.address, owner.address); // Temporarily owner as minter
         await sbt.waitForDeployment();
 
-        // 6. Deploy PolyCompletionSBT
-        const CompletionSBTFactory = await ethers.getContractFactory("PolyCompletionSBT");
-        completionSBT = await CompletionSBTFactory.deploy(owner.address);
-        await completionSBT.waitForDeployment();
 
-        // 7. Deploy Escrow (Proxy)
+        // 7. Deploy Forwarder
+        const Forwarder = await ethers.getContractFactory("PolyLanceForwarder");
+        const forwarder = await Forwarder.deploy();
+        await forwarder.waitForDeployment();
+
+        // 8. Deploy Escrow (Proxy)
         const EscrowFactory = await ethers.getContractFactory("FreelanceEscrow");
         escrow = await upgrades.deployProxy(EscrowFactory, [
             owner.address,
-            ethers.ZeroAddress, // forwarder
-            ethers.ZeroAddress, // ccipRouter
-            await insurance.getAddress(),
-            ethers.ZeroAddress  // lzEndpoint
+            await forwarder.getAddress(),
+            await sbt.getAddress(),
+            owner.address // dummy entrypoint
         ], { kind: "uups" });
         await escrow.waitForDeployment();
+
+        // 9. Deploy PolyCompletionSBT (Now that we have escrow address)
+        const CompletionSBTFactory = await ethers.getContractFactory("PolyCompletionSBT");
+        completionSBT = await CompletionSBTFactory.deploy(owner.address, await escrow.getAddress());
+        await completionSBT.waitForDeployment();
 
         // 8. Deploy PrivacyShield
         const PrivacyFactory = await ethers.getContractFactory("PrivacyShield");
@@ -74,7 +79,6 @@ describe("PolyLance Production Suite", function () {
         await polyToken.grantRole(await polyToken.MINTER_ROLE(), await escrow.getAddress());
         await reputation.grantRole(await reputation.MINTER_ROLE(), await escrow.getAddress());
         await sbt.grantRole(await sbt.MINTER_ROLE(), await escrow.getAddress());
-        await completionSBT.grantRole(await completionSBT.MINTER_ROLE(), await escrow.getAddress());
 
         await escrow.setTokenWhitelist(await usdc.getAddress(), true);
 
@@ -87,7 +91,18 @@ describe("PolyLance Production Suite", function () {
 
     describe("Full Job Lifecycle (ERC20)", function () {
         it("Processes a standard job from creation to completion with SBTs and Reputation", async function () {
-            await escrow.connect(client).createJob(ethers.ZeroAddress, await usdc.getAddress(), JOB_AMOUNT, "ipfs://job", 7, 1);
+            const params = {
+                categoryId: 1,
+                freelancer: ethers.ZeroAddress,
+                token: await usdc.getAddress(),
+                amount: JOB_AMOUNT,
+                ipfsHash: "ipfs://job",
+                deadline: 7,
+                mAmounts: [],
+                mHashes: []
+            };
+            await escrow.connect(client).createJob(params);
+
             await escrow.connect(freelancer).applyForJob(1);
             await escrow.connect(client).pickFreelancer(1, freelancer.address);
             await escrow.connect(freelancer).acceptJob(1);
@@ -115,9 +130,17 @@ describe("PolyLance Production Suite", function () {
             const mAmounts = [JOB_AMOUNT / 2n, JOB_AMOUNT / 2n];
             const mDescs = ["Phase 1", "Phase 2"];
 
-            await escrow.connect(client).createJobWithMilestones(
-                freelancer.address, await usdc.getAddress(), JOB_AMOUNT, "ipfs://ms", mAmounts, mDescs
-            );
+            const params = {
+                categoryId: 1,
+                freelancer: freelancer.address,
+                token: await usdc.getAddress(),
+                amount: JOB_AMOUNT,
+                ipfsHash: "ipfs://ms",
+                deadline: 0,
+                mAmounts: mAmounts,
+                mHashes: mDescs
+            };
+            await escrow.connect(client).createJob(params);
 
             await escrow.connect(freelancer).acceptJob(1);
 
@@ -125,7 +148,7 @@ describe("PolyLance Production Suite", function () {
             await escrow.connect(client).releaseMilestone(1, 0);
             const balAfterM1 = await usdc.balanceOf(freelancer.address);
             // 500 - fees (2.5% + 1% = 3.5%) + 10% stake returned? 
-            // Actually stake is returned at the VERY END of the job.
+            // actually freelancerStake is returned at the very end.
             expect(balAfterM1).to.be.gt(0);
 
             // Complete job after last milestone
@@ -139,7 +162,26 @@ describe("PolyLance Production Suite", function () {
 
     describe("Dispute & Arbitration", function () {
         it("Arbitrator can resolve dispute with specific bps", async function () {
-            await escrow.connect(client).createJob(freelancer.address, await usdc.getAddress(), JOB_AMOUNT, "ipfs://j", 7, 1);
+            // Deploy MockArbitrator
+            const MockArbitrator = await ethers.getContractFactory("MockArbitrator");
+            const arbitrator = await MockArbitrator.deploy();
+            await arbitrator.waitForDeployment();
+
+            // Set arbitrator
+            await escrow.setArbitrator(await arbitrator.getAddress());
+
+            const params = {
+                categoryId: 1,
+                freelancer: freelancer.address,
+                token: await usdc.getAddress(),
+                amount: JOB_AMOUNT,
+                ipfsHash: "ipfs://j",
+                deadline: 7,
+                mAmounts: [],
+                mHashes: []
+            };
+            await escrow.connect(client).createJob(params);
+
             await escrow.connect(freelancer).acceptJob(1);
             await escrow.connect(client).dispute(1);
 

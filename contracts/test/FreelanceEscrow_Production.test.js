@@ -15,14 +15,23 @@ describe("FreelanceEscrow Production Features", function () {
         token = await Token.deploy(owner.address);
         await token.waitForDeployment();
 
+        // Deploy Forwarder
+        const Forwarder = await ethers.getContractFactory("PolyLanceForwarder");
+        const forwarder = await Forwarder.deploy();
+        await forwarder.waitForDeployment();
+
+        // Deploy SBT
+        const SBT = await ethers.getContractFactory("FreelanceSBT");
+        const sbt = await SBT.deploy(owner.address, owner.address);
+        await sbt.waitForDeployment();
+
         // Deploy Escrow
         Escrow = await ethers.getContractFactory("FreelanceEscrow");
         escrow = await upgrades.deployProxy(Escrow, [
             owner.address,
-            ethers.ZeroAddress,
-            ethers.ZeroAddress,
-            ethers.ZeroAddress,
-            ethers.ZeroAddress
+            await forwarder.getAddress(),
+            await sbt.getAddress(),
+            owner.address // dummy entrypoint
         ], { kind: 'uups' });
         await escrow.waitForDeployment();
 
@@ -38,7 +47,17 @@ describe("FreelanceEscrow Production Features", function () {
     it("Should handle pull-based refunds for unselected freelancers", async function () {
         // 1. Create Job with no freelancer
         await token.connect(client).approve(await escrow.getAddress(), amount);
-        await escrow.connect(client).createJob(ethers.ZeroAddress, await token.getAddress(), amount, "ipfs://description", 0);
+        const params = {
+            categoryId: 0,
+            freelancer: ethers.ZeroAddress,
+            token: await token.getAddress(),
+            amount: amount,
+            ipfsHash: "ipfs://description",
+            deadline: 0,
+            mAmounts: [],
+            mHashes: []
+        };
+        await escrow.connect(client).createJob(params);
         const jobId = await escrow.jobCount();
 
         // 2. Freelancers apply

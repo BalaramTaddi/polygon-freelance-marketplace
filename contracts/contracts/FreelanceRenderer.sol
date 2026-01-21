@@ -19,22 +19,22 @@ library FreelanceRenderer {
         (string memory color1, string memory color2, string memory badge) = getRatingColors(params.rating);
 
         return string(abi.encodePacked(
-            '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">',
-            '<rect width="100%" height="100%" fill="#1a1c2c"/>',
-            '<defs><linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">',
-            '<stop offset="0%" style="stop-color:', color1, '"/>',
-            '<stop offset="100%" style="stop-color:', color2, '"/>',
-            '</linearGradient></defs>',
-            '<circle cx="200" cy="200" r="150" fill="url(#grad)" opacity="0.9"/>',
-            '<text x="50%" y="30%" text-anchor="middle" fill="white" font-family="Arial" font-size="24" font-weight="bold">POLYLANCE WORK</text>',
-            '<text x="50%" y="45%" text-anchor="middle" fill="white" font-family="Arial" font-size="18">Job #', params.jobId.toString(), '</text>',
-            '<text x="50%" y="55%" text-anchor="middle" fill="#fbbf24" font-family="Arial" font-size="20">', getCategoryName(params.categoryId), '</text>',
-            '<text x="50%" y="65%" text-anchor="middle" fill="white" font-family="Arial" font-size="16">Budget: ', params.amount.toString(), '</text>',
+            "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"400\" height=\"400\" viewBox=\"0 0 400 400\">",
+            "<rect width=\"100%\" height=\"100%\" fill=\"#1a1c2c\"/>",
+            "<defs><linearGradient id=\"grad\" x1=\"0%\" y1=\"0%\" x2=\"100%\" y2=\"100%\">",
+            "<stop offset=\"0%\" style=\"stop-color:", color1, "\"/>",
+            "<stop offset=\"100%\" style=\"stop-color:", color2, "\"/>",
+            "</linearGradient></defs>",
+            "<circle cx=\"200\" cy=\"200\" r=\"150\" fill=\"url(#grad)\" opacity=\"0.9\"/>",
+            "<text x=\"50%\" y=\"30%\" text-anchor=\"middle\" fill=\"white\" font-family=\"Arial\" font-size=\"24\" font-weight=\"bold\">POLYLANCE WORK</text>",
+            "<text x=\"50%\" y=\"45%\" text-anchor=\"middle\" fill=\"white\" font-family=\"Arial\" font-size=\"18\">Job #", params.jobId.toString(), "</text>",
+            "<text x=\"50%\" y=\"55%\" text-anchor=\"middle\" fill=\"#fbbf24\" font-family=\"Arial\" font-size=\"20\">", getCategoryName(params.categoryId), "</text>",
+            "<text x=\"50%\" y=\"65%\" text-anchor=\"middle\" fill=\"white\" font-family=\"Arial\" font-size=\"16\">Budget: ", params.amount.toString(), "</text>",
             params.rating > 0 ? string(abi.encodePacked(
-                '<text x="50%" y="80%" text-anchor="middle" fill="', badge, '" font-family="Arial" font-size="22" font-weight="bold">',
-                getStars(params.rating), ' ', badge, '</text>'
-            )) : '',
-            '</svg>'
+                "<text x=\"50%\" y=\"80%\" text-anchor=\"middle\" fill=\"", badge, "\" font-family=\"Arial\" font-size=\"22\" font-weight=\"bold\">",
+                getStars(params.rating), " ", badge, "</text>"
+            )) : "",
+            "</svg>"
         ));
     }
 

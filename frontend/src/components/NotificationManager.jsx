@@ -20,9 +20,9 @@ export function NotificationManager() {
         eventName: 'JobCreated',
         onLogs(logs) {
             logs.forEach((log) => {
-                const { client, freelancer, amount } = log.args;
+                const { jobId, client, freelancer } = log.args;
                 if (address && (address.toLowerCase() === client.toLowerCase() || address.toLowerCase() === freelancer.toLowerCase())) {
-                    toast.success('New Job Created! 💼', {
+                    toast.success(`Job #${jobId} Created Successfully! 🚀`, {
                         autoClose: 5000,
                     });
                 }
@@ -37,8 +37,9 @@ export function NotificationManager() {
         abi: FreelanceEscrowABI.abi,
         eventName: 'JobAccepted',
         onLogs(logs) {
-            logs.forEach(() => {
-                toast.success('Job Accepted & Stake Secured! 🛡️', {
+            logs.forEach((log) => {
+                const { jobId } = log.args;
+                toast.success(`Job #${jobId} Accepted & Stake Secured! 🛡️`, {
                     autoClose: 5000,
                 });
                 refreshData();
@@ -53,7 +54,8 @@ export function NotificationManager() {
         eventName: 'WorkSubmitted',
         onLogs(logs) {
             logs.forEach((log) => {
-                toast.info('Work has been submitted! 📑', {
+                const { jobId } = log.args;
+                toast.info(`Work submitted for Job #${jobId}! 📑`, {
                     autoClose: 5000,
                 });
                 refreshData();
@@ -68,13 +70,13 @@ export function NotificationManager() {
         eventName: 'FundsReleased',
         onLogs(logs) {
             logs.forEach((log) => {
-                const { freelancer } = log.args;
+                const { jobId, freelancer } = log.args;
                 if (address && address.toLowerCase() === freelancer.toLowerCase()) {
-                    toast.success('Funds Received & NFT Minted! 💰', {
+                    toast.success(`Funds for Job #${jobId} Received! 💰`, {
                         autoClose: 6000,
                     });
                 } else {
-                    toast.success('Funds have been released! ✅');
+                    toast.success(`Funds released for Job #${jobId}! ✅`);
                 }
                 refreshData();
             });
@@ -87,8 +89,11 @@ export function NotificationManager() {
         abi: FreelanceEscrowABI.abi,
         eventName: 'JobDisputed',
         onLogs(logs) {
-            logs.forEach(() => {
-                toast.error('A job has been disputed! ⚖️');
+            logs.forEach((log) => {
+                const { jobId } = log.args;
+                toast.error(`Job #${jobId} has been disputed! ⚖️`, {
+                    autoClose: 10000,
+                });
                 refreshData();
             });
         },

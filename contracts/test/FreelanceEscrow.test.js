@@ -9,13 +9,23 @@ describe("FreelanceEscrow Verification", function () {
     beforeEach(async function () {
         [owner, client, freelancer, other] = await ethers.getSigners();
 
+        // 1. Deploy Forwarder
+        const Forwarder = await ethers.getContractFactory("PolyLanceForwarder");
+        const forwarder = await Forwarder.deploy();
+        await forwarder.waitForDeployment();
+
+        // 2. Deploy SBT
+        const SBT = await ethers.getContractFactory("FreelanceSBT");
+        const sbt = await SBT.deploy(owner.address, owner.address);
+        await sbt.waitForDeployment();
+
+        // 3. Deploy Escrow
         FreelanceEscrow = await ethers.getContractFactory("FreelanceEscrow");
         escrow = await upgrades.deployProxy(FreelanceEscrow, [
             owner.address,
-            ethers.ZeroAddress, // trustedForwarder
-            ethers.ZeroAddress, // ccipRouter
-            ethers.ZeroAddress, // insurancePool
-            ethers.ZeroAddress  // lzEndpoint
+            await forwarder.getAddress(),
+            await sbt.getAddress(),
+            other.address // dummy entrypoint
         ], {
             initializer: "initialize",
             kind: "uups",
@@ -34,15 +44,17 @@ describe("FreelanceEscrow Verification", function () {
         const milestoneAmounts = [ethers.parseEther("0.4"), ethers.parseEther("0.6")];
         const milestoneDescs = ["M1", "M2"];
 
-        await escrow.connect(client).createJobWithMilestones(
-            freelancer.address,
-            ethers.ZeroAddress,
-            totalAmount,
-            "ipfs://hash",
-            milestoneAmounts,
-            milestoneDescs,
-            { value: totalAmount }
-        );
+        const params = {
+            categoryId: 1,
+            freelancer: freelancer.address,
+            token: ethers.ZeroAddress,
+            amount: totalAmount,
+            ipfsHash: "ipfs://hash",
+            deadline: 0,
+            mAmounts: milestoneAmounts,
+            mHashes: milestoneDescs
+        };
+        await escrow.connect(client).createJob(params, { value: totalAmount });
 
         const job = await escrow.jobs(1);
         expect(job.amount).to.equal(totalAmount);
@@ -61,14 +73,17 @@ describe("FreelanceEscrow Verification", function () {
 
     it("Should deduct platform fees upon full fund release", async function () {
         const amount = ethers.parseEther("1.0");
-        await escrow.connect(client).createJob(
-            freelancer.address,
-            ethers.ZeroAddress,
-            amount,
-            "ipfs://hash",
-            0,
-            { value: amount }
-        );
+        const params = {
+            categoryId: 0,
+            freelancer: freelancer.address,
+            token: ethers.ZeroAddress,
+            amount: amount,
+            ipfsHash: "ipfs://hash",
+            deadline: 0,
+            mAmounts: [],
+            mHashes: []
+        };
+        await escrow.connect(client).createJob(params, { value: amount });
 
         // Accept job (requires freelancer stake)
         const stake = amount / 10n; // 10%
@@ -90,15 +105,20 @@ describe("FreelanceEscrow Verification", function () {
 
     it("Should allow client to reclaim funds after deadline", async function () {
         const amount = ethers.parseEther("1.0");
-        const duration = 1; // 1 day
-        await escrow.connect(client).createJob(
-            freelancer.address,
-            ethers.ZeroAddress,
-            amount,
-            "ipfs://hash",
-            duration,
-            { value: amount }
-        );
+        const block = await ethers.provider.getBlock("latest");
+        const deadline = block.timestamp + 86400; // 1 day from now
+
+        const params = {
+            categoryId: 0,
+            freelancer: freelancer.address,
+            token: ethers.ZeroAddress,
+            amount: amount,
+            ipfsHash: "ipfs://hash",
+            deadline: deadline,
+            mAmounts: [],
+            mHashes: []
+        };
+        await escrow.connect(client).createJob(params, { value: amount });
 
         // Advance time by 2 days
         await ethers.provider.send("evm_increaseTime", [2 * 24 * 60 * 60]);

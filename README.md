@@ -1,4 +1,5 @@
 # PolyLance: Enterprise Decentralized Freelance Marketplace
+**Developed by:** Akhil Muvva
 
 PolyLance is a high-performance, professional freelance ecosystem built on the Polygon network. It enables secured escrow payments, milestone-based job tracking, on-chain reputation systems, and NFT-based proof-of-work, ensuring a trustless and efficient marketplace for freelancers and clients alike.
 

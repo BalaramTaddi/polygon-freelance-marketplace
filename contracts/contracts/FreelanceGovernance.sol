@@ -19,7 +19,7 @@ interface IFreelanceSBT {
 
 /**
  * @title FreelanceGovernance
- * @author PolyLance Team
+ * @author Akhil Muvva
  * @notice Reputation-based governance system for the PolyLance ecosystem.
  * @dev Users with a minimum number of Soulbound Tokens (SBTs) can create proposals.
  * Voting weight is proportional to the number of SBTs (reputation) held.

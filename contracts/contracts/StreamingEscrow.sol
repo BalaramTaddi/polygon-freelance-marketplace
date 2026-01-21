@@ -9,7 +9,7 @@ import "./FreelancerReputation.sol";
 
 /**
  * @title StreamingEscrow
- * @author PolyLance Team
+ * @author Akhil Muvva
  * @notice Continuous Settlement Escrow for real-time payments on high-performance chains.
  * Funds flow from employer to freelancer based on elapsed time.
  */
@@ -28,6 +28,7 @@ contract StreamingEscrow is ReentrancyGuard, AccessControl {
         uint256 ratePerSecond;
         uint256 remainingBalance;
         uint256 lastUpdateTimestamp;
+        uint256 totalPausedDuration;
         bool isPaused;
         bool isDisputed;
     }
@@ -78,11 +79,6 @@ contract StreamingEscrow is ReentrancyGuard, AccessControl {
 
     /**
      * @notice Creates a new payment stream.
-     * @param recipient The freelancer address.
-     * @param deposit Amount of tokens to stream.
-     * @param tokenAddress The ERC20 token address.
-     * @param startTime When the stream starts.
-     * @param stopTime When the stream ends.
      */
     function createStream(
         address recipient,
@@ -97,9 +93,8 @@ contract StreamingEscrow is ReentrancyGuard, AccessControl {
         if (stopTime <= startTime) revert InvalidTimeRange();
 
         uint256 duration = stopTime - startTime;
-        if (deposit < duration) revert InvalidDeposit(); // Need at least 1 unit per second
+        if (deposit < duration) revert InvalidDeposit();
 
-        // Avoid divide-before-multiply by ensuring transfer matches exactly what can be streamed
         uint256 actualDeposit = deposit - (deposit % duration);
         uint256 ratePerSecond = actualDeposit / duration;
 
@@ -116,6 +111,7 @@ contract StreamingEscrow is ReentrancyGuard, AccessControl {
             ratePerSecond: ratePerSecond,
             remainingBalance: actualDeposit,
             lastUpdateTimestamp: startTime,
+            totalPausedDuration: 0,
             isPaused: false,
             isDisputed: false
         });
@@ -126,16 +122,14 @@ contract StreamingEscrow is ReentrancyGuard, AccessControl {
 
     /**
      * @notice Calculates the amount currently available for withdrawal.
-     * @param streamId The ID of the stream.
      */
     function balanceOf(uint256 streamId) public view returns (uint256 recipientBalance, uint256 senderBalance) {
         Stream memory stream = streams[streamId];
-        if (stream.deposit == 0) return (0, 0);
+        if (streamId >= nextStreamId || stream.deposit == 0) return (0, 0);
 
         uint256 timeElapsed = _calculateTimeElapsed(stream);
         uint256 flowableAmount = timeElapsed * stream.ratePerSecond;
 
-        // Ensure we don't flow more than the deposit
         if (flowableAmount > stream.deposit) flowableAmount = stream.deposit;
 
         recipientBalance = flowableAmount - (stream.deposit - stream.remainingBalance);
@@ -144,12 +138,10 @@ contract StreamingEscrow is ReentrancyGuard, AccessControl {
 
     /**
      * @notice Withdraws available funds from the stream.
-     * @param streamId The ID of the stream.
-     * @param amount The amount to withdraw.
      */
     function withdrawFromStream(uint256 streamId, uint256 amount) external nonReentrant {
         Stream storage stream = streams[streamId];
-        if (stream.deposit == 0) revert StreamDoesNotExist();
+        if (streamId >= nextStreamId || stream.deposit == 0) revert StreamDoesNotExist();
         if (stream.isPaused || stream.isDisputed) revert StreamPausedOrDisputed();
         
         (uint256 available, ) = balanceOf(streamId);
@@ -158,7 +150,6 @@ contract StreamingEscrow is ReentrancyGuard, AccessControl {
         stream.remainingBalance -= amount;
         stream.lastUpdateTimestamp = block.timestamp > stream.stopTime ? stream.stopTime : block.timestamp;
 
-        // Apply Reputation-based fees
         uint256 fee = _calculateFee(stream.recipient, amount);
         uint256 netAmount = amount - fee;
 
@@ -178,7 +169,6 @@ contract StreamingEscrow is ReentrancyGuard, AccessControl {
         if (msg.sender != stream.sender && msg.sender != stream.recipient) revert Unauthorized();
         if (stream.isPaused) revert StreamPausedOrDisputed();
         
-        // Sync the timestamp so flow stops exactly now
         stream.lastUpdateTimestamp = block.timestamp > stream.stopTime ? stream.stopTime : block.timestamp;
         stream.isPaused = true;
         stream.isDisputed = true;
@@ -195,10 +185,8 @@ contract StreamingEscrow is ReentrancyGuard, AccessControl {
         if (!hasRole(ARBITRATOR_ROLE, msg.sender)) revert Unauthorized();
         if (!stream.isPaused) return;
 
-        // Shift the timeline by the duration of the pause
         uint256 pauseDuration = block.timestamp - stream.lastUpdateTimestamp;
-        stream.startTime += pauseDuration;
-        stream.stopTime += pauseDuration;
+        stream.totalPausedDuration += pauseDuration;
         
         stream.isPaused = false;
         stream.isDisputed = false;
@@ -209,28 +197,40 @@ contract StreamingEscrow is ReentrancyGuard, AccessControl {
     /**
      * @notice Arbitrator resolves a dispute.
      */
-    function resolveDispute(uint256 streamId, uint256 senderAmount, uint256 recipientAmount) external onlyRole(ARBITRATOR_ROLE) {
+    function resolveDispute(uint256 streamId, uint256 senderAmount, uint256 recipientAmount) external onlyRole(ARBITRATOR_ROLE) nonReentrant {
         Stream storage stream = streams[streamId];
+        if (streamId >= nextStreamId || stream.deposit == 0) revert StreamDoesNotExist();
         if (senderAmount + recipientAmount > stream.remainingBalance) revert InsufficientBalance();
 
-        IERC20(stream.tokenAddress).safeTransfer(stream.sender, senderAmount);
-        IERC20(stream.tokenAddress).safeTransfer(stream.recipient, recipientAmount);
+        address sender = stream.sender;
+        address recipient = stream.recipient;
+        address token = stream.tokenAddress;
 
+        // Effects
         stream.remainingBalance -= (senderAmount + recipientAmount);
-        delete streams[streamId]; // Close stream
+        delete streams[streamId]; 
+
+        // Interactions
+        IERC20(token).safeTransfer(sender, senderAmount);
+        IERC20(token).safeTransfer(recipient, recipientAmount);
 
         emit StreamResolved(streamId, senderAmount, recipientAmount);
     }
 
     function _calculateTimeElapsed(Stream memory stream) internal view returns (uint256) {
-        if (block.timestamp <= stream.startTime) return 0;
+        uint256 currentTime = block.timestamp;
+        if (currentTime <= stream.startTime) return 0;
         
-        uint256 effectiveEnd = block.timestamp > stream.stopTime ? stream.stopTime : block.timestamp;
+        uint256 effectiveEnd = currentTime > (stream.stopTime + stream.totalPausedDuration) ? (stream.stopTime + stream.totalPausedDuration) : currentTime;
+        
         if (stream.isPaused) {
             effectiveEnd = stream.lastUpdateTimestamp;
         }
         
-        return effectiveEnd - stream.startTime;
+        uint256 durationSinceStart = effectiveEnd - stream.startTime;
+        if (durationSinceStart <= stream.totalPausedDuration) return 0;
+        
+        return durationSinceStart - stream.totalPausedDuration;
     }
 
     function _calculateFee(address freelancer, uint256 amount) internal view returns (uint256) {

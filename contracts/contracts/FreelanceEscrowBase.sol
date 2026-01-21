@@ -10,17 +10,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./FreelanceEscrowLibrary.sol";
 
-interface IArbitrator {
-    function createDispute(uint256 _choices, bytes calldata _extraData) external payable returns (uint256 disputeID);
-    function arbitrationCost(bytes calldata _extraData) external view returns (uint256 cost);
-}
-
-interface IArbitrable {
-    event Dispute(IArbitrator indexed _arbitrator, uint256 indexed _disputeID, uint256 _metaEvidenceID, uint256 _evidenceID);
-    event Evidence(IArbitrator indexed _arbitrator, uint256 indexed _evidenceID, address indexed _party, string _evidence);
-    event Ruling(IArbitrator indexed _arbitrator, uint256 indexed _disputeID, uint256 _ruling);
-    function rule(uint256 _disputeID, uint256 _ruling) external;
-}
+import "./IArbitrator.sol";
 
 abstract contract FreelanceEscrowBase is 
     Initializable, 
@@ -34,6 +24,7 @@ abstract contract FreelanceEscrowBase is
     struct Milestone {
         uint256 amount;
         string ipfsHash;
+        bool isReleased;
     }
 
     struct Job {
@@ -63,6 +54,9 @@ abstract contract FreelanceEscrowBase is
     mapping(uint256 => Application[]) public jobApplications;
     mapping(uint256 => mapping(address => bool)) public hasApplied;
     mapping(address => mapping(address => uint256)) public pendingRefunds; 
+    mapping(uint256 => uint256) public milestoneBitmask;
+    mapping(uint256 => uint256) public disputeIdToJobId;
+    
     uint256 public jobCount;
     uint256 public constant APPLICATION_STAKE_PERCENT = 5; 
 
@@ -70,17 +64,18 @@ abstract contract FreelanceEscrowBase is
     bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
 
     address public arbitrator;
+    address public sbtContract;
     address internal _trustedForwarder; 
     address public entryPoint;
     address public vault;
     uint256 public platformFeeBps;
-    mapping(uint256 => uint256) public milestoneBitmask;
 
     error NotAuthorized();
     error InvalidStatus();
     error AlreadyPaid();
     error MilestoneAlreadyReleased();
     error InvalidMilestone();
+    error InvalidAddress();
 
     function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721Upgradeable, AccessControlUpgradeable) returns (bool) {
         return super.supportsInterface(interfaceId);

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../services/api';
-import { Trophy, Medal, Award, ExternalLink, User, Star, TrendingUp } from 'lucide-react';
+import { Trophy, Medal, Award, ExternalLink, User, Star, TrendingUp, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 function Leaderboard() {
@@ -15,9 +15,16 @@ function Leaderboard() {
     }, []);
 
     if (loading) return (
-        <div style={{ textAlign: 'center', padding: '160px' }}>
-            <Loader2 className="animate-spin" size={48} style={{ margin: '0 auto 24px auto', color: 'var(--primary)' }} />
-            <h3 style={{ color: 'var(--text-dim)' }}>Synchronizing Hall of Fame...</h3>
+        <div className="container" style={{ maxWidth: '1200px', padding: '40px 0' }}>
+            <div style={{ textAlign: 'center', marginBottom: '80px' }}>
+                <div className="skeleton skeleton-title mx-auto" style={{ width: '400px', height: '60px' }} />
+                <div className="skeleton skeleton-text mx-auto" style={{ width: '600px', marginTop: '20px' }} />
+            </div>
+            <div className="glass-card !border-white/5 opacity-50">
+                {Array.from({ length: 10 }).map((_, i) => (
+                    <div key={i} className="skeleton h-16 w-full mb-2" />
+                ))}
+            </div>
         </div>
     );
 

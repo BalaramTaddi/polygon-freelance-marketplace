@@ -27,11 +27,31 @@ function Portfolio({ address, onBack }) {
         args: [address],
     });
 
-    if (loading) return <div style={{ textAlign: 'center', padding: '100px' }}>Loading Portfolio...</div>;
-    if (!data?.profile?.address) return <div style={{ textAlign: 'center', padding: '100px' }}>Profile not found.</div>;
+    if (loading) return (
+        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 0' }}>
+            <div className="skeleton h-8 w-32 mb-8" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div className="skeleton h-[600px] w-full" />
+                <div className="md:col-span-2 space-y-8">
+                    <div className="skeleton h-20 w-1/2" />
+                    <div className="skeleton h-60 w-full" />
+                    <div className="skeleton h-60 w-full" />
+                </div>
+            </div>
+        </div>
+    );
+
+    if (!data?.profile?.address) return (
+        <div className="flex flex-col items-center justify-center py-20">
+            <User size={60} className="text-white/10 mb-6" />
+            <h3 className="text-2xl font-bold">Profile not found</h3>
+            <p className="text-text-muted mt-2">This address hasn't registered a PolyLance identity yet.</p>
+            {onBack && <button onClick={onBack} className="mt-8 btn-ghost">Return to Marketplace</button>}
+        </div>
+    );
 
     const { profile, jobs } = data;
-    const completedJobs = jobs.filter(j => j.status === 'Completed' || j.status === 2 || j.status === 4); // Status 4 is Completed in contract v1.1
+    const completedJobs = jobs.filter(j => j.status === 'Completed' || j.status === 2 || j.status === 4);
 
     // Calculate average rating
     const ratedJobs = completedJobs.filter(j => j.rating > 0);
@@ -40,10 +60,14 @@ function Portfolio({ address, onBack }) {
         : null;
 
     return (
-        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', paddingBottom: '100px' }}>
             {onBack && (
-                <button onClick={onBack} style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', marginBottom: '20px', fontWeight: 600 }}>
-                    ← Back to App
+                <button
+                    onClick={onBack}
+                    className="flex items-center gap-2 text-primary hover:text-white mb-10 group transition-all"
+                    style={{ fontWeight: 800, textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.15em' }}
+                >
+                    <span className="group-hover:-translate-x-1 transition-transform">←</span> Return to Marketplace
                 </button>
             )}
 

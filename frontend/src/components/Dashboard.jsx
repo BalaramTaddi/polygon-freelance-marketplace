@@ -11,15 +11,10 @@ function Dashboard() {
     const { address, isConnected } = useAccount();
     const { openConnectModal } = useConnectModal();
 
-    useEffect(() => {
-        console.log('[DASHBOARD] Account State:', { address, isConnected });
-    }, [address, isConnected]);
-    const [profile, setProfile] = React.useState({ name: '', bio: '', skills: '', category: 'Development' });
-    const [analytics, setAnalytics] = React.useState({ totalJobs: 0, totalVolume: 0, totalUsers: 0 });
-    const [isSaving, setIsSaving] = React.useState(false);
-    const { signMessageAsync } = useSignMessage();
+    const [isLoadingProfile, setIsLoadingProfile] = React.useState(true);
+    const [isLoadingAnalytics, setIsLoadingAnalytics] = React.useState(true);
 
-    const { data: jobCount } = useReadContract({
+    const { data: jobCount, isLoading: isLoadingJobCount } = useReadContract({
         address: CONTRACT_ADDRESS,
         abi: FreelanceEscrowABI.abi,
         functionName: 'jobCount',
@@ -27,12 +22,15 @@ function Dashboard() {
 
     React.useEffect(() => {
         if (isConnected && address) {
+            setIsLoadingProfile(true);
+            setIsLoadingAnalytics(true);
             api.getProfile(address).then(data => {
                 if (data.address) setProfile(data);
-            });
+            }).finally(() => setIsLoadingProfile(false));
+
             api.getAnalytics().then(data => {
                 if (data && data.totalJobs !== undefined) setAnalytics(data);
-            });
+            }).finally(() => setIsLoadingAnalytics(false));
         }
     }, [isConnected, address]);
 
@@ -45,10 +43,9 @@ function Dashboard() {
             const message = `Login to PolyLance: ${nonce}`;
             const signature = await signMessageAsync({ message });
             await api.updateProfile({ address, ...profile, signature, message });
-            alert('Profile updated securely!');
+            // Should integration with toast system here
         } catch (err) {
             console.error(err);
-            alert('Failed to update profile: ' + (err.shortMessage || err.message));
         } finally {
             setIsSaving(false);
         }
@@ -57,20 +54,23 @@ function Dashboard() {
     if (!isConnected) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] text-center animate-fade">
-                <div className="glass-card max-w-lg p-12">
-                    <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center mx-auto mb-8">
-                        <Wallet size={40} className="text-primary" />
+                <div className="glass-card max-w-lg p-12 overflow-visible">
+                    <div className="bg-glow absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-20" />
+                    <div className="relative z-10">
+                        <div className="w-24 h-24 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-[2rem] flex items-center justify-center mx-auto mb-8 border border-white/10 active-pulse shadow-2xl">
+                            <Wallet size={44} className="text-white" />
+                        </div>
+                        <h2 className="text-4xl font-black mb-4 tracking-tight">Connect to the Future</h2>
+                        <p className="text-text-muted text-lg mb-10 leading-relaxed font-medium">
+                            PolyLance is for the bold. Connect your wallet to manage your decentralized career, track earnings, and explore global opportunities.
+                        </p>
+                        <button
+                            onClick={openConnectModal}
+                            className="btn-primary !px-10 !py-5 text-lg"
+                        >
+                            <User size={20} /> Get Started Now
+                        </button>
                     </div>
-                    <h2 className="text-3xl font-bold mb-4">Connect to the Future</h2>
-                    <p className="text-text-muted text-lg mb-8 leading-relaxed">
-                        PolyLance is for the bold. Connect your wallet to manage your decentralized career, track earnings, and explore global opportunities.
-                    </p>
-                    <button
-                        onClick={openConnectModal}
-                        className="btn-primary"
-                    >
-                        Get Started Now
-                    </button>
                 </div>
             </div>
         );
@@ -80,64 +80,85 @@ function Dashboard() {
         <div className="animate-fade">
             <header className="mb-16">
                 <div className="flex items-center gap-4 mb-6">
-                    <span className="badge badge-info shadow-lg shadow-primary/10">
-                        {profile.skills ? 'Certified Talent' : 'Employer'}
-                    </span>
-                    {profile.reputationScore > 500 && (
-                        <span className="badge badge-warning shadow-lg shadow-warning/10">
-                            ✨ Elite Freelancer
-                        </span>
+                    {isLoadingProfile ? (
+                        <div className="skeleton h-6 w-32 rounded-full" />
+                    ) : (
+                        <>
+                            <span className="badge badge-info shadow-lg shadow-primary/10 border-primary/20">
+                                {profile.skills ? 'Certified Talent' : 'Employer'}
+                            </span>
+                            {profile.reputationScore > 500 && (
+                                <span className="badge badge-warning shadow-lg shadow-warning/10 border-warning/20">
+                                    ✨ Elite Freelancer
+                                </span>
+                            )}
+                        </>
                     )}
                 </div>
                 <h1 className="text-6xl font-black mb-6 leading-[1.1] tracking-tight">
-                    Welcome back, <span className="gradient-text">{profile.name || 'Pioneer'}</span>
+                    Welcome back, <span className="gradient-text">{isLoadingProfile ? '...' : (profile.name || 'Pioneer')}</span>
                 </h1>
-                <p className="text-text-muted text-xl max-w-2xl leading-relaxed font-medium">
+                <p className="text-text-muted text-xl max-w-2xl leading-relaxed font-medium opacity-80">
                     The decentralized workforce is at your fingertips. Monitor your contracts, analyze your growth, and stay ahead of the curve.
                 </p>
             </header>
 
             <div className="grid grid-marketplace mb-16">
-                <div className="glass-card group border-t-2 border-primary">
+                {/* Active Contracts Card */}
+                <div className="glass-card group border-t-2 border-primary hover-glow">
                     <div className="flex justify-between items-start mb-6">
                         <span className="text-[10px] font-black text-text-dim uppercase tracking-[0.2em]">Active Contracts</span>
-                        <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:scale-110 transition-transform">
-                            <Briefcase size={20} />
+                        <div className="p-2.5 rounded-xl bg-primary/10 text-primary group-hover:scale-110 group-hover:bg-primary/20 transition-all">
+                            <Briefcase size={22} />
                         </div>
                     </div>
-                    <div className="text-5xl font-black mb-2 tracking-tighter">
-                        {jobCount?.toString() || '0'}
-                    </div>
-                    <div className="text-xs font-bold text-primary/60 uppercase tracking-widest">Total Job History</div>
+                    {isLoadingJobCount ? (
+                        <div className="skeleton skeleton-title w-24 h-12 mb-2" />
+                    ) : (
+                        <div className="text-5xl font-black mb-2 tracking-tighter">
+                            {jobCount?.toString() || '0'}
+                        </div>
+                    )}
+                    <div className="text-[11px] font-black text-primary/60 uppercase tracking-widest">Total Job History</div>
                 </div>
 
-                <div className="glass-card group border-t-2 border-warning">
+                {/* Reputation Rank Card */}
+                <div className="glass-card group border-t-2 border-warning hover-glow">
                     <div className="flex justify-between items-start mb-6">
                         <span className="text-[10px] font-black text-text-dim uppercase tracking-[0.2em]">Reputation Rank</span>
-                        <div className="p-2 rounded-lg bg-warning/10 text-warning group-hover:scale-110 transition-transform">
-                            <Award size={20} />
+                        <div className="p-2.5 rounded-xl bg-warning/10 text-warning group-hover:scale-110 group-hover:bg-warning/20 transition-all">
+                            <Award size={22} />
                         </div>
                     </div>
-                    <div className="text-5xl font-black mb-2 tracking-tighter">
-                        {profile.reputationScore || 0}
-                    </div>
-                    <div className="text-xs font-bold text-warning/60 uppercase tracking-widest">
+                    {isLoadingProfile ? (
+                        <div className="skeleton skeleton-title w-24 h-12 mb-2" />
+                    ) : (
+                        <div className="text-5xl font-black mb-2 tracking-tighter">
+                            {profile.reputationScore || 0}
+                        </div>
+                    )}
+                    <div className="text-[11px] font-black text-warning/60 uppercase tracking-widest">
                         Top {profile.reputationScore > 500 ? '1%' : '10%'} World Rank
                     </div>
                 </div>
 
-                <div className="glass-card group border-t-2 border-accent">
+                {/* Earnings Card */}
+                <div className="glass-card group border-t-2 border-accent hover-glow">
                     <div className="flex justify-between items-start mb-6">
                         <span className="text-[10px] font-black text-text-dim uppercase tracking-[0.2em]">Aggregate Earnings</span>
-                        <div className="p-2 rounded-lg bg-accent/10 text-accent group-hover:scale-110 transition-transform">
-                            <CheckCircle size={20} />
+                        <div className="p-2.5 rounded-xl bg-accent/10 text-accent group-hover:scale-110 group-hover:bg-accent/20 transition-all">
+                            <CheckCircle size={22} />
                         </div>
                     </div>
-                    <div className="text-5xl font-black mb-2 tracking-tighter">
-                        {profile.totalEarned?.toFixed(2) || '0.00'}
-                        <span className="text-sm font-bold text-text-dim ml-3 tracking-normal">MATIC</span>
-                    </div>
-                    <div className="text-xs font-bold text-accent/60 uppercase tracking-widest">Secured via Smart Escrow</div>
+                    {isLoadingProfile ? (
+                        <div className="skeleton skeleton-title w-32 h-12 mb-2" />
+                    ) : (
+                        <div className="text-5xl font-black mb-2 tracking-tighter">
+                            {profile.totalEarned?.toFixed(2) || '0.00'}
+                            <span className="text-sm font-bold text-text-dim ml-3 tracking-normal">MATIC</span>
+                        </div>
+                    )}
+                    <div className="text-[11px] font-black text-accent/60 uppercase tracking-widest">Secured via Smart Escrow</div>
                 </div>
             </div>
 

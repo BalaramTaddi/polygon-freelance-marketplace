@@ -1,12 +1,37 @@
 # Audit Report & Vulnerability Tracking
+**Lead Auditor:** Akhil Muvva
 
 ## Summary
 | Date | Tool | Findings | Status |
 |------|------|----------|--------|
 | 2026-01-06 | Initial Audit | Configured Slither, Mythril, Echidna | Complete |
 | 2026-01-06 | Security Enhancement | Integrated SafeERC20, RBAC | Complete |
+| 2026-01-21 | Deep Audit | Solhint, Surya, Manual Review | In Progress |
 
-## Findings & Fixes
+## Recent Findings (2026-01-21)
+
+### 10. Improper Meta-Transaction/AA `_msgSender()` Handling (HIGH)
+- **Vulnerability**: In `FreelanceEscrow.sol`, `_msgSender()` uses `tx.origin` when called via `trustedForwarder` or `entryPoint`. This is insecure and breaks ERC-4337 compatibility (returns Bundler address instead of User).
+- **Impact**: Users using Account Abstraction wallets cannot interact with the contract. Potential phishing risk.
+- **Recommendation**: Use `ERC2771Context` pattern for forwarder and proper EntryPoint extraction.
+
+### 11. Governance Voting Power Manipulation (MEDIUM-HIGH)
+- **Vulnerability**: `FreelanceGovernance.sol` calculates voting power using live `sbtContract.balanceOf(msg.sender)` during the voting period.
+- **Impact**: Users can "mine" reputation (complete jobs) *during* a vote to artificially inflate their power. Lack of checkpoints/snapshots.
+- **Recommendation**: Implement a checkpointing system or use a block-height based snapshot for voting power.
+
+### 12. Solhint Style & Best Practice Violations (LOW)
+- **Findings**: 512 violations found.
+  - 47 Errors: Mostly string quote inconsistency and compiler version mismatches.
+  - 465 Warnings: Missing NatSpec tags, gas-inefficient strict inequalities, and non-indexed events.
+- **Recommendation**: Fix string quotes and add full NatSpec documentation for production readiness.
+
+### 13. Surya Inheritance & Call Graph Verification
+- **Findings**: 
+  - `FreelanceEscrow` correctly inherits 7+ interfaces and base contracts.
+  - Modifiers (`nonReentrant`, `whenNotPaused`) are appropriately applied to all state-changing external functions except `rule` (which is correctly exempted).
+
+## Historical Findings & Fixes
 
 ### 1. Manual Access Control in PolyToken
 - **Vulnerability**: Minter role was handled by a manual mapping and `onlyOwner`.

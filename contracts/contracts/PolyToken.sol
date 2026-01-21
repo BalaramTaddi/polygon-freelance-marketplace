@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 
 /**
  * @title PolyToken
- * @author PolyLance Team
+ * @author Akhil Muvva
  * @notice The utility and governance token for the PolyLance ecosystem.
  * @dev Features ERC20Votes for governance, ERC20Permit for gasless approvals, 
  * and role-based minting for platform rewards.

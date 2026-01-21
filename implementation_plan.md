@@ -1,16 +1,12 @@
 # PolyLance Transformation Plan
+**Lead:** Akhil Muvva
 
 This plan outlines the steps to transform the PolyLance repository into a production-ready, god-tier dApp.
 
 ## 1. Smart Contract Enhancements
 - [x] Merge `contracts/` and `contracts_new/`.
 - [ ] Add comprehensive NatSpec documentation to all contracts.
-- [ ] Implement/Enhance security features:
-  - `ReentrancyGuard` (Ensure all state-changing functions use it).
-  - `SafeERC20` (Already used, but ensure consistent application).
-  - `Pausable` (Add emergency stop for all critical interactions).
-  - `AccessControl` (Refine roles: `DEFAULT_ADMIN_ROLE`, `ARBITRATOR_ROLE`, `MANAGER_ROLE`).
-  - `SafeCast` for packing/unpacking if needed.
+- [x] Implement/Enhance security features (Reentrancy, Pausable, AccessControl)
 - [ ] Gas Optimizations:
   - Use `unchecked` blocks for arithmetic where safe.
   - Optimize storage layouts (already partially done).

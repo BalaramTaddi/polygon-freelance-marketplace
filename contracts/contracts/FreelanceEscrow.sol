@@ -3,68 +3,30 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./FreelanceRenderer.sol";
-
+import "./FreelanceEscrowBase.sol";
 import "./interfaces/IFreelanceSBT.sol";
-import "./interfaces/IArbitrator.sol";
 
 /**
  * @title FreelanceEscrow
+ * @author Akhil Muvva
  * @notice Refactored for Antigravity's EVM.
  * Implements: 1. Milestone Factory, 2. Decentralized Dispute Resolution, 3. Soulbound Identity (SBT).
+ * This contract handles the locking and release of funds for freelance work on the Polygon network.
  */
-contract FreelanceEscrow is Initializable, ERC721Upgradeable, AccessControlUpgradeable, ReentrancyGuardUpgradeable, UUPSUpgradeable, IArbitrable {
+contract FreelanceEscrow is FreelanceEscrowBase, PausableUpgradeable, IArbitrable, OwnableUpgradeable {
     using SafeERC20 for IERC20;
 
-    enum JobStatus { Created, Ongoing, Disputed, Completed, Cancelled }
-
-    struct Milestone {
-        uint256 amount;
-        string ipfsHash;
-    }
-
-    struct Job {
-        address client;          
-        address freelancer;      
-        uint256 amount;
-        uint256 totalPaidOut;
-        JobStatus status;        
-        uint16 categoryId;       
-        uint16 milestoneCount;   
-        uint8 rating;            
-        bool paid;               
-        address token;           
-        string ipfsHash;
-    }
-
-    mapping(uint256 => Job) public jobs;
-    mapping(uint256 => mapping(uint256 => Milestone)) public jobMilestones;
-    mapping(uint256 => uint256) public milestoneBitmask;
-    mapping(uint256 => uint256) public disputeIdToJobId;
-    
-    uint256 public jobCount;
-    address public arbitrator;
-    address public sbtContract;
-    address public entryPoint;
-    address public trustedForwarder;
-
-    bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
-
-    event JobCreated(uint256 indexed jobId, address indexed client, address indexed freelancer, uint256 amount);
-    event FundsReleased(uint256 indexed jobId, address indexed freelancer, uint256 amount);
-    event MilestoneReleased(uint256 indexed jobId, uint256 indexed milestoneId, uint256 amount);
-    event DisputeRaised(uint256 indexed jobId, uint256 disputeId);
-
-    error NotAuthorized();
-    error InvalidStatus();
-    error AlreadyPaid();
-    error InvalidMilestone();
-    error InvalidAddress();
+    address public polyToken;
+    address public reputationContract;
+    address public completionCertContract;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -76,14 +38,19 @@ contract FreelanceEscrow is Initializable, ERC721Upgradeable, AccessControlUpgra
         __ERC721_init("FreelanceWork", "FWORK");
         __AccessControl_init();
         __ReentrancyGuard_init();
+        __Pausable_init();
         __UUPSUpgradeable_init();
+        __Ownable_init(admin);
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(MANAGER_ROLE, admin);
-        trustedForwarder = forwarder;
+        _grantRole(ARBITRATOR_ROLE, admin);
+        
+        _trustedForwarder = forwarder;
         arbitrator = admin;
         sbtContract = _sbt;
         entryPoint = _entry;
+        platformFeeBps = 250; // 2.5% default
     }
 
     function setSBTContract(address _sbt) external onlyRole(DEFAULT_ADMIN_ROLE) {
@@ -96,9 +63,108 @@ contract FreelanceEscrow is Initializable, ERC721Upgradeable, AccessControlUpgra
         entryPoint = _entry;
     }
 
+    function setVault(address _vault) external onlyOwner {
+        if (_vault == address(0)) revert InvalidAddress();
+        vault = _vault;
+    }
+
+    function setPlatformFee(uint256 _bps) external onlyOwner {
+        if (_bps > 1000) revert InvalidStatus(); // Max 10%
+        platformFeeBps = _bps;
+    }
+
+    function setPolyToken(address _token) external onlyOwner {
+        polyToken = _token;
+    }
+
+    function setReputationContract(address _rep) external onlyOwner {
+        reputationContract = _rep;
+    }
+
+    function setCompletionCertContract(address _cert) external onlyOwner {
+        completionCertContract = _cert;
+    }
+
+    mapping(address => bool) public tokenWhitelist;
+    function setTokenWhitelist(address _token, bool _status) external onlyRole(MANAGER_ROLE) {
+        tokenWhitelist[_token] = _status;
+    }
+
+    function applyForJob(uint256 jobId) external payable whenNotPaused nonReentrant {
+        Job storage job = jobs[jobId];
+        if (job.status != JobStatus.Created) revert InvalidStatus();
+        if (hasApplied[jobId][_msgSender()]) revert InvalidStatus();
+
+        uint256 stake = (job.amount * 5) / 100;
+
+        if (job.token != address(0)) {
+            IERC20(job.token).safeTransferFrom(_msgSender(), address(this), stake);
+        } else {
+            require(msg.value >= stake, "Low stake");
+        }
+
+        jobApplications[jobId].push(Application(_msgSender(), stake));
+        hasApplied[jobId][_msgSender()] = true;
+    }
+
+    function pickFreelancer(uint256 jobId, address freelancer) external whenNotPaused {
+        Job storage job = jobs[jobId];
+        if (_msgSender() != job.client) revert NotAuthorized();
+        if (job.status != JobStatus.Created) revert InvalidStatus();
+
+        job.freelancer = freelancer;
+        job.status = JobStatus.Accepted;
+
+        // Refund others
+        Application[] storage apps = jobApplications[jobId];
+        for (uint256 i = 0; i < apps.length; i++) {
+            if (apps[i].freelancer != freelancer) {
+                pendingRefunds[apps[i].freelancer][job.token] += apps[i].stake;
+            } else {
+                job.freelancerStake = apps[i].stake;
+            }
+        }
+    }
+
+    function acceptJob(uint256 jobId) external payable whenNotPaused nonReentrant {
+        Job storage job = jobs[jobId];
+        if (_msgSender() != job.freelancer) revert NotAuthorized();
+        if (job.status != JobStatus.Accepted) revert InvalidStatus();
+
+        if (msg.value > 0) {
+            job.freelancerStake += msg.value;
+        }
+
+        job.status = JobStatus.Ongoing;
+    }
+
+    function submitWork(uint256 jobId, string memory ipfsHash) external whenNotPaused {
+        Job storage job = jobs[jobId];
+        if (_msgSender() != job.freelancer) revert NotAuthorized();
+        if (job.status != JobStatus.Ongoing) revert InvalidStatus();
+
+        job.ipfsHash = ipfsHash;
+        // Optionally update status to 'Submitted' if we had such a state, 
+        // but traditionally we just wait for client to release funds.
+    }
+
+    function claimRefund(address token) external nonReentrant {
+        uint256 amt = pendingRefunds[_msgSender()][token];
+        if (amt == 0) revert InvalidStatus();
+        pendingRefunds[_msgSender()][token] = 0;
+        _sendFunds(_msgSender(), token, amt);
+    }
     function setArbitrator(address _arb) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (_arb == address(0)) revert InvalidAddress();
         arbitrator = _arb;
+    }
+
+    function pause() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _pause();
+    }
+
+    function unpause() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _unpause();
     }
 
     struct CreateParams {
@@ -107,6 +173,7 @@ contract FreelanceEscrow is Initializable, ERC721Upgradeable, AccessControlUpgra
         address token;
         uint256 amount;
         string ipfsHash;
+        uint256 deadline;
         uint256[] mAmounts;
         string[] mHashes;
     }
@@ -114,7 +181,7 @@ contract FreelanceEscrow is Initializable, ERC721Upgradeable, AccessControlUpgra
     /**
      * @notice Milestone Factory: Locks funds and defines stages upfront.
      */
-    function createJob(CreateParams calldata p) external payable nonReentrant {
+    function createJob(CreateParams memory p) public payable whenNotPaused nonReentrant returns (uint256) {
         if (p.token != address(0)) {
             IERC20(p.token).safeTransferFrom(_msgSender(), address(this), p.amount);
         } else {
@@ -127,28 +194,33 @@ contract FreelanceEscrow is Initializable, ERC721Upgradeable, AccessControlUpgra
         job.freelancer = p.freelancer;
         job.token = p.token;
         job.amount = p.amount;
-        job.status = JobStatus.Created;
+        job.status = p.freelancer == address(0) ? JobStatus.Created : JobStatus.Accepted;
         job.ipfsHash = p.ipfsHash;
         job.categoryId = uint16(p.categoryId);
         job.milestoneCount = uint16(p.mAmounts.length);
 
         for (uint256 i = 0; i < p.mAmounts.length; i++) {
-            jobMilestones[jobId][i] = Milestone(p.mAmounts[i], p.mHashes[i]);
+            jobMilestones[jobId][i] = Milestone(p.mAmounts[i], p.mHashes[i], false);
         }
 
-        emit JobCreated(jobId, job.client, p.freelancer, p.amount);
+        job.deadline = uint48(p.deadline == 0 ? block.timestamp + 7 days : p.deadline);
+
+        emit JobCreated(jobId, job.client, p.freelancer, p.amount, job.deadline);
+        return jobId;
     }
+
 
     /**
      * @notice Stage-based release of funds.
      */
-    function releaseMilestone(uint256 jobId, uint256 mId) external nonReentrant {
+    function releaseMilestone(uint256 jobId, uint256 mId) external whenNotPaused nonReentrant {
         Job storage job = jobs[jobId];
         if (_msgSender() != job.client) revert NotAuthorized();
         
         uint256 mask = 1 << mId;
         if ((milestoneBitmask[jobId] & mask) != 0) revert InvalidMilestone();
         milestoneBitmask[jobId] |= mask;
+        jobMilestones[jobId][mId].isReleased = true;
 
         uint256 amt = jobMilestones[jobId][mId].amount;
         job.totalPaidOut += amt;
@@ -160,37 +232,80 @@ contract FreelanceEscrow is Initializable, ERC721Upgradeable, AccessControlUpgra
     /**
      * @notice Completion and SBT Minting.
      */
-    function completeJob(uint256 jobId, uint8 rating) external nonReentrant {
+    function completeJob(uint256 jobId, uint8 rating) public whenNotPaused nonReentrant {
         Job storage job = jobs[jobId];
         if (_msgSender() != job.client) revert NotAuthorized();
+        if (job.status != JobStatus.Ongoing) revert InvalidStatus();
         if (job.paid) revert AlreadyPaid();
 
         uint256 payout = job.amount - job.totalPaidOut;
-        
-        // State updates before external calls
+        uint256 fee = (job.amount * platformFeeBps) / 10000;
+        uint256 freelancerNet = payout - fee;
+
+        // State updates
         job.paid = true;
         job.status = JobStatus.Completed;
         job.rating = rating;
         job.totalPaidOut += payout;
 
-        // Mint before sending funds
+        // Mint SBTs
         _safeMint(job.freelancer, jobId);
+        
         if (sbtContract != address(0)) {
-            uint256 sbtId = IFreelanceSBT(sbtContract).mintContribution(job.freelancer, job.categoryId, rating, jobId, job.client);
-            (sbtId); // Silence unused variable warning
+            try IFreelanceSBT(sbtContract).mintContribution(job.freelancer, job.categoryId, rating, jobId, job.client) {}
+            catch {
+                // Fallback to safeMint for FreelanceSBT if mintContribution fails/missing
+                (bool s, ) = sbtContract.call(abi.encodeWithSignature("safeMint(address,string)", job.freelancer, job.ipfsHash));
+                (s);
+            }
         }
 
-        if (payout > 0) {
-            _sendFunds(job.freelancer, job.token, payout);
+        if (completionCertContract != address(0)) {
+            IFreelanceSBT(completionCertContract).mintContribution(job.freelancer, job.categoryId, rating, jobId, job.client);
         }
 
-        emit FundsReleased(jobId, job.freelancer, payout);
+        if (reputationContract != address(0)) {
+            (bool success, ) = reputationContract.call(abi.encodeWithSignature("levelUp(address,uint256,uint256)", job.freelancer, job.categoryId, 1));
+            (success);
+        }
+
+        if (polyToken != address(0)) {
+            (bool success, ) = polyToken.call(abi.encodeWithSignature("mint(address,uint256)", job.freelancer, 100 * 1e18));
+            (success);
+        }
+
+        // Payout freelancer (net) + stake return
+        _sendFunds(job.freelancer, job.token, freelancerNet + job.freelancerStake);
+        
+        // Payout vault (fee)
+        if (fee > 0 && vault != address(0)) {
+            _sendFunds(vault, job.token, fee);
+        }
+
+        emit FundsReleased(jobId, job.freelancer, payout, jobId);
+    }
+
+    // Traditional releaseFunds call
+    function releaseFunds(uint256 jobId) external {
+        completeJob(jobId, 5);
+    }
+
+    function refundExpiredJob(uint256 jobId) external whenNotPaused nonReentrant {
+        Job storage job = jobs[jobId];
+        if (_msgSender() != job.client) revert NotAuthorized();
+        if (job.status != JobStatus.Created && job.status != JobStatus.Accepted) revert InvalidStatus();
+        if (block.timestamp < job.deadline && job.deadline != 0) revert InvalidStatus();
+
+        job.status = JobStatus.Cancelled;
+        job.paid = true;
+        
+        _sendFunds(job.client, job.token, job.amount);
     }
 
     /**
      * @notice Decentralized Dispute Integration.
      */
-    function raiseDispute(uint256 jobId) external payable nonReentrant {
+    function raiseDispute(uint256 jobId) public payable whenNotPaused nonReentrant {
         Job storage job = jobs[jobId];
         if (_msgSender() != job.client && _msgSender() != job.freelancer) revert NotAuthorized();
         job.status = JobStatus.Disputed;
@@ -202,24 +317,45 @@ contract FreelanceEscrow is Initializable, ERC721Upgradeable, AccessControlUpgra
         }
     }
 
-    function rule(uint256 dId, uint256 ruling) external override {
+    function dispute(uint256 jobId) external payable {
+        raiseDispute(jobId);
+    }
+
+    function rule(uint256 dId, uint256 ruling) external override nonReentrant {
         if (_msgSender() != arbitrator) revert NotAuthorized();
         uint256 jobId = disputeIdToJobId[dId];
         Job storage job = jobs[jobId];
 
         uint256 payout = job.amount - job.totalPaidOut;
-        // MUST update state BEFORE external calls to avoid reentrancy
+        
+        // Effects: Update state BEFORE external calls
         job.totalPaidOut += payout;
-
+        
         if (ruling == 1) { // Client
             job.status = JobStatus.Cancelled;
             _sendFunds(job.client, job.token, payout);
         } else { // Freelancer
             job.status = JobStatus.Completed;
+            // Note: _safeMint can be a reentrancy vector, but we are protected by nonReentrant
             _safeMint(job.freelancer, jobId);
             _sendFunds(job.freelancer, job.token, payout);
         }
         emit Ruling(IArbitrator(arbitrator), dId, ruling);
+    }
+
+    function resolveDisputeManual(uint256 jobId, uint256 freelancerBps) external onlyRole(DEFAULT_ADMIN_ROLE) nonReentrant {
+        Job storage job = jobs[jobId];
+        if (job.status != JobStatus.Disputed) revert InvalidStatus();
+        
+        uint256 remaining = job.amount - job.totalPaidOut;
+        uint256 freelancerAmt = (remaining * freelancerBps) / 10000;
+        uint256 clientAmt = remaining - freelancerAmt;
+
+        job.totalPaidOut += remaining;
+        job.status = (freelancerBps > 5000) ? JobStatus.Completed : JobStatus.Cancelled;
+
+        if (freelancerAmt > 0) _sendFunds(job.freelancer, job.token, freelancerAmt);
+        if (clientAmt > 0) _sendFunds(job.client, job.token, clientAmt);
     }
 
     function _sendFunds(address to, address token, uint256 amt) internal {
@@ -242,12 +378,14 @@ contract FreelanceEscrow is Initializable, ERC721Upgradeable, AccessControlUpgra
         }));
     }
 
-    function supportsInterface(bytes4 id) public view override(ERC721Upgradeable, AccessControlUpgradeable) returns (bool) {
+    function supportsInterface(bytes4 id) public view override returns (bool) {
         return super.supportsInterface(id);
     }
 
     function _msgSender() internal view virtual override returns (address sender) {
-        if (msg.sender == trustedForwarder || msg.sender == entryPoint) return tx.origin;
+        if (msg.sender == _trustedForwarder && msg.data.length >= 20) {
+            return address(bytes20(msg.data[msg.data.length - 20:]));
+        }
         return super._msgSender();
     }
 
