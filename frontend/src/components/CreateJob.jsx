@@ -126,17 +126,17 @@ function CreateJob({ onJobCreated, gasless }) {
     }, [isSuccess, jobCount]);
 
     return (
-        <div className="container" style={{ maxWidth: '800px', padding: '40px 0' }}>
-            <div style={{ marginBottom: '40px', textAlign: 'center' }}>
-                <h1 style={{ fontSize: '2.5rem', marginBottom: '12px', background: 'linear-gradient(to right, #fff, var(--primary))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                    Post a Premium Mandate
+        <div className="animate-fade">
+            <header className="mb-12 text-center">
+                <h1 className="text-6xl font-black mb-6 tracking-tighter shimmer-text">
+                    Post a Mandate
                 </h1>
-                <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem' }}>
+                <p className="text-text-muted text-xl max-w-2xl mx-auto leading-relaxed font-medium">
                     Secure the best talent with automated on-chain escrow protection.
                 </p>
-            </div>
+            </header>
 
-            <form onSubmit={handleSubmit} className="glass-card" style={{ padding: '40px' }}>
+            <form onSubmit={handleSubmit} className="glass-card max-w-4xl mx-auto p-12">
                 <div className="input-group">
                     <label className="input-label">Project Identity</label>
                     <div style={{ position: 'relative' }}>

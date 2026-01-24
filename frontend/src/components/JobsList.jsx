@@ -45,25 +45,23 @@ function JobsList({ onUserClick, onSelectChat, gasless }) {
                 </p>
             </header>
 
-            <div className="glass-card !border-white/5 hover:border-primary/20" style={{ marginBottom: '32px', padding: '24px' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1fr 0.8fr', gap: '16px', alignItems: 'center' }}>
-                    <div style={{ position: 'relative' }}>
-                        <Search size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)' }} />
+            <div className="glass-card mb-12 !border-white/5">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-center">
+                    <div className="relative">
+                        <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-dim" />
                         <input
                             type="text"
                             placeholder="Search high-end gigs..."
-                            className="input-field"
+                            className="input-field !pl-12"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            style={{ paddingLeft: '44px' }}
                         />
                     </div>
 
-                    <div style={{ position: 'relative' }}>
-                        <Filter size={16} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)' }} />
+                    <div className="relative">
+                        <Filter size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-dim" />
                         <select
-                            className="input-field"
-                            style={{ paddingLeft: '40px', appearance: 'none' }}
+                            className="input-field !pl-10 !appearance-none"
                             value={filter}
                             onChange={(e) => setFilter(e.target.value)}
                         >
@@ -87,11 +85,10 @@ function JobsList({ onUserClick, onSelectChat, gasless }) {
                         <option value="3">Disputed ⚖️</option>
                     </select>
 
-                    <div style={{ position: 'relative' }}>
-                        <ArrowUpDown size={16} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)' }} />
+                    <div className="relative">
+                        <ArrowUpDown size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-dim" />
                         <select
-                            className="input-field"
-                            style={{ paddingLeft: '40px', appearance: 'none' }}
+                            className="input-field !pl-10 !appearance-none"
                             value={sortBy}
                             onChange={(e) => setSortBy(e.target.value)}
                         >

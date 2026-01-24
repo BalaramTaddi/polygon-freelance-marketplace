@@ -19,21 +19,26 @@ function NFTGallery() {
     const nftCount = balance ? Number(balance) : 0;
 
     return (
-        <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-                <h1>My Proof-of-Work NFTs</h1>
-                <div className="badge" style={{ padding: '8px 16px' }}>Polygon Network</div>
-            </div>
+        <div className="animate-fade">
+            <header className="mb-12 flex justify-between items-center bg-white/5 p-8 rounded-3xl border border-white/5">
+                <div>
+                    <h1 className="text-5xl font-black mb-2 tracking-tighter shimmer-text">Proof-of-Work</h1>
+                    <p className="text-text-muted font-medium opacity-70">Your on-chain career achievements and certificates.</p>
+                </div>
+                <div className="badge badge-info shadow-xl shadow-primary/5 border-primary/20 !px-6 !py-3">
+                    Polygon Powered
+                </div>
+            </header>
 
             {!isConnected ? (
-                <div className="glass-card" style={{ textAlign: 'center', padding: '60px' }}>
-                    <p style={{ color: 'var(--text-muted)' }}>Please connect your wallet to view your certificates.</p>
+                <div className="glass-card text-center py-20">
+                    <p className="text-text-muted text-lg">Please connect your wallet to view your certificates.</p>
                 </div>
             ) : (
-                <div className="grid">
+                <div className="grid-marketplace">
                     {nftCount === 0 ? (
-                        <div className="glass-card" style={{ textAlign: 'center', padding: '40px', gridColumn: '1 / -1' }}>
-                            <p style={{ color: 'var(--text-muted)' }}>You haven't earned any proof-of-work NFTs yet. Complete a job to receive one!</p>
+                        <div className="glass-card text-center py-20 lg:col-span-3">
+                            <p className="text-text-muted text-lg">You haven't earned any proof-of-work NFTs yet. Complete a job to receive one!</p>
                         </div>
                     ) : (
                         Array.from({ length: nftCount }).map((_, i) => (

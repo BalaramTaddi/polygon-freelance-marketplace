@@ -3,7 +3,7 @@ import { Client } from '@xmtp/browser-sdk';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useEthersSigner } from '../hooks/useEthersSigner';
 import { useAccount } from 'wagmi';
-import { MessageSquare, Send, User, Loader2, FileText, DollarSign, Clock, CheckCircle2 } from 'lucide-react';
+import { MessageSquare, Send, User, Loader2, FileText, DollarSign, Clock, CheckCircle2, PlusCircle } from 'lucide-react';
 import { hexToBytes } from 'viem';
 
 export default function Chat({ initialPeerAddress, onClearedAddress }) {
@@ -149,99 +149,88 @@ export default function Chat({ initialPeerAddress, onClearedAddress }) {
 
     if (!client) {
         return (
-            <div className="glass-card" style={{ textAlign: 'center', padding: '50px' }}>
-                <MessageSquare size={48} style={{ marginBottom: '20px', color: 'var(--primary)' }} />
-                <h3>Enable Decentralized Messaging (XMTP V3)</h3>
-                <p style={{ color: 'var(--text-muted)', marginBottom: '20px' }}>
-                    PolyLance uses XMTP V3 for secure, end-to-end encrypted messaging.
+            <div className="glass-card text-center py-20 max-w-2xl mx-auto">
+                <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center mx-auto mb-8 border border-primary/20">
+                    <MessageSquare size={40} className="text-primary" />
+                </div>
+                <h3 className="text-3xl font-black mb-4">Enable Decentralized Messaging</h3>
+                <p className="text-text-muted text-lg mb-10 max-w-md mx-auto line-height-relaxed">
+                    PolyLance uses XMTP V3 for secure, end-to-end encrypted messaging between partners.
                 </p>
                 <button
                     onClick={handleInitialize}
-                    className="btn-primary"
+                    className="btn-primary !px-10 !py-4 text-lg"
                     disabled={isInitializing || !signer}
                 >
-                    {isInitializing ? <Loader2 className="animate-spin" /> : signer ? 'Connect to XMTP V3' : 'Connect Wallet First'}
+                    {isInitializing ? <Loader2 className="animate-spin" /> : signer ? 'Initialize Secure Channel' : 'Connect Wallet First'}
                 </button>
                 {!signer && (
-                    <p style={{ color: '#f59e0b', marginTop: '10px', fontSize: '0.9rem' }}>
+                    <p className="text-warning mt-6 font-bold text-sm">
                         Please connect your wallet in the dashboard to enable messaging.
                     </p>
                 )}
-                {error && <p style={{ color: '#ef4444', marginTop: '10px' }}>{error.message}</p>}
+                {error && <p className="text-danger mt-6 font-medium">{error.message}</p>}
             </div>
         );
     }
 
     return (
-        <div className="grid" style={{ gridTemplateColumns: '300px 1fr', height: '70vh', gap: '20px' }}>
-            <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                <h3>Conversations</h3>
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 h-[75vh]">
+            <div className="lg:col-span-1 glass-card !p-6 flex flex-col gap-6 overflow-hidden">
+                <h3 className="text-xl font-bold">Conversations</h3>
                 <form
-                    style={{ display: 'flex', gap: '5px' }}
+                    className="flex gap-2"
                     onSubmit={async (e) => {
                         e.preventDefault();
                         if (peerAddress && client) {
                             try {
-                                // In V3, creating a peer-to-peer conversation
-                                // We check if they can receive messages first if possible
                                 const conversation = await client.conversations.newConversation(peerAddress);
                                 setSelectedConversation(conversation);
                                 setPeerAddress('');
                             } catch (err) {
                                 console.error('[XMTP] Error starting conversation:', err);
-                                if (err.message?.includes('not registered') || err.message?.includes('not found')) {
-                                    alert('This user has not enabled XMTP messaging yet. They need to connect their wallet and enable messaging for you to talk to them.');
-                                } else {
-                                    alert('Error starting conversation: ' + err.message);
-                                }
+                                alert('Error starting conversation: ' + err.message);
                             }
                         }
                     }}
                 >
                     <input
                         type="text"
-                        placeholder="Wallet Address"
+                        placeholder="0x..."
+                        className="input-field !py-2.5 !text-sm"
                         value={peerAddress}
                         onChange={(e) => setPeerAddress(e.target.value)}
-                        style={{ flex: 1, padding: '8px' }}
                     />
                     <button
                         type="submit"
-                        className="btn-primary"
-                        style={{ padding: '8px 12px' }}
+                        className="btn-primary !p-2.5 !rounded-xl"
                     >
-                        +
+                        <PlusCircle size={20} />
                     </button>
                 </form>
-                <div style={{ overflowY: 'auto', flex: 1, paddingRight: '5px' }}>
-                    {conversations.map((conv, i) => (
-                        <motion.div
-                            key={conv.id}
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: i * 0.05 }}
-                            onClick={() => setSelectedConversation(conv)}
-                            style={{
-                                padding: '12px 16px',
-                                marginBottom: '8px',
-                                borderRadius: '12px',
-                                cursor: 'pointer',
-                                background: selectedConversation?.id === conv.id ? 'rgba(138, 43, 226, 0.15)' : 'rgba(255,255,255,0.03)',
-                                border: '1px solid',
-                                borderColor: selectedConversation?.id === conv.id ? 'var(--primary)' : 'transparent',
-                                color: selectedConversation?.id === conv.id ? 'var(--primary)' : 'inherit',
-                                transition: 'all 0.2s ease'
-                            }}
-                        >
-                            <div style={{ fontSize: '0.85rem', fontWeight: '600' }}>
-                                {conv.peerAddress?.slice(0, 8) || 'Group'}...{conv.peerAddress?.slice(-6) || ''}
-                            </div>
-                        </motion.div>
-                    ))}
+                <div className="overflow-y-auto flex-1 pr-2 space-y-3 custom-scrollbar">
+                    {conversations.length === 0 ? (
+                        <p className="text-text-dim text-sm text-center py-10 italic">No message history.</p>
+                    ) : (
+                        conversations.map((conv, i) => (
+                            <motion.div
+                                key={conv.id}
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: i * 0.05 }}
+                                onClick={() => setSelectedConversation(conv)}
+                                className={`p-4 rounded-2xl cursor-pointer border transition-all duration-300 ${selectedConversation?.id === conv.id ? 'bg-primary/10 border-primary text-primary shadow-lg shadow-primary/5' : 'bg-white/5 border-transparent hover:bg-white/10'}`}
+                            >
+                                <div className="text-sm font-black truncate">
+                                    {conv.peerAddress?.slice(0, 8)}...{conv.peerAddress?.slice(-6)}
+                                </div>
+                            </motion.div>
+                        ))
+                    )}
                 </div>
             </div>
 
-            <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', padding: 0, overflow: 'hidden' }}>
+            <div className="lg:col-span-3 glass-card !p-0 flex flex-col overflow-hidden relative">
                 {selectedConversation ? (
                     <MessageContainer
                         conversation={selectedConversation}

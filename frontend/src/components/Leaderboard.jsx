@@ -29,21 +29,21 @@ function Leaderboard() {
     );
 
     return (
-        <div className="container" style={{ maxWidth: '1200px', padding: '40px 0' }}>
-            <div style={{ textAlign: 'center', marginBottom: '80px' }}>
+        <div className="animate-fade">
+            <header className="mb-16 text-center">
                 <motion.div
                     initial={{ scale: 0.9, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{ duration: 0.5 }}
                 >
-                    <h1 style={{ fontSize: '3.5rem', marginBottom: '16px', background: 'linear-gradient(to right, #fff, var(--primary), var(--secondary))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontFamily: 'Outfit' }}>
-                        The PolyLance Elite
+                    <h1 className="text-6xl md:text-8xl font-black mb-6 tracking-tighter shimmer-text">
+                        The Elite
                     </h1>
-                    <p style={{ color: 'var(--text-muted)', fontSize: '1.2rem', maxWidth: '600px', margin: '0 auto' }}>
+                    <p className="text-text-muted text-xl max-w-2xl mx-auto leading-relaxed font-medium">
                         Celebrating the world's most trusted decentralized creators and their mission-critical contributions.
                     </p>
                 </motion.div>
-            </div>
+            </header>
 
             <div className="glass-card" style={{ padding: '0', overflow: 'hidden', border: '1px solid var(--glass-border)' }}>
                 <div style={{ overflowX: 'auto' }}>

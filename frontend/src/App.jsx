@@ -74,16 +74,16 @@ function App() {
       <NotificationManager />
       <ConnectionBanner />
 
-      <nav className="glass-nav">
-        <div className="brand" onClick={() => setActiveTab('dashboard')} style={{ cursor: 'pointer' }}>
-          <div className="w-10 h-10 bg-primary/20 rounded-xl flex items-center justify-center border border-primary/30">
-            <Briefcase size={22} className="text-primary active-icon" />
+      <div className="app-layout">
+        <aside className="sidebar-premium">
+          <div className="brand mb-12" onClick={() => setActiveTab('dashboard')} style={{ cursor: 'pointer' }}>
+            <div className="w-10 h-10 bg-primary/20 rounded-xl flex items-center justify-center border border-primary/30 shadow-[0_0_15px_rgba(139,92,246,0.3)]">
+              <Briefcase size={22} className="text-primary active-icon" />
+            </div>
+            <span className="shimmer-text font-bold text-2xl tracking-tighter">PolyLance</span>
           </div>
-          <span className="gradient-text font-bold text-2xl tracking-tighter">PolyLance</span>
-        </div>
 
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-1">
+          <nav className="nav-vertical">
             <button
               onClick={() => setActiveTab('dashboard')}
               className={`nav-link ${activeTab === 'dashboard' ? 'active' : ''}`}
@@ -120,18 +120,16 @@ function App() {
             >
               <MessageSquare size={18} /> Messenger
             </button>
-          </div>
+          </nav>
 
-          <div className="h-8 w-px bg-white/5 mx-2" />
-
-          <div className="flex items-center gap-6">
-            <div className="flex flex-col items-center">
-              <span className="text-[10px] font-black uppercase opacity-30 mb-1.5 tracking-widest">Relay</span>
+          <div className="sidebar-bottom">
+            <div className="flex items-center justify-between bg-white/5 p-3 rounded-2xl border border-white/5">
+              <span className="text-[10px] font-black uppercase opacity-50 tracking-widest text-text-muted">Gasless</span>
               <button
                 onClick={() => setIsGasless(!isGasless)}
-                className={`relative w-10 h-5.5 rounded-full transition-all duration-500 ${isGasless ? 'bg-primary shadow-lg shadow-primary/30' : 'bg-slate-800'}`}
+                className={`relative w-10 h-5 rounded-full transition-all duration-300 ${isGasless ? 'bg-primary shadow-[0_0_15px_rgba(139,92,246,0.5)]' : 'bg-slate-800 border border-white/10'}`}
               >
-                <div className={`absolute top-1 w-3.5 h-3.5 rounded-full bg-white transition-all duration-500 shadow-md ${isGasless ? 'left-5.5' : 'left-1'}`} />
+                <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all duration-300 shadow-sm ${isGasless ? 'left-5.5' : 'left-0.5'}`} />
               </button>
             </div>
 
@@ -153,7 +151,7 @@ function App() {
                     {(() => {
                       if (!connected) {
                         return (
-                          <button onClick={openConnectModal} className="btn-primary shadow-2xl">
+                          <button onClick={openConnectModal} className="btn-primary w-full shadow-2xl !py-4">
                             Connect Wallet
                           </button>
                         );
@@ -161,24 +159,24 @@ function App() {
 
                       if (chain.unsupported) {
                         return (
-                          <button onClick={openChainModal} className="btn-ghost !text-danger !border-danger/20">
+                          <button onClick={openChainModal} className="btn-ghost w-full !text-danger !border-danger/20">
                             Wrong Network
                           </button>
                         );
                       }
 
                       return (
-                        <div className="flex items-center gap-4 bg-white/5 p-1.5 pr-4 rounded-2xl border border-white/5 hover:border-white/10 transition-all cursor-pointer" onClick={openAccountModal}>
-                          <div className="w-9 h-9 rounded-xl overflow-hidden border border-white/10">
+                        <div className="flex items-center gap-4 bg-white/5 p-2 pr-4 rounded-2xl border border-white/5 hover:border-white/10 transition-all cursor-pointer w-full" onClick={openAccountModal}>
+                          <div className="w-10 h-10 rounded-xl overflow-hidden border border-white/10 shrink-0">
                             <img
                               src={`https://api.dicebear.com/7.x/identicon/svg?seed=${account.address}`}
                               alt="avatar"
                               className="w-full h-full object-cover"
                             />
                           </div>
-                          <div className="flex flex-col">
-                            <span className="text-xs font-black text-white/90 leading-none mb-1">{account.displayName}</span>
-                            <span className="text-[10px] font-bold text-primary/80 leading-none">{account.displayBalance}</span>
+                          <div className="flex flex-col truncate">
+                            <span className="text-xs font-black text-white/90 leading-none mb-1 truncate">{account.displayName}</span>
+                            <span className="text-[10px] font-bold text-primary/80 leading-none truncate">{account.displayBalance}</span>
                           </div>
                         </div>
                       );
@@ -188,31 +186,77 @@ function App() {
               }}
             </ConnectButton.Custom>
           </div>
-        </div>
-      </nav>
+        </aside>
 
-      <main className="container flex-grow relative z-10">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeTab + (portfolioAddress || '')}
-            initial={{ opacity: 0, y: 20, filter: 'blur(10px)' }}
-            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-            exit={{ opacity: 0, y: -20, filter: 'blur(10px)' }}
-            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-          >
-            {renderContent()}
-          </motion.div>
-        </AnimatePresence>
-      </main>
+        <div className="main-content-premium">
+          <main className="container flex-grow relative z-10">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTab + (portfolioAddress || '')}
+                initial={{ opacity: 0, y: 20, filter: 'blur(10px)' }}
+                animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                exit={{ opacity: 0, y: -20, filter: 'blur(10px)' }}
+                transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+              >
+                {renderContent()}
+              </motion.div>
+            </AnimatePresence>
+          </main>
 
-      <footer className="px-12 py-8 border-t border-white/5 flex justify-between items-center text-sm">
-        <div className="opacity-40 italic">© 2026 PolyLance Protocol. The future of decentralized work.</div>
-        <div className="flex gap-6 opacity-60">
-          <button onClick={() => setActiveTab('tos')} className="hover:text-primary transition-colors">Terms of Service</button>
-          <button onClick={() => setActiveTab('privacy')} className="hover:text-primary transition-colors">Privacy Policy</button>
-          <a href="https://polygon.technology" target="_blank" rel="noreferrer" className="hover:text-primary transition-colors">Built on Polygon</a>
+          <footer className="footer-premium">
+            <div className="container">
+              <div className="footer-grid">
+                <div className="footer-brand">
+                  <div className="brand" onClick={() => setActiveTab('dashboard')} style={{ cursor: 'pointer' }}>
+                    <div className="w-8 h-8 bg-primary/20 rounded-lg flex items-center justify-center border border-primary/30">
+                      <Briefcase size={18} className="text-primary" />
+                    </div>
+                    <span className="shimmer-text font-bold text-xl tracking-tighter">PolyLance</span>
+                  </div>
+                  <p className="text-text-dim text-xs mt-4 max-w-[200px] leading-relaxed">
+                    The future of decentralized work. Secured by Polygon, powered by the community.
+                  </p>
+                </div>
+
+                <div className="footer-nav-col">
+                  <h4 className="footer-title">Navigation</h4>
+                  <button onClick={() => setActiveTab('dashboard')} className="footer-link">Dashboard</button>
+                  <button onClick={() => setActiveTab('jobs')} className="footer-link">Markets</button>
+                  <button onClick={() => setActiveTab('create')} className="footer-link">Post Job</button>
+                </div>
+
+                <div className="footer-nav-col">
+                  <h4 className="footer-title">Platform</h4>
+                  <button onClick={() => setActiveTab('nfts')} className="footer-link">Gallery</button>
+                  <button onClick={() => setActiveTab('leaderboard')} className="footer-link">Leaders</button>
+                  <button onClick={() => setActiveTab('chat')} className="footer-link">Messenger</button>
+                </div>
+
+                <div className="footer-nav-col">
+                  <h4 className="footer-title">Legal</h4>
+                  <button onClick={() => setActiveTab('tos')} className="footer-link">Terms of Service</button>
+                  <button onClick={() => setActiveTab('privacy')} className="footer-link">Privacy Policy</button>
+                </div>
+
+                <div className="footer-cta">
+                  <ConnectButton />
+                  <div className="mt-4 flex items-center gap-2 text-[10px] text-text-dim uppercase font-black tracking-widest">
+                    <div className="w-1 h-1 rounded-full bg-accent animate-pulse" />
+                    Amoy Testnet Active
+                  </div>
+                </div>
+              </div>
+
+              <div className="footer-bottom">
+                <div className="opacity-40 text-xs italic">© 2026 PolyLance Protocol. All Rights Reserved.</div>
+                <div className="flex gap-6 opacity-60 text-xs">
+                  <a href="https://polygon.technology" target="_blank" rel="noreferrer" className="hover:text-primary transition-colors">Built on Polygon</a>
+                </div>
+              </div>
+            </div>
+          </footer>
         </div>
-      </footer>
+      </div>
     </div>
   );
 }
