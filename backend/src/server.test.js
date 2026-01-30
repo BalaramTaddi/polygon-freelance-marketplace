@@ -1,40 +1,59 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import request from 'supertest';
+import mongoose from 'mongoose';
+import { app } from './server.js';
+import { Profile } from './models/Profile.js';
 
-// Use vi.mock at the top level with a factory function
-vi.mock('@prisma/client', () => {
-    const PrismaClient = vi.fn(() => ({
-        profile: {
-            findUnique: vi.fn(),
-            upsert: vi.fn(),
-            update: vi.fn(),
-        },
-        jobMetadata: {
-            findMany: vi.fn(),
-            findUnique: vi.fn(),
-        },
-        $disconnect: vi.fn(),
-    }));
-    return { PrismaClient };
-});
+// Mock Mongoose models
+vi.mock('./models/Profile.js', () => ({
+    Profile: {
+        findOne: vi.fn(),
+        findOneAndUpdate: vi.fn(),
+    }
+}));
 
-// Import app after mocking PrismaClient
-import { app, prisma } from './server.js';
+vi.mock('./models/JobMetadata.js', () => ({
+    JobMetadata: {
+        find: vi.fn(),
+        findOne: vi.fn(),
+        create: vi.fn(),
+    }
+}));
 
-describe('API Endpoints (Mocked Prisma)', () => {
+// Mock Mongoose connection to avoid hanging tests
+vi.spyOn(mongoose, 'connect').mockResolvedValue(null);
+
+import { JobMetadata } from './models/JobMetadata.js';
+
+describe('Backend API Endpoints (MongoDB Mocked)', () => {
     const testAddress = '0x1234567890123456789012345678901234567890';
 
     it('GET /api/profiles/:address should return profile if found', async () => {
-        prisma.profile.findUnique.mockResolvedValue({ address: testAddress, name: 'Alice' });
+        Profile.findOne.mockResolvedValue({ address: testAddress, name: 'Alice' });
+
         const res = await request(app).get(`/api/profiles/${testAddress}`);
         expect(res.statusCode).toEqual(200);
         expect(res.body.name).toBe('Alice');
     });
 
     it('GET /api/auth/nonce/:address should return a nonce', async () => {
-        prisma.profile.upsert.mockResolvedValue({ nonce: 'test-nonce' });
+        Profile.findOneAndUpdate.mockResolvedValue({ address: testAddress, nonce: 'test-nonce' });
+
         const res = await request(app).get(`/api/auth/nonce/${testAddress}`);
         expect(res.statusCode).toEqual(200);
         expect(res.body).toHaveProperty('nonce');
+    });
+
+    it('GET /api/jobs should return a list of jobs', async () => {
+        const mockJobs = [{ jobId: 1, title: 'Test Job' }];
+        // Mongoose find returns a query object, but in simple mock we just return the value
+        JobMetadata.find.mockReturnValue({
+            sort: vi.fn().mockResolvedValue(mockJobs)
+        });
+
+        const res = await request(app).get('/api/jobs');
+        expect(res.statusCode).toEqual(200);
+        expect(Array.isArray(res.body)).toBe(true);
+        expect(res.body[0].title).toBe('Test Job');
     });
 });

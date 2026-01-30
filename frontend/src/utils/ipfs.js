@@ -1,63 +1,49 @@
 import axios from 'axios';
 
-const PINATA_API_KEY = import.meta.env.VITE_PINATA_API_KEY;
-const PINATA_API_SECRET = import.meta.env.VITE_PINATA_API_SECRET;
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://localhost:3001/api';
 
 /**
- * Uploads a JSON object to IPFS via Pinata.
+ * Uploads a JSON object to IPFS via the Backend Relay (Secure).
  * @param {Object} data - The JSON data to upload.
  * @returns {Promise<string>} - The IPFS hash (CID).
  */
 export const uploadJSONToIPFS = async (data) => {
-    if (!PINATA_API_KEY || !PINATA_API_SECRET) {
-        console.warn('Pinata API keys missing. Metadata will not be pinned.');
-        return '';
-    }
-
     try {
-        const response = await axios.post('https://api.pinata.cloud/pinning/pinJSONToIPFS', data, {
-            headers: {
-                'Content-Type': 'application/json',
-                pinata_api_key: PINATA_API_KEY,
-                pinata_secret_api_key: PINATA_API_SECRET,
-            },
-        });
-        return response.data.IpfsHash;
+        const response = await axios.post(`${API_BASE_URL}/storage/upload-json`, data);
+        return response.data.cid;
     } catch (error) {
-        console.error('Error uploading to IPFS:', error);
+        console.error('Error uploading JSON to IPFS via relay:', error);
         throw error;
     }
 };
 
 /**
- * Uploads a file to IPFS via Pinata.
+ * Uploads a file to IPFS via the Backend Relay (Secure).
  * @param {File} file - The file to upload.
  * @returns {Promise<string>} - The IPFS hash (CID).
  */
 export const uploadFileToIPFS = async (file) => {
-    if (!PINATA_API_KEY || !PINATA_API_SECRET) {
-        throw new Error('Pinata API keys missing');
-    }
-
     const formData = new FormData();
     formData.append('file', file);
 
     try {
-        const response = await axios.post('https://api.pinata.cloud/pinning/pinFileToIPFS', formData, {
-            headers: {
-                'Content-Type': `multipart/form-data; boundary=${formData._boundary}`,
-                pinata_api_key: PINATA_API_KEY,
-                pinata_secret_api_key: PINATA_API_SECRET,
-            },
+        const response = await axios.post(`${API_BASE_URL}/storage/upload-file`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
         });
-        return response.data.IpfsHash;
+        return response.data.cid;
     } catch (error) {
-        console.error('Error uploading file to IPFS:', error);
+        console.error('Error uploading file to IPFS via relay:', error);
         throw error;
     }
 };
 
+/**
+ * Generates a public gateway URL for an IPFS hash.
+ * @param {string} hash 
+ * @returns {string}
+ */
 export const getIPFSUrl = (hash) => {
     if (!hash) return '';
+    // Prefer public gateways like Cloudflare or Pinata
     return `https://gateway.pinata.cloud/ipfs/${hash}`;
 };

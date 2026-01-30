@@ -11,6 +11,14 @@ import { WagmiProvider, http, fallback, useAccount } from 'wagmi';
 import { polygon, polygonAmoy, hardhat, base, baseSepolia } from 'wagmi/chains';
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { SiweMessage } from 'siwe';
+import { HuddleProvider, HuddleClient } from '@huddle01/react';
+
+const huddleClient = new HuddleClient({
+    projectId: import.meta.env.VITE_HUDDLE_PROJECT_ID || 'yS_cM7SrkNqXv3193R2W1nI_7P3j3P-z',
+    options: {
+        activeSpeakersLimit: 5,
+    },
+});
 
 function ConnectionLogger({ children }) {
     const { address, isConnected, isConnecting, isReconnecting } = useAccount();
@@ -159,9 +167,11 @@ export function Web3Provider({ children }) {
                         borderRadius: 'medium',
                         overlayBlur: 'small',
                     })} modalSize="compact">
-                        <ConnectionLogger>
-                            {children}
-                        </ConnectionLogger>
+                        <HuddleProvider client={huddleClient}>
+                            <ConnectionLogger>
+                                {children}
+                            </ConnectionLogger>
+                        </HuddleProvider>
                     </RainbowKitProvider>
                 </RainbowKitAuthenticationProvider>
             </QueryClientProvider>

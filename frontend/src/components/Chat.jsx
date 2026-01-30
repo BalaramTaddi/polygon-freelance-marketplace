@@ -3,7 +3,8 @@ import { Client } from '@xmtp/browser-sdk';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useEthersSigner } from '../hooks/useEthersSigner';
 import { useAccount } from 'wagmi';
-import { MessageSquare, Send, User, Loader2, FileText, DollarSign, Clock, CheckCircle2, PlusCircle } from 'lucide-react';
+import { MessageSquare, Send, User, Loader2, FileText, DollarSign, Clock, CheckCircle2, PlusCircle, Video } from 'lucide-react';
+import UserLink from './UserLink';
 import { hexToBytes } from 'viem';
 
 export default function Chat({ initialPeerAddress, onClearedAddress }) {
@@ -330,13 +331,23 @@ function MessageContainer({ conversation, address, contractContext, loadingConte
 
     return (
         <>
-            <div style={{ padding: '20px', borderBottom: '1px solid var(--glass-border)', background: 'rgba(255,255,255,0.01)' }}>
+            <div style={{ padding: '20px', borderBottom: '1px solid var(--glass-border)', background: 'rgba(255,255,255,0.01)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <div className="activity-icon" style={{ width: '32px', height: '32px' }}>
                         <User size={16} />
                     </div>
-                    <strong>{conversation.peerAddress?.slice(0, 8) || 'Group Chat'}...{conversation.peerAddress?.slice(-6) || ''}</strong>
+                    <strong>
+                        <UserLink address={conversation.peerAddress} />
+                    </strong>
                 </div>
+
+                <button
+                    onClick={() => window.open(`https://app.huddle01.com/${conversation.id?.slice(0, 8)}`, '_blank')}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 transition-all font-bold text-xs border border-primary/20 shadow-lg shadow-primary/5"
+                >
+                    <Video size={16} />
+                    Video Interview
+                </button>
             </div>
 
             {/* Contract Context Bar - Subgraph Integration */}

@@ -1,11 +1,12 @@
 import React, { useEffect } from 'react';
 import { useAccount, useReadContract, useSignMessage } from 'wagmi';
 import { useConnectModal } from '@rainbow-me/rainbowkit';
-import { Wallet, Briefcase, CheckCircle, Clock, Save, User, Award, PlusCircle } from 'lucide-react';
+import { Wallet, Briefcase, CheckCircle, Clock, Save, User, Award, PlusCircle, Sparkles } from 'lucide-react';
 import FreelanceEscrowABI from '../contracts/FreelanceEscrow.json';
 import { CONTRACT_ADDRESS } from '../constants';
 import { api } from '../services/api';
 import LiveJobFeed from './LiveJobFeed';
+import AiRecommendations from './AiRecommendations';
 
 function Dashboard() {
     const { address, isConnected } = useAccount();
@@ -30,6 +31,7 @@ function Dashboard() {
         avgReputation: 0,
         totalUsers: 0
     });
+    const [isPolishing, setIsPolishing] = React.useState(false);
 
     const { data: jobCount, isLoading: isLoadingJobCount } = useReadContract({
         address: CONTRACT_ADDRESS,
@@ -65,6 +67,26 @@ function Dashboard() {
             console.error(err);
         } finally {
             setIsSaving(false);
+        }
+    };
+
+    const handleAiPolish = async () => {
+        if (!profile.skills || !profile.bio) return;
+        setIsPolishing(true);
+        try {
+            const result = await api.polishBio({
+                name: profile.name,
+                category: profile.category,
+                skills: profile.skills,
+                bio: profile.bio
+            });
+            if (result.polishedBio) {
+                setProfile(prev => ({ ...prev, bio: result.polishedBio }));
+            }
+        } catch (err) {
+            console.error('AI Polish failed:', err);
+        } finally {
+            setIsPolishing(false);
         }
     };
 
@@ -226,7 +248,18 @@ function Dashboard() {
                             </div>
 
                             <div className="input-group-glass">
-                                <label className="input-label">Bio / Expertise</label>
+                                <div className="flex justify-between items-end mb-2">
+                                    <label className="input-label !mb-0">Bio / Expertise</label>
+                                    <button
+                                        type="button"
+                                        onClick={handleAiPolish}
+                                        disabled={isPolishing || !profile.skills}
+                                        className="text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 text-purple-400 hover:text-purple-300 transition-colors disabled:opacity-50"
+                                    >
+                                        <Sparkles size={12} className={isPolishing ? 'animate-spin' : ''} />
+                                        {isPolishing ? 'Polishing...' : 'Polish with AI'}
+                                    </button>
+                                </div>
                                 <textarea
                                     className="input-field min-h-[160px]"
                                     value={profile.bio}
@@ -257,13 +290,17 @@ function Dashboard() {
                     </div>
                 </div>
 
-                <div className="lg:col-span-1">
-                    <div className="sticky top-32">
-                        <div className="flex items-center gap-3 mb-8">
-                            <Clock size={20} className="text-text-dim" />
-                            <h3 className="text-sm font-black opacity-30 uppercase tracking-[0.25em]">Live Feed</h3>
+                <div className="lg:col-span-1 border-l border-white/5 pl-8">
+                    <div className="sticky top-32 space-y-12">
+                        <AiRecommendations address={address} />
+
+                        <div>
+                            <div className="flex items-center gap-3 mb-8">
+                                <Clock size={20} className="text-text-dim" />
+                                <h3 className="text-sm font-black opacity-30 uppercase tracking-[0.25em]">Recent Market</h3>
+                            </div>
+                            <LiveJobFeed />
                         </div>
-                        <LiveJobFeed />
                     </div>
                 </div>
             </div>

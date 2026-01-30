@@ -1,17 +1,20 @@
 import React from 'react';
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { motion } from 'framer-motion';
-import { Briefcase, CheckCircle, ExternalLink, RefreshCcw, AlertCircle, MessageSquare, Search, Filter, ArrowUpDown } from 'lucide-react';
+import { Briefcase, CheckCircle, ExternalLink, RefreshCcw, AlertCircle, MessageSquare, Search, Filter, ArrowUpDown, Sparkles } from 'lucide-react';
+import axios from 'axios';
 import FreelanceEscrowABI from '../contracts/FreelanceEscrow.json';
 import { formatEther, formatUnits, parseUnits, erc20Abi } from 'viem';
 import { CONTRACT_ADDRESS, SUPPORTED_TOKENS } from '../constants';
 import { api } from '../services/api';
 import UserLink from './UserLink';
+import AiMatchRating from './AiMatchRating';
 import { checkRiskLevel } from '../utils/riskMitigation';
 import { useTransactionToast } from '../hooks/useTransactionToast';
 import { uploadJSONToIPFS } from '../utils/ipfs';
 import { useEthersSigner } from '../hooks/useEthersSigner';
 import { createBiconomySmartAccount, submitWorkGasless } from '../utils/biconomy';
+import { useTokenPrice } from '../hooks/useTokenPrice';
 
 const statusLabels = ['Created', 'Accepted', 'Ongoing', 'Disputed', 'Completed', 'Cancelled'];
 
@@ -22,6 +25,36 @@ function JobsList({ onUserClick, onSelectChat, gasless }) {
     const [minBudget, setMinBudget] = React.useState('');
     const [sortBy, setSortBy] = React.useState('Newest');
     const [statusFilter, setStatusFilter] = React.useState('All');
+    const [aiResults, setAiResults] = React.useState(null);
+    const [isAiLoading, setIsAiLoading] = React.useState(false);
+
+    // AI Intent Search Logic
+    React.useEffect(() => {
+        const timer = setTimeout(async () => {
+            if (searchQuery.length > 3) {
+                setIsAiLoading(true);
+                try {
+                    const response = await axios.get(`${import.meta.env.VITE_API_URL || 'https://localhost:3001/api'}/search?q=${searchQuery}`);
+                    setAiResults(response.data.jobs.map(j => j.jobId));
+
+                    // Auto-set category if AI detected it
+                    if (response.data.intent.category && response.data.intent.category !== 'All') {
+                        setFilter(response.data.intent.category);
+                    }
+                    if (response.data.intent.minBudget > 0) {
+                        setMinBudget(response.data.intent.minBudget.toString());
+                    }
+                } catch (err) {
+                    console.error('AI Search failed:', err);
+                } finally {
+                    setIsAiLoading(false);
+                }
+            } else {
+                setAiResults(null);
+            }
+        }, 600);
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
 
     const { data: jobCount } = useReadContract({
         address: CONTRACT_ADDRESS,
@@ -30,10 +63,16 @@ function JobsList({ onUserClick, onSelectChat, gasless }) {
     });
 
     const count = jobCount ? Number(jobCount) : 0;
-    const jobIds = Array.from({ length: count }, (_, i) => i + 1);
+    let jobIds = Array.from({ length: count }, (_, i) => i + 1);
+
+    // Filter by AI Results if they exist
+    if (aiResults) {
+        jobIds = jobIds.filter(id => aiResults.includes(id));
+    }
+
     if (sortBy === 'Newest') jobIds.reverse();
 
-    const isLoading = jobCount === undefined;
+    const isLoading = jobCount === undefined || isAiLoading;
 
     return (
         <div className="container" style={{ padding: 0 }}>
@@ -45,17 +84,26 @@ function JobsList({ onUserClick, onSelectChat, gasless }) {
                 </p>
             </header>
 
-            <div className="glass-card mb-12 !border-white/5">
+            <div className="glass-card mb-12 !border-white/5 relative overflow-hidden">
+                {isAiLoading && (
+                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-purple-500 to-primary animate-shimmer" />
+                )}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-center">
-                    <div className="relative">
-                        <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-dim" />
+                    <div className="relative lg:col-span-2">
+                        <Search size={18} className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${searchQuery ? 'text-purple-400' : 'text-text-dim'}`} />
                         <input
                             type="text"
-                            placeholder="Search high-end gigs..."
-                            className="input-field !pl-12"
+                            placeholder="Try 'I want a solidity developer budget 1000'..."
+                            className="input-field !pl-12 w-full border-white/10"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
+                        {searchQuery && !isAiLoading && (
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                                <Sparkles size={12} className="text-purple-400" />
+                                <span className="text-[10px] font-black text-purple-400 uppercase tracking-tighter">AI Active</span>
+                            </div>
+                        )}
                     </div>
 
                     <div className="relative">
@@ -170,6 +218,7 @@ function JobCard({ jobId, categoryFilter, searchQuery, minBudget, statusFilter, 
     const [metadata, setMetadata] = React.useState(null);
     const [matchScore, setMatchScore] = React.useState(null);
     const [isApproving, setIsApproving] = React.useState(false);
+    const { convertToUsd } = useTokenPrice('MATIC');
 
     const { data: job, refetch } = useReadContract({
         address: CONTRACT_ADDRESS,
@@ -298,10 +347,13 @@ function JobCard({ jobId, categoryFilter, searchQuery, minBudget, statusFilter, 
                     <div style={{ fontSize: '1.25rem', fontWeight: '800', color: 'var(--text-main)', fontFamily: 'Outfit' }}>
                         {formatUnits(amount, decimals)} {currency}
                     </div>
-                    {matchScore !== null && status === 0 && (
-                        <div style={{ fontSize: '0.75rem', color: 'var(--accent)', fontWeight: '700', marginTop: '4px' }}>
-                            ✨ {Math.round(matchScore * 100)}% Match
+                    {currency === 'MATIC' && (
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)', fontWeight: 'bold', marginTop: '-2px', textAlign: 'right', opacity: 0.8 }}>
+                            ~${convertToUsd(amount, decimals).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD
                         </div>
+                    )}
+                    {address && status === 0 && (
+                        <AiMatchRating jobId={jobId} freelancerAddress={address} />
                     )}
                 </div>
             </div>

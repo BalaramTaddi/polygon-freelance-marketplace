@@ -7,34 +7,133 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const SUBGRAPH_URL = process.env.SUBGRAPH_URL || 'https://api.thegraph.com/subgraphs/name/username/polylance';
 
 /**
- * AI Job Matcher Service
- * Performs semantic matching between Job Descriptions and Freelancer Skills using Gemini.
+ * AI Job Matcher Service v2
+ * Performs deep semantic matching, risk assessment, and skill gap analysis.
  */
 export async function calculateMatchScore(jobDescription, freelancerProfile) {
     try {
         if (!process.env.GEMINI_API_KEY) throw new Error("GEMINI_API_KEY missing");
 
-        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-        const prompt = `
-            Task: Match a job description to a freelancer's profile.
-            Job Description: "${jobDescription}"
-            Freelancer Skills: "${freelancerProfile.skills}"
-            Freelancer Reputation Score: ${freelancerProfile.reputationScore}
-            Freelancer Completed Jobs: ${freelancerProfile.completedJobs}
+        // Upgrading to 2026-spec Gemini 2.0 for higher reasoning density
+        const model = genAI.getGenerativeModel({
+            model: "gemini-2.0-flash-exp",
+            generationConfig: {
+                temperature: 0.1, // Precision over creativity
+                topP: 0.95,
+                maxOutputTokens: 1024,
+            }
+        });
 
-            Return a match score between 0.0 and 1.0 based on technical fit and experience.
-            Output ONLY the numeric score.
+        const prompt = `
+            # ROLE: POLY-AGENCY AUTONOMOUS RECRUITER v2
+            Assess the technical synergy between this Job and Freelancer.
+
+            JOB REQUIREMENTS: "${jobDescription}"
+            FREELANCER DNA: "${freelancerProfile.skills}"
+            ON-CHAIN REPUTATION: ${freelancerProfile.reputationScore}/1000
+            STABILITY SCORE: ${freelancerProfile.completedJobs} / ${freelancerProfile.disputedJobs || 0} (Jobs/Disputes)
+
+            # TASK: 
+            Perform a multi-dimensional fit analysis. Be extremely skeptical. Look for "Skill Inflation".
+            
+            # OUTPUT (JSON ONLY):
+            {
+                "score": 0.0-1.0,
+                "reason": "Executive summary with zero fluff",
+                "strengths": ["Verified skill 1", "Verified skill 2"],
+                "gaps": ["Missing context 1"],
+                "riskLevel": "Low/Med/High",
+                "proTip": "A strategic competitive edge for the application",
+                "agentNotes": "Technical nuance about the match"
+            }
         `;
 
         const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const text = response.text().trim();
-        const score = parseFloat(text);
+        const responseText = result.response.text();
+        const jsonMatch = responseText.match(/\{.*\}/s);
 
-        return isNaN(score) ? 0.5 : Math.min(Math.max(score, 0), 1.0);
+        if (jsonMatch) {
+            const data = JSON.parse(jsonMatch[0]);
+            return {
+                score: Math.min(Math.max(parseFloat(data.score) || 0.5, 0), 1.0),
+                reason: data.reason || "Standard match.",
+                strengths: data.strengths || [],
+                gaps: data.gaps || [],
+                riskLevel: data.riskLevel || "Low",
+                proTip: data.proTip || "N/A"
+            };
+        }
+        throw new Error("Invalid AI response");
     } catch (error) {
-        console.warn("AI Matching failed, falling back to keyword logic:", error.message);
-        return fallbackMatch(jobDescription, freelancerProfile);
+        console.warn("AI Matching failed:", error.message);
+        return {
+            score: fallbackMatch(jobDescription, freelancerProfile),
+            reason: "Legacy keyword match.",
+            strengths: [],
+            gaps: [],
+            riskLevel: "Unknown",
+            proTip: "Update your profile for AI insights."
+        };
+    }
+}
+
+/**
+ * Natural Language Search Intent Detection
+ * Converts "I want to build a dapp" into specific filters.
+ */
+export async function determineSearchIntent(userInput) {
+    if (!process.env.GEMINI_API_KEY) return { query: userInput, category: 'All' };
+
+    try {
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const prompt = `
+            Convert this user search query into structured search filters.
+            Query: "${userInput}"
+            
+            Categories: [Development, Design, Marketing, Writing]
+            
+            Respond in JSON:
+            {
+                "refinedQuery": "Optimized search keywords",
+                "category": "The best matching category",
+                "minBudget": estimated min budget if mentioned or 0
+            }
+            OUTPUT ONLY JSON.
+        `;
+
+        const result = await model.generateContent(prompt);
+        const jsonMatch = result.response.text().match(/\{.*\}/s);
+        return jsonMatch ? JSON.parse(jsonMatch[0]) : { query: userInput, category: 'All' };
+    } catch (e) {
+        return { query: userInput, category: 'All' };
+    }
+}
+
+/**
+ * Recommends jobs to a specific freelancer.
+ */
+export async function calculateJobRecommendations(freelancerProfile, jobsList) {
+    if (!process.env.GEMINI_API_KEY) return jobsList.slice(0, 3).map(j => j.jobId);
+
+    try {
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const jobsSummary = jobsList.map(j => `ID: ${j.jobId}, Title: ${j.title}, Desc: ${j.description.substring(0, 100)}`).join('\n');
+
+        const prompt = `
+            Recommend the top 3 jobs for this freelancer.
+            Profile: ${freelancerProfile.skills}, Reputation ${freelancerProfile.reputationScore}
+            
+            Jobs:
+            ${jobsSummary}
+
+            Return JSON array of IDs: [id1, id2, id3]
+        `;
+
+        const result = await model.generateContent(prompt);
+        const arrayMatch = (await result.response).text().match(/\[.*\]/);
+        return arrayMatch ? JSON.parse(arrayMatch[0]) : [];
+    } catch (e) {
+        return [];
     }
 }
 
@@ -57,37 +156,35 @@ function fallbackMatch(jobDescription, freelancerProfile) {
 }
 
 /**
- * Queries the Subgraph for the best-matched freelancer dNFTs based on Gemini analysis.
+ * AI Profile Polish
+ * Enhances a user's bio based on their skills and category.
  */
-export async function queryBestMatchesFromSubgraph(jobDescription) {
+export async function polishProfileBio(name, category, skills, roughBio) {
+    if (!process.env.GEMINI_API_KEY) return roughBio;
+
     try {
-        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-        const analysisPrompt = `Extract main skill tags from this job: "${jobDescription}". Return only a comma-separated list.`;
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const prompt = `
+            You are a professional brand consultant for high-end Web3 freelancers.
+            Enhance this user's bio to be elite, persuasive, and professional.
+            
+            NAME: ${name}
+            CATEGORY: ${category}
+            SKILLS: ${skills}
+            CURRENT BIO: "${roughBio}"
 
-        const result = await model.generateContent(analysisPrompt);
-        const tags = (await result.response).text().split(',').map(s => s.trim());
+            TASK:
+            1. Rewrite the bio to highlight their strengths.
+            2. Keep it under 3 sentences.
+            3. Use a tone appropriate for a premium blockchain marketplace.
+            4. Do not lie, only amplify what is there.
+            
+            RETURN ONLY THE REWRITTEN BIO TEXT.
+        `;
 
-        // Example Subgraph Query for Skill NFTs
-        const query = `
-        {
-          freelancerNFTs(where: { category_in: ${JSON.stringify(tags)} }, orderBy: level, orderDirection: desc, first: 10) {
-            id
-            owner {
-              id
-            }
-            category
-            level
-          }
-        }`;
-
-        // The following is a template for the user to configure their Subgraph
-        // const response = await axios.post(SUBGRAPH_URL, { query });
-        // return response.data.data.freelancerNFTs;
-
-        console.log("Subgraph query prepared:", query);
-        return []; // Placeholder until Subgraph is deployed
-    } catch (error) {
-        console.error("Subgraph Query Error:", error);
-        return [];
+        const result = await model.generateContent(prompt);
+        return (await result.response).text().trim();
+    } catch (e) {
+        return roughBio;
     }
 }

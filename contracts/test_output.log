@@ -1,0 +1,39 @@
+WARNING: You are currently using Node.js v22.19.0, which is not supported by Hardhat. This can lead to unexpected behavior. See https://hardhat.org/nodejs-versions
+
+
+[dotenv@17.2.3] injecting env (3) from .env -- tip: ΓÜÖ∩╕Å  suppress all logs with { quiet: true }
+[dotenv@17.2.3] injecting env (0) from .env -- tip: ≡ƒ¢á∩╕Å  run anywhere with `dotenvx run -- yourcommand`
+≡ƒÜÇ Starting Final E2E Test Run: PolyLance Flow
+
+Owner/Admin: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+Client: 0x70997970C51812dc3A010C7d01b50e0d17dc79C8
+Freelancer: 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC
+
+≡ƒôª Deploying Contracts...
+- PolyToken: 0x5FbDB2315678afecb367f032d93F642f64180aa3
+- Escrow Proxy: 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9
+ΓÜÖ∩╕Å Setting up roles...
+
+≡ƒ¢á∩╕Å Step 1: Client Creates Job (Budget: 1 ETH)
+Γ£à Job Created On-Chain (Job ID #1)
+
+≡ƒñ¥ Step 2: Freelancer Applies (Stake: 0.05 ETH)
+Γ£à Application Recorded
+
+≡ƒÄ» Step 3: Client Selects Freelancer
+Γ£à Freelancer Assigned
+
+Γ£à Step 4: Freelancer Accepts Job
+Γ£à Job Status: Ongoing
+
+≡ƒôñ Step 5: Freelancer Submits Work
+Γ£à Work Submitted to IPFS
+
+≡ƒÆ░ Step 6: Client Releases Funds
+Γ£à Funds Released from Escrow
+   - Freelancer Profit: 1.025 ETH
+
+Γ£¿ Step 7: Verifying AI & SBT Rewards
+   - PolyToken Rewards: 100.0 POLY
+
+≡ƒÅü Final Test Run Successful! PolyLance Ecosystem is Production Ready.

@@ -13,6 +13,8 @@ import https from 'https';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import multer from 'multer';
+import { uploadJSONToIPFS, uploadFileToIPFS } from './ipfs.js';
 
 dotenv.config();
 
@@ -240,6 +242,17 @@ app.get('/api/portfolios/:address', async (req, res) => {
 });
 
 // AI Job Matching
+app.post('/api/profiles/polish-bio', async (req, res) => {
+    const { name, category, skills, bio } = req.body;
+    try {
+        const { polishProfileBio } = await import('./aiMatcher.js');
+        const polishedBio = await polishProfileBio(name, category, skills, bio);
+        res.json({ polishedBio });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 app.get('/api/jobs/match/:jobId', async (req, res) => {
     const { jobId } = req.params;
     try {
@@ -250,11 +263,59 @@ app.get('/api/jobs/match/:jobId', async (req, res) => {
         const { calculateMatchScore } = await import('./aiMatcher.js');
 
         const matches = await Promise.all(freelancers.map(async (f) => {
-            const score = await calculateMatchScore(job.description, f);
-            return { address: f.address, name: f.name, matchScore: score };
+            const result = await calculateMatchScore(job.description, f);
+            return {
+                address: f.address,
+                name: f.name,
+                matchScore: result.score,
+                reason: result.reason
+            };
         }));
 
         res.json(matches.sort((a, b) => b.matchScore - a.matchScore));
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/api/search', async (req, res) => {
+    const { q } = req.query;
+    try {
+        const { determineSearchIntent } = await import('./aiMatcher.js');
+        const intent = await determineSearchIntent(q);
+
+        let filter = {};
+        if (intent.category && intent.category !== 'All') {
+            filter.category = intent.category;
+        }
+
+        const jobs = await JobMetadata.find({
+            $or: [
+                { title: { $regex: intent.refinedQuery || q, $options: 'i' } },
+                { description: { $regex: intent.refinedQuery || q, $options: 'i' } }
+            ],
+            ...filter
+        }).limit(20);
+
+        res.json({ jobs, intent });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/api/recommendations/:address', async (req, res) => {
+    const { address } = req.params;
+    try {
+        const profile = await Profile.findOne({ address: address.toLowerCase() });
+        const allJobs = await JobMetadata.find().limit(20);
+
+        if (!profile) return res.status(404).json({ error: 'Profile not found' });
+
+        const { calculateJobRecommendations } = await import('./aiMatcher.js');
+        const recommendedIds = await calculateJobRecommendations(profile, allJobs);
+
+        const recommendedJobs = allJobs.filter(j => recommendedIds.includes(j.jobId));
+        res.json(recommendedJobs);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -275,6 +336,28 @@ app.get('/api/analytics', async (req, res) => {
             avgReputation,
             totalUsers: profiles.length
         });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// IPFS Storage Routes
+const upload = multer({ storage: multer.memoryStorage() });
+
+app.post('/api/storage/upload-json', async (req, res) => {
+    try {
+        const cid = await uploadJSONToIPFS(req.body);
+        res.json({ cid, url: `https://gateway.pinata.cloud/ipfs/${cid}` });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/storage/upload-file', upload.single('file'), async (req, res) => {
+    try {
+        if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+        const cid = await uploadFileToIPFS(req.file.buffer, req.file.originalname);
+        res.json({ cid, url: `https://gateway.pinata.cloud/ipfs/${cid}` });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

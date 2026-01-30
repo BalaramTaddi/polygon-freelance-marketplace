@@ -23,13 +23,20 @@ async function checkDatabase() {
         if (profileCount > 0) {
             const latestProfiles = await Profile.find().sort({ createdAt: -1 }).limit(3);
             console.log('\nLatest Profiles:');
-            latestProfiles.forEach(p => console.log(`- ${p.address} (${p.name || 'No Name'})`));
+            latestProfiles.forEach(p => {
+                console.log(`- ${p.address}`);
+                console.log(`  Name: ${p.name || 'N/A'}, Reputation: ${p.reputationScore}, Earned: ${p.totalEarned} MATIC`);
+                if (p.avatarIpfsHash) console.log(`  Avatar (IPFS): ${p.avatarIpfsHash}`);
+            });
         }
 
         if (jobCount > 0) {
             const latestJobs = await JobMetadata.find().sort({ createdAt: -1 }).limit(3);
             console.log('\nLatest Jobs:');
-            latestJobs.forEach(j => console.log(`- Job ID: ${j.jobId}, Title: ${j.title}`));
+            latestJobs.forEach(j => {
+                console.log(`- Job ID: ${j.jobId}, Title: ${j.title}`);
+                if (j.ipfsHash) console.log(`  Details (IPFS): ${j.ipfsHash}`);
+            });
         }
 
     } catch (error) {

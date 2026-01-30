@@ -5,6 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { JobMetadata } from './models/JobMetadata.js';
 import { Profile } from './models/Profile.js';
+import { sendNotification } from './notifications.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -45,6 +46,15 @@ export async function startSyncer() {
                             category: 'General',
                         });
                     }
+
+                    // Send notification to freelancer if assigned
+                    if (freelancer !== '0x0000000000000000000000000000000000000000') {
+                        await sendNotification(
+                            freelancer,
+                            "New Job Assigned 💼",
+                            `You have been assigned to Job #${jobId} with a budget of ${Number(amount) / 1e18} MATIC.`
+                        );
+                    }
                 } catch (error) {
                     console.error(`Error syncing job ${jobId}:`, error);
                 }
@@ -70,6 +80,12 @@ export async function startSyncer() {
                         },
                         { upsert: true, new: true }
                     );
+
+                    await sendNotification(
+                        freelancer,
+                        "Funds Released! 💰",
+                        `Payment of ${maticAmount} MATIC for Job #${jobId} has been released to your wallet.`
+                    );
                 } catch (error) {
                     console.error('Error handling FundsReleased:', error);
                 }
@@ -94,6 +110,7 @@ export async function startSyncer() {
                         args: [jobId]
                     });
                     const freelancer = job[2];
+                    const clientAddress = job[1];
 
                     const profile = await Profile.findOne({ address: freelancer.toLowerCase() });
                     if (profile) {
@@ -106,6 +123,17 @@ export async function startSyncer() {
 
                         await profile.save();
                         console.log(`Updated reputation for ${freelancer} (Dispute)`);
+
+                        await sendNotification(
+                            freelancer,
+                            "Dispute Opened ⚖️",
+                            `A dispute has been initiated for Job #${jobId}. Please check the platform for details.`
+                        );
+                        await sendNotification(
+                            clientAddress,
+                            "Dispute Opened ⚖️",
+                            `An official dispute has been recorded for Job #${jobId}.`
+                        );
                     }
                 } catch (error) {
                     console.error('Error handling JobDisputed:', error);
