@@ -1,0 +1,52 @@
+WARNING: You are currently using Node.js v22.19.0, which is not supported by Hardhat. This can lead to unexpected behavior. See https://hardhat.org/nodejs-versions
+
+
+[dotenv@17.2.3] injecting env (3) from .env -- tip: ≡ƒöÉ encrypt with Dotenvx: https://dotenvx.com
+[dotenv@17.2.3] injecting env (0) from .env -- tip: ≡ƒöä add secrets lifecycle management: https://dotenvx.com/ops
+Deploying contracts with the account: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+Loaded existing deployment addresses.
+
+1. Deploying PolyToken...
+PolyToken deployed to: 0x5FbDB2315678afecb367f032d93F642f64180aa3
+
+2. Deploying InsurancePool...
+InsurancePool deployed to: 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512
+
+2.5 Deploying PolyLanceForwarder...
+PolyLanceForwarder deployed to: 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
+
+3. Deploying FreelanceEscrow (UUPS Proxy)...
+FreelanceEscrow Proxy deployed to: 0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9
+
+4. Deploying FreelancerReputation...
+FreelancerReputation Proxy deployed to: 0x0165878A594ca255338adfa4d48449f69242Eb8F
+
+5. Deploying StreamingEscrow...
+StreamingEscrow deployed to: 0xa513E6E4b8f2a923D98304ec87F64353C4D5C853
+
+6. Deploying FreelanceSBT...
+FreelanceSBT deployed to: 0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6
+
+7. Configuring Escrow...
+Linked PolyToken to Escrow.
+Linked FreelanceSBT to Escrow.
+Whitelisted PolyToken for payments.
+Linked Reputation Oracle and set Supreme Threshold.
+Granted MINTER_ROLE to Escrow on PolyToken.
+Granted MINTER_ROLE to StreamingEscrow on Reputation.
+
+8. Deploying FreelanceGovernance...
+FreelanceGovernance deployed to: 0x959922bE3CAee4b8Cd9a407cc3ac1C251C2007B1
+
+--- Deployment Summary ---
+Network:  hardhat
+PolyToken:            0x5FbDB2315678afecb367f032d93F642f64180aa3
+InsurancePool:        0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512
+FreelanceSBT:        0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6
+FreelanceEscrow Proxy: 0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9
+FreelancerReputation Proxy: 0x0165878A594ca255338adfa4d48449f69242Eb8F
+StreamingEscrow:      0xa513E6E4b8f2a923D98304ec87F64353C4D5C853
+FreelanceGovernance:   0x959922bE3CAee4b8Cd9a407cc3ac1C251C2007B1
+---------------------------
+
+Updated frontend constants.js with new addresses.

@@ -36,7 +36,11 @@ export const app = express();
 const PORT = process.env.PORT || 3001;
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/polylance';
 
-app.use(helmet()); // Secure HTTP headers
+app.use(helmet({
+    contentSecurityPolicy: false,
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    crossOriginEmbedderPolicy: false
+}));
 app.use(hpp()); // Prevent HTTP Parameter Pollution
 app.use(cors({
     origin: process.env.FRONTEND_URL || 'https://localhost:5173',
@@ -301,6 +305,19 @@ app.get('/api/jobs/match/:jobId', apiLimiter, async (req, res) => {
         }));
 
         res.json(matches.sort((a, b) => b.matchScore - a.matchScore));
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/api/disputes/analyze/:jobId', apiLimiter, async (req, res) => {
+    const { jobId } = req.params;
+    try {
+        const { analyzeDispute } = await import('./aiMatcher.js');
+        const job = await JobMetadata.findOne({ jobId: parseInt(jobId) });
+        // Mocking chat and work for the Supreme demo, in prod these fetch from DB
+        const result = await analyzeDispute(job, [], {});
+        res.json(result);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

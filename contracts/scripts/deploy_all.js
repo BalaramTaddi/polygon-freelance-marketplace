@@ -88,11 +88,15 @@ async function main() {
         const FreelanceEscrow = await ethers.getContractFactory("FreelanceEscrow");
         const escrow = await upgrades.deployProxy(
             FreelanceEscrow,
-            [deployer.address, trustedForwarder, ccipRouter, addresses.InsurancePool],
+            [
+                deployer.address,
+                trustedForwarder,
+                deployer.address, // Temporary _sbt placeholder
+                deployer.address  // Temporary _entry placeholder
+            ],
             {
                 kind: 'uups',
-                initializer: 'initialize',
-                constructorArgs: [lzEndpoint]
+                initializer: 'initialize'
             }
         );
         await escrow.waitForDeployment();
@@ -150,6 +154,17 @@ async function main() {
         // Whitelist PolyToken for payments
         await deployedEscrow.setTokenWhitelist(addresses.PolyToken, true);
         console.log("Whitelisted PolyToken for payments.");
+
+        // Supreme Configuration
+        await deployedEscrow.setReputationContract(addresses.FreelancerReputation);
+        await deployedEscrow.setReputationThreshold(10);
+        console.log("Linked Reputation Oracle and set Supreme Threshold.");
+
+        // Give Escrow MINTER_ROLE on PolyToken
+        const polyContract = await ethers.getContractAt("PolyToken", addresses.PolyToken);
+        const POLY_MINTER = await polyContract.MINTER_ROLE();
+        await polyContract.grantRole(POLY_MINTER, addresses.FreelanceEscrow);
+        console.log("Granted MINTER_ROLE to Escrow on PolyToken.");
 
         // Give StreamingEscrow MINTER_ROLE on Reputation
         const deployedRep = await ethers.getContractAt("FreelancerReputation", addresses.FreelancerReputation);

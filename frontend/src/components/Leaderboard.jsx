@@ -91,7 +91,12 @@ function Leaderboard() {
                                                     <User size={24} color="white" />
                                                 </div>
                                                 <div>
-                                                    <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-main)', fontFamily: 'Outfit' }}>{leader.name || 'Elite Member'}</div>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                        <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-main)', fontFamily: 'Outfit' }}>{leader.name || 'Elite Member'}</div>
+                                                        {leader.reputationScore >= 10 && (
+                                                            <div className="badge !px-2 !py-0.5 !text-[9px] !font-black !bg-gradient-to-r !from-amber-400 !to-orange-500 !text-black !border-none">SUPREME</div>
+                                                        )}
+                                                    </div>
                                                     <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)', fontFamily: 'monospace' }}>
                                                         {leader.address.slice(0, 10)}...{leader.address.slice(-6)}
                                                     </div>

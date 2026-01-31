@@ -178,3 +178,41 @@ export async function polishProfileBio(name, category, skills, roughBio) {
         return roughBio;
     }
 }
+
+/**
+ * analyzeDispute
+ * Elite AI Arbitration analysis for ongoing disputes.
+ */
+export async function analyzeDispute(jobData, chatHistory, workMetadata) {
+    try {
+        const model = genAI.getGenerativeModel({
+            model: "gemini-2.0-flash-exp",
+            generationConfig: { temperature: 0.05 }
+        });
+
+        const prompt = `
+            # LEGAL AGENT: POLY-ESCROW ARBITRATION
+            Evaluate a dispute between Client and Freelancer.
+
+            JOB DESC: "${jobData.description}"
+            WORK SUBMITTED: "${JSON.stringify(workMetadata)}"
+            CHAT LOGS: "${JSON.stringify(chatHistory)}"
+
+            # OBJECTIVE:
+            1. Identify the 'Defaulting' party.
+            2. Propose a fair % split (0-100 to Freelancer).
+            3. Provide a 'Protocol Precedent' logic.
+
+            # OUTPUT JSON:
+            {"winnerAddress": "string", "suggestedSplit": 0-100, "verdict": "string", "reasoning": "string"}
+        `;
+
+        const result = await model.generateContent(prompt);
+        const text = result.response.text();
+        const cleaned = text.match(/\{.*\}/s);
+        return cleaned ? JSON.parse(cleaned[0]) : { suggestedSplit: 50 };
+    } catch (error) {
+        console.error("AI Arbitration Error:", error);
+        return { suggestedSplit: 50, verdict: "Manual review required" };
+    }
+}

@@ -1,0 +1,25 @@
+WARNING: You are currently using Node.js v22.19.0, which is not supported by Hardhat. This can lead to unexpected behavior. See https://hardhat.org/nodejs-versions
+
+
+[dotenv@17.2.3] injecting env (3) from .env -- tip: ΓÜÖ∩╕Å  write to custom object with { processEnv: myObject }
+Compiled 2 Solidity files successfully (evm target: cancun).
+[dotenv@17.2.3] injecting env (0) from .env -- tip: Γ£à audit secrets and track compliance: https://dotenvx.com/ops
+≡ƒÜÇ Starting SUPREME TRANSACTION AUDIT: PolyLance Flow
+
+≡ƒôª Deploying Supreme Protocol Layers...
+Γ£à PolyToken: 0x5FbDB2315678afecb367f032d93F642f64180aa3
+Γ£à PrivacyShield (Forwarder): 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512
+Γ£à Mock Reputation (ERC1155): 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
+Γ£à FreelanceEscrow: 0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9
+
+≡ƒ¢í∩╕Å Simulation: SUPREME ELITE VS STANDARD
+
+--- Scenario A: Standard User ---
+Γ£à Standard User Fee Collected: 0.025 ETH (Expect 0.025)
+Γ£à Standard User Rewards: 100.0 POLY (Expect 100)
+
+--- Scenario B: SUPREME USER ---
+≡ƒÆÄ Supreme User Fee Collected: 0.0 ETH (Expect 0.0)
+≡ƒÆÄ Supreme User Rewards Boost: 300.0 POLY (Expect 300)
+
+≡ƒÜÇ Transaction Audit Complete. STATUS: PRODUCTION_READY_ZENITH

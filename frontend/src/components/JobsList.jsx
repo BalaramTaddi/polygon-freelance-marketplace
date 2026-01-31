@@ -352,10 +352,15 @@ const JobCard = React.memo(({ jobId, categoryFilter, searchQuery, minBudget, sta
     return (
         <div ref={cardRef} className="glass-card" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
-                <div className={`badge ${status === 3 ? 'badge-warning' : 'badge-info'}`}>
+                <div className={`badge ${status === 3 ? 'badge-warning' : 'badge-info'}`} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {status === 0 && <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" />}
                     {statusLabels[status]}
                 </div>
                 <div style={{ textAlign: 'right' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', marginBottom: '4px' }}>
+                        <div className="text-[9px] font-black tracking-widest text-primary uppercase opacity-60">Zenith Secured</div>
+                        <Sparkles size={10} className="text-primary" />
+                    </div>
                     <div style={{ fontSize: '1.25rem', fontWeight: '800', color: 'var(--text-main)', fontFamily: 'Outfit' }}>
                         {formatUnits(amount, decimals)} {currency}
                     </div>

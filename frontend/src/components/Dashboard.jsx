@@ -160,48 +160,64 @@ function Dashboard() {
                 </div>
 
                 {/* Reputation Rank Card */}
-                <div className="glass-card group p-12 hover-glow">
+                <div className="glass-card group p-12 hover-glow relative overflow-hidden">
+                    {profile.reputationScore >= 10 && (
+                        <div className="absolute top-0 right-0 p-6">
+                            <div className="badge !bg-gradient-to-r !from-amber-400 !to-orange-500 !text-black !font-black !px-3 !py-1 !rounded-full shadow-2xl animate-pulse">
+                                SUPREME
+                            </div>
+                        </div>
+                    )}
                     <div className="flex flex-col gap-6">
                         <div>
                             <p className="text-sm font-black text-text-dim uppercase tracking-[0.2em] mb-4">Reputation Rank</p>
-                            <div className="text-6xl font-black tracking-tighter mb-4">
+                            <div className="text-6xl font-black tracking-tighter mb-4 shimmer-text">
                                 {profile.reputationScore || 0}
                             </div>
                             <div className="p-3 rounded-2xl bg-warning/10 text-warning w-fit mb-6">
                                 <Award size={32} />
                             </div>
                         </div>
-                        <div className="text-xs font-black text-text-dim uppercase tracking-widest opacity-60">Top 10% World Rank</div>
+                        <div className="text-xs font-black text-text-dim uppercase tracking-widest opacity-60">
+                            {profile.reputationScore >= 10 ? 'ELITE VETERAN • 0% FEES' : 'Top 10% World Rank'}
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* Analytics & Actions Bar */}
-            <div className="glass-card p-10 mb-20 bg-white/5 border-white/5">
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-12 items-center">
-                    <div className="space-y-8 lg:col-span-3">
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-12">
-                            <div>
-                                <p className="text-[10px] font-black text-text-dim uppercase tracking-[0.2em] mb-2">Global Volume</p>
-                                <p className="text-2xl font-black tracking-tight">{(analytics.totalVolume || 0).toFixed(2)} <span className="text-xs text-text-dim">MATIC</span></p>
+            {/* Supreme Zenith Analytics Bar */}
+            <div className="glass-card p-1 pb-1 mb-20 !bg-gradient-to-r !from-primary/20 !via-purple-500/10 !to-secondary/20 !border-white/10 overflow-hidden group">
+                <div className="bg-zenith-surface p-10 rounded-[39px]">
+                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-12 items-center">
+                        <div className="lg:col-span-3">
+                            <div className="flex items-center gap-3 mb-8">
+                                <Sparkles size={16} className="text-primary animate-pulse" />
+                                <h3 className="text-xs font-black uppercase tracking-[0.3em] text-primary">Zenith Global Intelligence</h3>
                             </div>
-                            <div>
-                                <p className="text-[10px] font-black text-text-dim uppercase tracking-[0.2em] mb-2">Ecosystem Jobs</p>
-                                <p className="text-2xl font-black tracking-tight">{analytics.totalJobs || 0}</p>
-                            </div>
-                            <div>
-                                <p className="text-[10px] font-black text-text-dim uppercase tracking-[0.2em] mb-2">Platform Users</p>
-                                <p className="text-2xl font-black tracking-tight">{analytics.totalUsers || 0}</p>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-12">
+                                <div>
+                                    <p className="text-[10px] font-black text-text-dim uppercase tracking-[0.2em] mb-2">Network Liquidity</p>
+                                    <p className="text-2xl font-black tracking-tight shimmer-text">{(analytics.totalVolume || 0).toFixed(2)} <span className="text-xs text-text-dim">MATIC</span></p>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-black text-text-dim uppercase tracking-[0.2em] mb-2">Neural Job Matching</p>
+                                    <p className="text-2xl font-black tracking-tight">{analytics.totalJobs || 0} <span className="text-[10px] text-accent">+12%</span></p>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-black text-text-dim uppercase tracking-[0.2em] mb-2">Verified Agents</p>
+                                    <p className="text-2xl font-black tracking-tight">{analytics.totalUsers || 0}</p>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <div className="flex flex-col gap-4">
-                        <button className="btn-primary !py-4 shadow-xl">
-                            <PlusCircle size={20} /> New Job
-                        </button>
-                        <button onClick={() => setPortfolioAddress(address)} className="btn-ghost !py-4">
-                            <User size={18} /> My Portfolio
-                        </button>
+                        <div className="flex flex-col gap-4">
+                            <div className="p-4 rounded-3xl bg-white/5 border border-white/5 group-hover:border-primary/30 transition-all">
+                                <div className="text-[9px] font-black uppercase tracking-[0.2em] text-text-dim mb-1">Protection Layer</div>
+                                <div className="text-xs font-bold text-white flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                    ZENITH SHIELD ACTIVE
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

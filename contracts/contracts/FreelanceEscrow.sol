@@ -88,6 +88,13 @@ contract FreelanceEscrow is FreelanceEscrowBase, PausableUpgradeable, IArbitrabl
         completionCertContract = _cert;
     }
 
+    uint256 public reputationThreshold; 
+    mapping(address => bool) public isSupreme;
+
+    function setReputationThreshold(uint256 _t) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        reputationThreshold = _t;
+    }
+
     mapping(address => bool) public tokenWhitelist;
     function setTokenWhitelist(address _token, bool _status) external onlyRole(MANAGER_ROLE) {
         tokenWhitelist[_token] = _status;
@@ -208,9 +215,12 @@ contract FreelanceEscrow is FreelanceEscrowBase, PausableUpgradeable, IArbitrabl
         job.categoryId = uint16(p.categoryId);
         job.milestoneCount = uint16(p.mAmounts.length);
 
+        uint256 mSum = 0;
         for (uint256 i = 0; i < p.mAmounts.length; i++) {
+            mSum += p.mAmounts[i];
             jobMilestones[jobId][i] = Milestone(p.mAmounts[i], p.mHashes[i], false);
         }
+        if (p.mAmounts.length > 0 && mSum != p.amount) revert InvalidStatus();
 
         job.deadline = uint48(p.deadline == 0 ? block.timestamp + 7 days : p.deadline);
 
@@ -249,6 +259,15 @@ contract FreelanceEscrow is FreelanceEscrowBase, PausableUpgradeable, IArbitrabl
 
         uint256 payout = job.amount - job.totalPaidOut;
         uint256 fee = (job.amount * platformFeeBps) / 10000;
+
+        // Supreme Level Check: 0% Fee for Elite Veterans
+        if (reputationContract != address(0)) {
+            (bool success, bytes memory data) = reputationContract.call(abi.encodeWithSignature("balanceOf(address,uint256)", job.freelancer, job.categoryId));
+            if (success && data.length >= 32) {
+                if (abi.decode(data, (uint256)) >= 10) fee = 0;
+            }
+        }
+        
         uint256 freelancerNet = payout - fee;
 
         // State updates
@@ -279,7 +298,16 @@ contract FreelanceEscrow is FreelanceEscrowBase, PausableUpgradeable, IArbitrabl
         }
 
         if (polyToken != address(0)) {
-            (bool success, ) = polyToken.call(abi.encodeWithSignature("mint(address,uint256)", job.freelancer, 100 * 1e18));
+            uint256 reward = 100 * 1e18;
+            // Supreme Level Check: 3x Loyalty Boost
+            if (reputationContract != address(0)) {
+                (bool s, bytes memory data) = reputationContract.call(abi.encodeWithSignature("balanceOf(address,uint256)", job.freelancer, job.categoryId));
+                if (s && data.length >= 32) {
+                    uint256 bal = abi.decode(data, (uint256));
+                    if (bal >= 10) reward = 300 * 1e18; // 3x Boost for Vets
+                }
+            }
+            (bool success, ) = polyToken.call(abi.encodeWithSignature("mint(address,uint256)", job.freelancer, reward));
             (success);
         }
 
