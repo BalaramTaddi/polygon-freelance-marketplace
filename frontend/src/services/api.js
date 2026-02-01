@@ -35,7 +35,7 @@ export const api = {
 
     getAnalytics: () => fetch(`${API_URL}/analytics`).then(handleResponse),
 
-    getJobMatches: (jobId) => fetch(`${API_URL}/jobs/match/${jobId}`).then(handleResponse),
+    getMatchScore: (jobId, address) => fetch(`${API_URL}/match/${jobId}/${address}`).then(handleResponse),
 
     createStripeOnrampSession: (address) => fetch(`${API_URL}/stripe/create-onramp-session`, {
         method: 'POST',

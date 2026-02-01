@@ -162,36 +162,29 @@ export async function startSyncer() {
     // Watch for ReviewSubmitted (PolyLance specific)
     client.watchEvent({
         address: CONTRACT_ADDRESS,
-        event: parseAbiItem('event ReviewSubmitted(uint256 indexed jobId, address indexed reviewer, uint8 rating, string comment)'),
+        event: parseAbiItem('event ReviewSubmitted(uint256 indexed jobId, address indexed client, address indexed freelancer, uint8 rating, string review)'),
         onLogs: async (logs) => {
             for (const log of logs) {
                 try {
-                    const { jobId, rating, comment } = log.args;
-                    console.log(`Review Received: Job ${jobId}, Rating: ${rating}`);
+                    const { jobId, rating, review, freelancer } = log.args;
+                    console.log(`Review Received: Job ${jobId}, Rating: ${rating}, Freelancer: ${freelancer}`);
                     await JobMetadata.findOneAndUpdate(
                         { jobId: Number(jobId) },
-                        { rating: Number(rating), review: comment },
+                        { rating: Number(rating), review: review },
                         { upsert: true }
                     );
 
                     // Update freelancer reputation logic
-                    const job = await client.readContract({
-                        address: CONTRACT_ADDRESS,
-                        abi: abi,
-                        functionName: 'jobs',
-                        args: [jobId]
-                    });
-                    const freelancer = job[2];
-
                     const profile = await Profile.findOne({ address: freelancer.toLowerCase() });
                     if (profile) {
                         profile.ratingSum += Number(rating);
                         profile.ratingCount += 1;
-                        // Recalculate score...
+                        // Recalculate score: Earned * (AvgRating/5)
                         const avgRating = profile.ratingCount > 0 ? profile.ratingSum / profile.ratingCount : 0;
                         const score = (profile.totalEarned) * (avgRating / 5);
                         profile.reputationScore = Math.floor(score * 10);
                         await profile.save();
+                        console.log(`Updated reputation for ${freelancer}: Score ${profile.reputationScore}`);
                     }
                 } catch (error) {
                     console.error('Error handling ReviewSubmitted:', error);

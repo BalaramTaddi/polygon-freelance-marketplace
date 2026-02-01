@@ -16,16 +16,9 @@ const AiMatchRating = ({ jobId, freelancerAddress }) => {
     useEffect(() => {
         const fetchMatch = async () => {
             try {
-                // In a production app, we might want to fetch all matches for a job at once,
-                // but for this component we'll fetch the specific match from our AI endpoint.
-                const response = await axios.get(`${API_BASE_URL}/jobs/match/${jobId}`);
-                const freelancerMatch = response.data.find(m => m.address.toLowerCase() === freelancerAddress.toLowerCase());
-
-                if (freelancerMatch) {
-                    setMatch(freelancerMatch);
-                } else {
-                    setError('No match data');
-                }
+                // Fetch direct synergy score between freelancer and job via Gemini 2.0
+                const response = await axios.get(`${API_BASE_URL}/match/${jobId}/${freelancerAddress}`);
+                setMatch(response.data);
             } catch (err) {
                 console.error('AI Match Fetch Error:', err);
                 setError('AI Match unavailable');
@@ -55,7 +48,7 @@ const AiMatchRating = ({ jobId, freelancerAddress }) => {
     };
 
     return (
-        <div className={`mt-3 p-4 rounded-xl border transition-all duration-300 ${getScoreColor(match.matchScore)}`}>
+        <div className={`mt-3 p-4 rounded-xl border transition-all duration-300 ${getScoreColor(match.score)}`}>
             <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center space-x-2">
                     <div className="p-1.5 rounded-lg bg-white/10">
@@ -67,7 +60,7 @@ const AiMatchRating = ({ jobId, freelancerAddress }) => {
                     </div>
                 </div>
                 <div className="text-2xl font-black">
-                    {Math.round(match.matchScore * 100)}%
+                    {Math.round(match.score * 100)}%
                 </div>
             </div>
 

@@ -10,6 +10,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "./FreelanceRenderer.sol";
 import "./FreelanceEscrowBase.sol";
 import "./interfaces/IFreelanceSBT.sol";
@@ -22,7 +23,7 @@ import "./PrivacyShield.sol";
  * Implements: 1. Milestone Factory, 2. Decentralized Dispute Resolution, 3. Soulbound Identity (SBT).
  * This contract handles the locking and release of funds for freelance work on the Polygon network.
  */
-contract FreelanceEscrow is FreelanceEscrowBase, PausableUpgradeable, IArbitrable, OwnableUpgradeable {
+contract FreelanceEscrow is FreelanceEscrowBase, PausableUpgradeable, IArbitrable {
     using SafeERC20 for IERC20;
 
     event JobApplied(uint256 indexed jobId, address indexed freelancer, uint256 stake);
@@ -44,12 +45,11 @@ contract FreelanceEscrow is FreelanceEscrowBase, PausableUpgradeable, IArbitrabl
 
     function initialize(address admin, address forwarder, address _sbt, address _entry) public initializer {
         if (admin == address(0) || forwarder == address(0) || _sbt == address(0) || _entry == address(0)) revert InvalidAddress();
-        __ERC721_init("FreelanceWork", "FWORK");
+        __ERC721_init("PolyLance Zenith Project", "ZENITH");
         __AccessControl_init();
         __ReentrancyGuard_init();
         __Pausable_init();
         __UUPSUpgradeable_init();
-        __Ownable_init(admin);
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(MANAGER_ROLE, admin);
@@ -72,25 +72,25 @@ contract FreelanceEscrow is FreelanceEscrowBase, PausableUpgradeable, IArbitrabl
         entryPoint = _entry;
     }
 
-    function setVault(address _vault) external onlyOwner {
+    function setVault(address _vault) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (_vault == address(0)) revert InvalidAddress();
         vault = _vault;
     }
 
-    function setPlatformFee(uint256 _bps) external onlyOwner {
+    function setPlatformFee(uint256 _bps) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (_bps > 1000) revert InvalidStatus(); // Max 10%
         platformFeeBps = _bps;
     }
 
-    function setPolyToken(address _token) external onlyOwner {
+    function setPolyToken(address _token) external onlyRole(DEFAULT_ADMIN_ROLE) {
         polyToken = _token;
     }
 
-    function setReputationContract(address _rep) external onlyOwner {
+    function setReputationContract(address _rep) external onlyRole(DEFAULT_ADMIN_ROLE) {
         reputationContract = _rep;
     }
 
-    function setCompletionCertContract(address _cert) external onlyOwner {
+    function setCompletionCertContract(address _cert) external onlyRole(DEFAULT_ADMIN_ROLE) {
         completionCertContract = _cert;
     }
 
@@ -114,6 +114,7 @@ contract FreelanceEscrow is FreelanceEscrowBase, PausableUpgradeable, IArbitrabl
 
     function applyForJob(uint256 jobId) external payable whenNotPaused nonReentrant {
         Job storage job = jobs[jobId];
+        if (job.client == address(0)) revert InvalidAddress();
         if (job.status != JobStatus.Created) revert InvalidStatus();
         if (hasApplied[jobId][_msgSender()]) revert InvalidStatus();
         if (jobApplications[jobId].length >= MAX_APPLICATIONS_PER_JOB) revert NotAuthorized(); // Simplified error for "Capacity Reached"
@@ -130,6 +131,10 @@ contract FreelanceEscrow is FreelanceEscrowBase, PausableUpgradeable, IArbitrabl
         hasApplied[jobId][_msgSender()] = true;
         
         emit JobApplied(jobId, _msgSender(), stake);
+    }
+
+    function getJobApplications(uint256 jobId) external view returns (Application[] memory) {
+        return jobApplications[jobId];
     }
 
     function pickFreelancer(uint256 jobId, address freelancer) external whenNotPaused {
@@ -255,7 +260,7 @@ contract FreelanceEscrow is FreelanceEscrowBase, PausableUpgradeable, IArbitrabl
         if (_msgSender() != job.client) revert NotAuthorized();
         
         uint256 mask = 1 << mId;
-        if ((milestoneBitmask[jobId] & mask) != 0) revert InvalidMilestone();
+        if ((milestoneBitmask[jobId] & mask) != 0) revert MilestoneAlreadyReleased();
         milestoneBitmask[jobId] |= mask;
         jobMilestones[jobId][mId].isReleased = true;
 
@@ -284,10 +289,9 @@ contract FreelanceEscrow is FreelanceEscrowBase, PausableUpgradeable, IArbitrabl
         // Supreme Level Check: 0% Fee for Elite Veterans or Private Verified Users
         bool isSupremeMember = false;
         if (reputationContract != address(0)) {
-            (bool success, bytes memory data) = reputationContract.call(abi.encodeWithSignature("balanceOf(address,uint256)", job.freelancer, job.categoryId));
-            if (success && data.length >= 32) {
-                if (abi.decode(data, (uint256)) >= reputationThreshold) isSupremeMember = true;
-            }
+            try IERC1155(reputationContract).balanceOf(job.freelancer, uint256(job.categoryId)) returns (uint256 bal) {
+                if (bal >= reputationThreshold) isSupremeMember = true;
+            } catch {}
         }
         
         // ZK-Privacy Shield Backup
@@ -358,6 +362,7 @@ contract FreelanceEscrow is FreelanceEscrowBase, PausableUpgradeable, IArbitrabl
         }
 
         emit FundsReleased(jobId, job.freelancer, payout, jobId);
+        emit ReviewSubmitted(jobId, job.client, job.freelancer, rating, "");
     }
 
     // Traditional releaseFunds call

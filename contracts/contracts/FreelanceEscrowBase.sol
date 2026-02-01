@@ -85,4 +85,5 @@ abstract contract FreelanceEscrowBase is
     event FundsReleased(uint256 indexed jobId, address indexed freelancer, uint256 amount, uint256 nftId);
     event MilestoneReleased(uint256 indexed jobId, address indexed freelancer, uint256 indexed milestoneId, uint256 amount);
     event DisputeRaised(uint256 indexed jobId, uint256 disputeId);
+    event ReviewSubmitted(uint256 indexed jobId, address indexed client, address indexed freelancer, uint8 rating, string review);
 }

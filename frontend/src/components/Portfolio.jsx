@@ -71,7 +71,7 @@ function Portfolio({ address, onBack }) {
                 </button>
             )}
 
-            <div className="grid" style={{ gridTemplateColumns: '1fr 2fr', gap: '40px' }}>
+            <div className="grid-portfolio" style={{ display: 'grid', gap: '40px' }}>
                 {/* Profile Sidebar */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
                     <div className="glass-card" style={{ textAlign: 'center', padding: '40px 20px' }}>
@@ -96,7 +96,7 @@ function Portfolio({ address, onBack }) {
                             )) || <span className="badge">General Creator</span>}
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '30px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
                             <div className="glass-card" style={{ padding: '15px' }}>
                                 <div style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--primary)' }}>{profile.completedJobs}</div>
                                 <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>JOBS</div>
@@ -105,6 +105,11 @@ function Portfolio({ address, onBack }) {
                                 <div style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--primary)' }}>{profile.totalEarned.toFixed(1)}</div>
                                 <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>MATIC</div>
                             </div>
+                        </div>
+
+                        <div className="glass-card !bg-primary/5 !border-primary/20 mb-8">
+                            <div style={{ fontSize: '1.5rem', fontWeight: 900, color: 'var(--primary)', letterSpacing: '2px' }}>{profile.reputationScore || 0}</div>
+                            <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', fontWeight: 800 }}>REPUTATION SCORE</div>
                         </div>
 
                         <p style={{ color: 'var(--text-muted)', lineHeight: '1.6', marginBottom: '30px', fontSize: '0.95rem' }}>

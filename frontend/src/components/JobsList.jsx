@@ -335,11 +335,17 @@ const JobCard = React.memo(({ jobId, categoryFilter, searchQuery, minBudget, sta
     };
 
     const handleRelease = () => {
+        const rating = prompt('Please rate the freelancer (1-5):', '5');
+        if (!rating || isNaN(rating) || rating < 1 || rating > 5) {
+            alert('Invalid rating. Please enter a number between 1 and 5.');
+            return;
+        }
+
         writeContract({
             address: CONTRACT_ADDRESS,
             abi: FreelanceEscrowABI.abi,
-            functionName: 'releaseFunds',
-            args: [BigInt(jobId)],
+            functionName: 'completeJob',
+            args: [BigInt(jobId), parseInt(rating)],
         });
     };
 

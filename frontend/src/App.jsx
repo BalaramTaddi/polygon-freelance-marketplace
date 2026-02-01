@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import logo from './assets/logo.png';
-import { Briefcase, PlusCircle, LayoutDashboard, Ticket, MessageSquare, Trophy, User } from 'lucide-react';
+import { Briefcase, PlusCircle, LayoutDashboard, Ticket, MessageSquare, Trophy, User, Gavel } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Dashboard from './components/Dashboard';
 import CreateJob from './components/CreateJob';
@@ -17,7 +17,6 @@ import { NotificationManager } from './components/NotificationManager';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useAccount, useBalance } from 'wagmi';
-import { Briefcase, PlusCircle, LayoutDashboard, Ticket, MessageSquare, Trophy, User, Gavel } from 'lucide-react';
 
 function App() {
   const { address } = useAccount();
@@ -38,261 +37,156 @@ function App() {
 
     switch (activeTab) {
       case 'dashboard': return <Dashboard />;
-      case 'jobs': return <JobsList gasless={isGasless} onUserClick={(addr) => setPortfolioAddress(addr)} onSelectChat={onSelectChat} />;
-      case 'create': return <CreateJob gasless={isGasless} onJobCreated={() => setActiveTab('jobs')} />;
+      case 'jobs': return <JobsList onUserClick={setPortfolioAddress} onSelectChat={onSelectChat} gasless={isGasless} />;
+      case 'create': return <CreateJob />;
       case 'nfts': return <NFTGallery />;
-      case 'chat': return <Chat initialPeerAddress={chatPeerAddress} onClearedAddress={() => setChatPeerAddress(null)} />;
-      case 'leaderboard': return <Leaderboard />;
-      case 'dao': return <DaoDashboard />;
-      case 'tos': return <TermsOfService onBack={() => setActiveTab('dashboard')} />;
-      case 'privacy': return <PrivacyPolicy onBack={() => setActiveTab('dashboard')} />;
+      case 'chat': return <Chat peerAddress={chatPeerAddress} />;
+      case 'leaderboard': return <Leaderboard onUserClick={setPortfolioAddress} />;
+      case 'governance': return <DaoDashboard />;
+      case 'terms': return <TermsOfService />;
+      case 'privacy': return <PrivacyPolicy />;
       default: return <Dashboard />;
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col relative overflow-hidden">
-      {/* Decorative Background Elements */}
-      <motion.div
-        animate={{
-          x: [0, 100, 0],
-          y: [0, 50, 0],
-          scale: [1, 1.2, 1]
-        }}
-        transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-        className="bg-glow"
-        style={{ top: '-10%', left: '-10%' }}
-      />
-      <motion.div
-        animate={{
-          x: [0, -80, 0],
-          y: [0, 120, 0],
-          scale: [1, 1.1, 1]
-        }}
-        transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
-        className="bg-glow"
-        style={{ bottom: '-10%', right: '-10%', background: 'radial-gradient(circle, rgba(236, 72, 153, 0.2) 0%, transparent 70%)' }}
-      />
-
-      <ToastContainer position="top-right" autoClose={5000} theme="dark" hideProgressBar={false} />
+    <div className="app-container">
       <NotificationManager />
-      <ConnectionBanner />
+      <ToastContainer theme="dark" position="bottom-right" />
 
-      <div className="app-layout">
-        <aside className="sidebar-premium">
-          <div className="brand mb-12" onClick={() => setActiveTab('dashboard')} style={{ cursor: 'pointer' }}>
-            <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center border border-primary/30 shadow-[0_0_15px_rgba(139,92,246,0.3)]">
-              <img src={logo} alt="PolyLance Zenith" className="w-full h-full object-cover" />
-            </div>
-            <span className="shimmer-text font-bold text-2xl tracking-tighter">Zenith</span>
+      {/* Dynamic Background */}
+      <div className="fixed inset-0 -z-10 bg-[#02040a]">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/10 rounded-full blur-[120px] animate-pulse" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-500/10 rounded-full blur-[120px] animate-pulse" />
+      </div>
+
+      <aside className="sidebar">
+        <div className="sidebar-logo">
+          <img src={logo} alt="PolyLance Zenith" className="w-10 h-10 object-contain hover:scale-110 transition-transform cursor-pointer" onClick={() => setActiveTab('dashboard')} />
+          <div className="flex flex-col">
+            <span className="font-black text-xl tracking-tighter text-white">POLY<span className="text-primary">LANCE</span></span>
+            <span className="text-[10px] uppercase tracking-widest font-black text-primary opacity-80 leading-none">Zenith Protocol</span>
           </div>
+        </div>
 
-          <nav className="nav-vertical">
-            <button
-              onClick={() => setActiveTab('dashboard')}
-              className={`nav-link ${activeTab === 'dashboard' ? 'active' : ''}`}
-            >
-              <LayoutDashboard size={18} /> Dashboard
-            </button>
-            <button
-              onClick={() => setActiveTab('jobs')}
-              className={`nav-link ${activeTab === 'jobs' ? 'active' : ''}`}
-            >
-              <Briefcase size={18} /> Markets
-            </button>
-            <button
-              onClick={() => setActiveTab('create')}
-              className={`nav-link ${activeTab === 'create' ? 'active' : ''}`}
-            >
-              <PlusCircle size={18} /> Post Job
-            </button>
-            <button
-              onClick={() => setActiveTab('nfts')}
-              className={`nav-link ${activeTab === 'nfts' ? 'active' : ''}`}
-            >
-              <Ticket size={18} /> Gallery
-            </button>
-            <button
-              onClick={() => setActiveTab('leaderboard')}
-              className={`nav-link ${activeTab === 'leaderboard' ? 'active' : ''}`}
-            >
-              <Trophy size={18} /> Leaders
-            </button>
-            <button
-              onClick={() => setActiveTab('chat')}
-              className={`nav-link ${activeTab === 'chat' ? 'active' : ''}`}
-            >
-              <MessageSquare size={18} /> Messenger
-            </button>
-            <button
-              onClick={() => setActiveTab('dao')}
-              className={`nav-link ${activeTab === 'dao' ? 'active' : ''}`}
-            >
-              <Gavel size={18} /> Governance
-            </button>
-          </nav>
+        <nav className="sidebar-nav">
+          <button className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => setActiveTab('dashboard')}>
+            <LayoutDashboard size={20} /> Dashboard
+          </button>
+          <button className={`nav-item ${activeTab === 'jobs' ? 'active' : ''}`} onClick={() => setActiveTab('jobs')}>
+            <Briefcase size={20} /> Explorer
+          </button>
+          <button className={`nav-item ${activeTab === 'create' ? 'active' : ''}`} onClick={() => setActiveTab('create')}>
+            <PlusCircle size={20} /> Create Gig
+          </button>
+          <button className={`nav-item ${activeTab === 'chat' ? 'active' : ''}`} onClick={() => setActiveTab('chat')}>
+            <MessageSquare size={20} /> Neural Chat
+          </button>
+          <button className={`nav-item ${activeTab === 'leaderboard' ? 'active' : ''}`} onClick={() => setActiveTab('leaderboard')}>
+            <Trophy size={20} /> Hall of Fame
+          </button>
+          <button className={`nav-item ${activeTab === 'governance' ? 'active' : ''}`} onClick={() => setActiveTab('governance')}>
+            <Gavel size={20} /> Governance
+          </button>
+          <button className={`nav-item ${activeTab === 'nfts' ? 'active' : ''}`} onClick={() => setActiveTab('nfts')}>
+            <Ticket size={20} /> Legacy Vault
+          </button>
+        </nav>
 
-          <div className="sidebar-bottom">
-            <div className="flex items-center justify-between bg-white/5 p-3 rounded-2xl border border-white/5">
-              <span className="text-[10px] font-black uppercase opacity-50 tracking-widest text-text-muted">Gasless</span>
+        <div className="mt-auto p-4">
+          <div className="glass-card !p-4 !bg-white/5 border border-white/5">
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-xs font-bold text-text-dim uppercase tracking-widest">Network Edge</span>
+              <div className="flex h-2 w-2 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-primary to-purple-500 shadow-lg shadow-primary/20" />
+              <div className="flex flex-col">
+                <span className="text-[10px] font-bold text-text-muted">Protocol Node</span>
+                <span className="text-[12px] font-black text-white">v1.2.0-SUPREME</span>
+              </div>
+            </div>
+            <div className="mt-4 flex items-center justify-between">
+              <span className="text-[10px] font-bold text-text-muted">Gasless Mode</span>
               <button
                 onClick={() => setIsGasless(!isGasless)}
-                className={`relative w-10 h-5 rounded-full transition-all duration-300 ${isGasless ? 'bg-primary shadow-[0_0_15px_rgba(139,92,246,0.5)]' : 'bg-slate-800 border border-white/10'}`}
+                className={`w-8 h-4 rounded-full relative transition-colors ${isGasless ? 'bg-primary' : 'bg-white/10'}`}
               >
-                <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all duration-300 shadow-sm ${isGasless ? 'left-5.5' : 'left-0.5'}`} />
+                <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${isGasless ? 'left-4.5' : 'left-0.5'}`} />
               </button>
             </div>
-
-            <ConnectButton.Custom>
-              {({
-                account,
-                chain,
-                openAccountModal,
-                openChainModal,
-                openConnectModal,
-                authenticationStatus,
-                mounted,
-              }) => {
-                const ready = mounted && authenticationStatus !== 'loading';
-                const connected = ready && account && chain && (!authenticationStatus || authenticationStatus === 'authenticated');
-
-                return (
-                  <div {...(!ready && { 'aria-hidden': true, 'className': 'opacity-0 pointer-events-none' })}>
-                    {(() => {
-                      if (!connected) {
-                        return (
-                          <button onClick={openConnectModal} className="btn-primary w-full shadow-2xl !py-4">
-                            Connect Wallet
-                          </button>
-                        );
-                      }
-
-                      if (chain.unsupported) {
-                        return (
-                          <button onClick={openChainModal} className="btn-ghost w-full !text-danger !border-danger/20">
-                            Wrong Network
-                          </button>
-                        );
-                      }
-
-                      return (
-                        <div className="flex items-center gap-4 bg-white/5 p-2 pr-4 rounded-2xl border border-white/5 hover:border-white/10 transition-all cursor-pointer w-full" onClick={openAccountModal}>
-                          <div className="w-10 h-10 rounded-xl overflow-hidden border border-white/10 shrink-0">
-                            <img
-                              src={`https://api.dicebear.com/7.x/identicon/svg?seed=${account.address}`}
-                              alt="avatar"
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                          <div className="flex flex-col truncate">
-                            <span className="text-xs font-black text-white/90 leading-none mb-1 truncate">{account.displayName}</span>
-                            <span className="text-[10px] font-bold text-primary/80 leading-none truncate">{account.displayBalance}</span>
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                );
-              }}
-            </ConnectButton.Custom>
           </div>
-        </aside>
-
-        <div className="main-content-premium">
-          <main className="container flex-grow relative z-10">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeTab + (portfolioAddress || '')}
-                initial={{ opacity: 0, y: 20, filter: 'blur(10px)' }}
-                animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-                exit={{ opacity: 0, y: -20, filter: 'blur(10px)' }}
-                transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-              >
-                {renderContent()}
-              </motion.div>
-            </AnimatePresence>
-          </main>
-
-          <footer className="footer-premium">
-            <div className="container">
-              <div className="footer-grid">
-                <div className="footer-brand">
-                  <div className="brand" onClick={() => setActiveTab('dashboard')} style={{ cursor: 'pointer' }}>
-                    <div className="w-8 h-8 bg-primary/20 rounded-lg flex items-center justify-center border border-primary/30">
-                      <Briefcase size={18} className="text-primary" />
-                    </div>
-                    <span className="shimmer-text font-bold text-xl tracking-tighter">PolyLance</span>
-                  </div>
-                  <p className="text-text-dim text-xs mt-4 max-w-[200px] leading-relaxed">
-                    The future of decentralized work. Secured by Polygon, powered by the community.
-                  </p>
-                </div>
-
-                <div className="footer-nav-col">
-                  <h4 className="footer-title">Navigation</h4>
-                  <button onClick={() => setActiveTab('dashboard')} className="footer-link">Dashboard</button>
-                  <button onClick={() => setActiveTab('jobs')} className="footer-link">Markets</button>
-                  <button onClick={() => setActiveTab('create')} className="footer-link">Post Job</button>
-                </div>
-
-                <div className="footer-nav-col">
-                  <h4 className="footer-title">Platform</h4>
-                  <button onClick={() => setActiveTab('nfts')} className="footer-link">Gallery</button>
-                  <button onClick={() => setActiveTab('leaderboard')} className="footer-link">Leaders</button>
-                  <button onClick={() => setActiveTab('chat')} className="footer-link">Messenger</button>
-                  <button onClick={() => setActiveTab('dao')} className="footer-link">Governance</button>
-                </div>
-
-                <div className="footer-nav-col">
-                  <h4 className="footer-title">Legal</h4>
-                  <button onClick={() => setActiveTab('tos')} className="footer-link">Terms of Service</button>
-                  <button onClick={() => setActiveTab('privacy')} className="footer-link">Privacy Policy</button>
-                </div>
-
-                <div className="footer-cta">
-                  <ConnectButton />
-                  <div className="mt-4 flex items-center gap-2 text-[10px] text-text-dim uppercase font-black tracking-widest">
-                    <div className="w-1 h-1 rounded-full bg-accent animate-pulse" />
-                    Amoy Testnet Active
-                  </div>
-                </div>
-              </div>
-
-              <div className="footer-bottom">
-                <div className="opacity-40 text-xs italic">© 2026 PolyLance Protocol. All Rights Reserved.</div>
-                <div className="flex gap-6 opacity-60 text-xs">
-                  <a href="https://polygon.technology" target="_blank" rel="noreferrer" className="hover:text-primary transition-colors">Built on Polygon</a>
-                </div>
-              </div>
-            </div>
-          </footer>
         </div>
+      </aside>
+
+      <main className="main-content">
+        <header className="header">
+          <div className="flex items-center gap-4">
+            <h2 className="text-sm font-bold text-text-dim uppercase tracking-[0.2em]">
+              {activeTab.replace('-', ' ')}
+            </h2>
+          </div>
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-[11px] font-bold tracking-widest uppercase opacity-80">Mainnet Synced</span>
+            </div>
+            <ConnectButton />
+          </div>
+        </header>
+
+        <div className="content-area">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab + (portfolioAddress || '')}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
+            >
+              {renderContent()}
+            </motion.div>
+          </AnimatePresence>
+        </div>
+
+        <footer className="footer">
+          <div className="flex gap-6">
+            <button onClick={() => setActiveTab('terms')} className="text-xs text-text-muted hover:text-white transition-colors">Terms of Service</button>
+            <button onClick={() => setActiveTab('privacy')} className="text-xs text-text-muted hover:text-white transition-colors">Privacy Policy</button>
+          </div>
+          <p className="text-xs text-text-dim font-medium tracking-tight">
+            Designed for the <span className="text-primary font-bold italic">Supreme Zenith</span> Era. &copy; 2026 PolyLance.
+          </p>
+        </footer>
+      </main>
+
+      <div className="mobile-nav">
+        <button className={`mobile-nav-item ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => setActiveTab('dashboard')}>
+          <LayoutDashboard size={20} />
+          <span>Home</span>
+        </button>
+        <button className={`mobile-nav-item ${activeTab === 'jobs' ? 'active' : ''}`} onClick={() => setActiveTab('jobs')}>
+          <Briefcase size={20} />
+          <span>Jobs</span>
+        </button>
+        <button className={`mobile-nav-item ${activeTab === 'create' ? 'active' : ''}`} onClick={() => setActiveTab('create')}>
+          <PlusCircle size={20} />
+          <span>Post</span>
+        </button>
+        <button className={`mobile-nav-item ${activeTab === 'chat' ? 'active' : ''}`} onClick={() => setActiveTab('chat')}>
+          <MessageSquare size={20} />
+          <span>Chat</span>
+        </button>
+        <button className={`mobile-nav-item ${activeTab === 'leaderboard' ? 'active' : ''}`} onClick={() => setActiveTab('leaderboard')}>
+          <Trophy size={20} />
+          <span>Elite</span>
+        </button>
       </div>
     </div>
   );
-}
-
-function ConnectionBanner() {
-  const { isConnected, chain } = useAccount();
-  const isWrongChain = isConnected && chain?.id !== 80002;
-
-  if (!isConnected) {
-    return (
-      <div className="bg-primary/10 text-primary py-2 px-12 text-center text-sm border-b border-primary/20">
-        ✨ Welcome to PolyLance! Please <strong>connect your wallet</strong> to get started.
-      </div>
-    );
-  }
-
-  if (isWrongChain) {
-    return (
-      <div className="bg-danger/10 text-danger py-2 px-12 text-center text-sm border-b border-danger/20">
-        🚨 Attention! You're on the wrong network. Please switch to <strong>Polygon Amoy</strong>.
-      </div>
-    );
-  }
-
-  return null;
 }
 
 export default App;

@@ -379,6 +379,22 @@ app.get('/api/recommendations/:address', async (req, res) => {
     }
 });
 
+app.get('/api/match/:jobId/:address', async (req, res) => {
+    const { jobId, address } = req.params;
+    try {
+        const job = await JobMetadata.findOne({ jobId: parseInt(jobId) });
+        const profile = await Profile.findOne({ address: address.toLowerCase() });
+
+        if (!job || !profile) return res.status(404).json({ error: 'Job or profile not found' });
+
+        const { calculateMatchScore } = await import('./aiMatcher.js');
+        const matchData = await calculateMatchScore(job.description, profile);
+        res.json(matchData);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Ecosystem Analytics
 app.get('/api/analytics', async (req, res) => {
     try {
