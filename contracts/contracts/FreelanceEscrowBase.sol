@@ -25,6 +25,7 @@ abstract contract FreelanceEscrowBase is
         uint256 amount;
         string ipfsHash;
         bool isReleased;
+        bool isUpfront;
     }
 
     struct Job {
@@ -76,6 +77,10 @@ abstract contract FreelanceEscrowBase is
     error MilestoneAlreadyReleased();
     error InvalidMilestone();
     error InvalidAddress();
+    error LowStake();
+    error LowValue();
+    error TransferFailed();
+    error TokenNotWhitelisted();
 
     function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721Upgradeable, AccessControlUpgradeable) returns (bool) {
         return super.supportsInterface(interfaceId);

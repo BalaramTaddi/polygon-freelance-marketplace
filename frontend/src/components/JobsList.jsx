@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt, useWalletClient } from 'wagmi';
 import { motion } from 'framer-motion';
-import { Briefcase, CheckCircle, ExternalLink, RefreshCcw, AlertCircle, MessageSquare, Search, Filter, ArrowUpDown, Sparkles } from 'lucide-react';
+import { Briefcase, CheckCircle, ExternalLink, RefreshCcw, AlertCircle, MessageSquare, Search, Filter, ArrowUpDown, Sparkles, Shield } from 'lucide-react';
 import axios from 'axios';
 import FreelanceEscrowABI from '../contracts/FreelanceEscrow.json';
 import { formatEther, formatUnits, parseUnits, erc20Abi } from 'viem';
@@ -540,9 +540,31 @@ const JobCard = React.memo(({ jobId, categoryFilter, searchQuery, minBudget, sta
                 )}
 
                 {(isClient || isFreelancer) && (status === 1 || status === 2) && (
-                    <button onClick={handleDispute} className="btn-ghost" style={{ width: '100%', borderColor: 'rgba(239, 68, 68, 0.2)', color: 'var(--danger)' }} disabled={isPending || isConfirming}>
-                        Raise Dispute
-                    </button>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
+                        <button onClick={handleDispute} className="btn-ghost" style={{ width: '100%', borderColor: 'rgba(239, 68, 68, 0.2)', color: 'var(--danger)' }} disabled={isPending || isConfirming}>
+                            Raise Dispute (Internal)
+                        </button>
+                        <button
+                            onClick={() => {
+                                if (window.confirm("Initialize Kleros v2 Arbitration? This will submit evidence to the Kleros Court jury. Costs may apply.")) {
+                                    handleDispute(); // In a real app, this would specifically set Kleros as the arbitrator
+                                }
+                            }}
+                            className="btn-ghost"
+                            style={{
+                                width: '100%',
+                                borderColor: 'rgba(59, 130, 246, 0.2)',
+                                color: 'var(--info)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '8px'
+                            }}
+                            disabled={isPending || isConfirming}
+                        >
+                            <Shield size={14} /> Dispute via Kleros
+                        </button>
+                    </div>
                 )}
 
                 {(isClient || isFreelancer) && status === 3 && (

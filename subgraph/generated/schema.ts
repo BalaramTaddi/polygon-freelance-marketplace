@@ -11,6 +11,114 @@ import {
   BigDecimal,
 } from "@graphprotocol/graph-ts";
 
+export class Freelancer extends Entity {
+  constructor(id: string) {
+    super();
+    this.set("id", Value.fromString(id));
+  }
+
+  save(): void {
+    let id = this.get("id");
+    assert(id != null, "Cannot save Freelancer entity without an ID");
+    if (id) {
+      assert(
+        id.kind == ValueKind.STRING,
+        `Entities of type Freelancer must have an ID of type String but the id '${id.displayData()}' is of type ${id.displayKind()}`,
+      );
+      store.set("Freelancer", id.toString(), this);
+    }
+  }
+
+  static loadInBlock(id: string): Freelancer | null {
+    return changetype<Freelancer | null>(store.get_in_block("Freelancer", id));
+  }
+
+  static load(id: string): Freelancer | null {
+    return changetype<Freelancer | null>(store.get("Freelancer", id));
+  }
+
+  get id(): string {
+    let value = this.get("id");
+    if (!value || value.kind == ValueKind.NULL) {
+      throw new Error("Cannot return null for a required field.");
+    } else {
+      return value.toString();
+    }
+  }
+
+  set id(value: string) {
+    this.set("id", Value.fromString(value));
+  }
+
+  get totalStars(): BigInt {
+    let value = this.get("totalStars");
+    if (!value || value.kind == ValueKind.NULL) {
+      throw new Error("Cannot return null for a required field.");
+    } else {
+      return value.toBigInt();
+    }
+  }
+
+  set totalStars(value: BigInt) {
+    this.set("totalStars", Value.fromBigInt(value));
+  }
+
+  get totalJobsReviewed(): BigInt {
+    let value = this.get("totalJobsReviewed");
+    if (!value || value.kind == ValueKind.NULL) {
+      throw new Error("Cannot return null for a required field.");
+    } else {
+      return value.toBigInt();
+    }
+  }
+
+  set totalJobsReviewed(value: BigInt) {
+    this.set("totalJobsReviewed", Value.fromBigInt(value));
+  }
+
+  get averageRating(): i32 {
+    let value = this.get("averageRating");
+    if (!value || value.kind == ValueKind.NULL) {
+      return 0;
+    } else {
+      return value.toI32();
+    }
+  }
+
+  set averageRating(value: i32) {
+    this.set("averageRating", Value.fromI32(value));
+  }
+
+  get portfolioCID(): string | null {
+    let value = this.get("portfolioCID");
+    if (!value || value.kind == ValueKind.NULL) {
+      return null;
+    } else {
+      return value.toString();
+    }
+  }
+
+  set portfolioCID(value: string | null) {
+    if (!value) {
+      this.unset("portfolioCID");
+    } else {
+      this.set("portfolioCID", Value.fromString(<string>value));
+    }
+  }
+
+  get jobs(): JobLoader {
+    return new JobLoader("Freelancer", this.get("id")!.toString(), "jobs");
+  }
+
+  get reviews(): ReviewLoader {
+    return new ReviewLoader(
+      "Freelancer",
+      this.get("id")!.toString(),
+      "reviews",
+    );
+  }
+}
+
 export class Job extends Entity {
   constructor(id: string) {
     super();
@@ -87,6 +195,23 @@ export class Job extends Entity {
 
   set freelancer(value: Bytes) {
     this.set("freelancer", Value.fromBytes(value));
+  }
+
+  get freelancerLookup(): string | null {
+    let value = this.get("freelancerLookup");
+    if (!value || value.kind == ValueKind.NULL) {
+      return null;
+    } else {
+      return value.toString();
+    }
+  }
+
+  set freelancerLookup(value: string | null) {
+    if (!value) {
+      this.unset("freelancerLookup");
+    } else {
+      this.set("freelancerLookup", Value.fromString(<string>value));
+    }
   }
 
   get token(): Bytes {
@@ -442,17 +567,17 @@ export class Application extends Entity {
     this.set("job", Value.fromString(value));
   }
 
-  get freelancer(): Bytes {
+  get freelancer(): string {
     let value = this.get("freelancer");
     if (!value || value.kind == ValueKind.NULL) {
       throw new Error("Cannot return null for a required field.");
     } else {
-      return value.toBytes();
+      return value.toString();
     }
   }
 
-  set freelancer(value: Bytes) {
-    this.set("freelancer", Value.fromBytes(value));
+  set freelancer(value: string) {
+    this.set("freelancer", Value.fromString(value));
   }
 
   get stake(): BigInt {
@@ -545,6 +670,19 @@ export class Review extends Entity {
 
   set reviewer(value: Bytes) {
     this.set("reviewer", Value.fromBytes(value));
+  }
+
+  get freelancer(): string {
+    let value = this.get("freelancer");
+    if (!value || value.kind == ValueKind.NULL) {
+      throw new Error("Cannot return null for a required field.");
+    } else {
+      return value.toString();
+    }
+  }
+
+  set freelancer(value: string) {
+    this.set("freelancer", Value.fromString(value));
   }
 
   get rating(): i32 {
@@ -807,6 +945,42 @@ export class GlobalStat extends Entity {
   }
 }
 
+export class JobLoader extends Entity {
+  _entity: string;
+  _field: string;
+  _id: string;
+
+  constructor(entity: string, id: string, field: string) {
+    super();
+    this._entity = entity;
+    this._id = id;
+    this._field = field;
+  }
+
+  load(): Job[] {
+    let value = store.loadRelated(this._entity, this._id, this._field);
+    return changetype<Job[]>(value);
+  }
+}
+
+export class ReviewLoader extends Entity {
+  _entity: string;
+  _field: string;
+  _id: string;
+
+  constructor(entity: string, id: string, field: string) {
+    super();
+    this._entity = entity;
+    this._id = id;
+    this._field = field;
+  }
+
+  load(): Review[] {
+    let value = store.loadRelated(this._entity, this._id, this._field);
+    return changetype<Review[]>(value);
+  }
+}
+
 export class TransactionLoader extends Entity {
   _entity: string;
   _field: string;
@@ -858,23 +1032,5 @@ export class ApplicationLoader extends Entity {
   load(): Application[] {
     let value = store.loadRelated(this._entity, this._id, this._field);
     return changetype<Application[]>(value);
-  }
-}
-
-export class ReviewLoader extends Entity {
-  _entity: string;
-  _field: string;
-  _id: string;
-
-  constructor(entity: string, id: string, field: string) {
-    super();
-    this._entity = entity;
-    this._id = id;
-    this._field = field;
-  }
-
-  load(): Review[] {
-    let value = store.loadRelated(this._entity, this._id, this._field);
-    return changetype<Review[]>(value);
   }
 }

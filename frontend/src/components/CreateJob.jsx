@@ -143,6 +143,12 @@ function CreateJob({ onJobCreated, gasless }) {
     return (
         <div className="animate-fade">
             <header className="mb-12 text-center">
+                <div className="flex justify-center mb-6">
+                    <div className="badge !bg-emerald-500/20 !text-emerald-400 !border-emerald-500/20 !px-4 !py-2 flex items-center gap-2 animate-bounce">
+                        <Sparkles size={14} />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Sponsorship Eligible: First Job Gas-Free</span>
+                    </div>
+                </div>
                 <h1 className="text-6xl font-black mb-6 tracking-tighter shimmer-text">
                     Post a Mandate
                 </h1>

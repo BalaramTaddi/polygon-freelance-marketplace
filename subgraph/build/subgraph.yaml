@@ -24,10 +24,34 @@ dataSources:
           handler: handleJobCreated
         - event: FundsReleased(indexed uint256,indexed address,uint256,uint256)
           handler: handleFundsReleased
-        - event: MilestoneReleased(indexed uint256,indexed uint256,uint256)
+        - event: MilestoneReleased(indexed uint256,indexed address,indexed uint256,uint256)
           handler: handleMilestoneReleased
-        - event: DisputeRaised(indexed uint256,indexed address)
+        - event: DisputeRaised(indexed uint256,uint256)
           handler: handleDisputeRaised
         - event: Ruling(indexed address,indexed uint256,uint256)
           handler: handleRuling
+        - event: ReviewSubmitted(indexed uint256,indexed address,indexed address,uint8,string)
+          handler: handleReviewSubmitted
+      file: FreelanceEscrow\FreelanceEscrow.wasm
+  - kind: ethereum
+    name: FreelancerReputation
+    network: amoy
+    source:
+      address: "0x89791A9A3210667c828492DB98DCa3e2076cc373"
+      abi: FreelancerReputation
+      startBlock: 8560000
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Freelancer
+      abis:
+        - name: FreelancerReputation
+          file: FreelancerReputation\abis\FreelancerReputation.json
+      eventHandlers:
+        - event: RatingUpdated(indexed address,uint8,uint256)
+          handler: handleRatingUpdated
+        - event: PortfolioUpdated(indexed address,string)
+          handler: handlePortfolioUpdated
       file: FreelanceEscrow\FreelanceEscrow.wasm

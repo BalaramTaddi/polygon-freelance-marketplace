@@ -33,6 +33,7 @@ contract FreelanceEscrow is FreelanceEscrowBase, PausableUpgradeable, IArbitrabl
     address public polyToken;
     address public reputationContract;
     address public completionCertContract;
+    address public reviewSBT;
     address public privacyShield;
     bool public emergencyMode; 
 
@@ -94,6 +95,10 @@ contract FreelanceEscrow is FreelanceEscrowBase, PausableUpgradeable, IArbitrabl
         completionCertContract = _cert;
     }
 
+    function setReviewSBT(address _rsbt) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        reviewSBT = _rsbt;
+    }
+
     uint256 public reputationThreshold; 
     mapping(address => bool) public isSupreme;
 
@@ -124,7 +129,7 @@ contract FreelanceEscrow is FreelanceEscrowBase, PausableUpgradeable, IArbitrabl
         if (job.token != address(0)) {
             IERC20(job.token).safeTransferFrom(_msgSender(), address(this), stake);
         } else {
-            require(msg.value >= stake, "Low stake");
+            if (msg.value < stake) revert LowStake();
         }
 
         jobApplications[jobId].push(Application(_msgSender(), stake));
@@ -215,16 +220,19 @@ contract FreelanceEscrow is FreelanceEscrowBase, PausableUpgradeable, IArbitrabl
         uint256 deadline;
         uint256[] mAmounts;
         string[] mHashes;
+        bool[] mIsUpfront;
     }
 
     /**
      * @notice Milestone Factory: Locks funds and defines stages upfront.
      */
     function createJob(CreateParams memory p) public payable whenNotPaused nonReentrant returns (uint256) {
+        if (p.token != address(0) && !tokenWhitelist[p.token]) revert TokenNotWhitelisted();
+
         if (p.token != address(0)) {
             IERC20(p.token).safeTransferFrom(_msgSender(), address(this), p.amount);
         } else {
-            require(msg.value >= p.amount, "Low value");
+            if (msg.value < p.amount) revert LowValue();
         }
 
         uint256 jobId = ++jobCount;
@@ -241,11 +249,20 @@ contract FreelanceEscrow is FreelanceEscrowBase, PausableUpgradeable, IArbitrabl
         uint256 mSum = 0;
         for (uint256 i = 0; i < p.mAmounts.length; i++) {
             mSum += p.mAmounts[i];
-            jobMilestones[jobId][i] = Milestone(p.mAmounts[i], p.mHashes[i], false);
+            jobMilestones[jobId][i] = Milestone(p.mAmounts[i], p.mHashes[i], false, p.mIsUpfront[i]);
         }
         if (p.mAmounts.length > 0 && mSum != p.amount) revert InvalidStatus();
 
         job.deadline = uint48(p.deadline == 0 ? block.timestamp + 7 days : p.deadline);
+
+        // Auto-release upfront milestones if freelancer is pre-selected
+        if (job.freelancer != address(0)) {
+            for (uint256 i = 0; i < p.mAmounts.length; i++) {
+                if (p.mIsUpfront[i]) {
+                    _releaseMilestoneInternal(jobId, i);
+                }
+            }
+        }
 
         emit JobCreated(jobId, job.client, p.freelancer, p.amount, job.deadline);
         return jobId;
@@ -258,7 +275,11 @@ contract FreelanceEscrow is FreelanceEscrowBase, PausableUpgradeable, IArbitrabl
     function releaseMilestone(uint256 jobId, uint256 mId) public whenNotPaused nonReentrant {
         Job storage job = jobs[jobId];
         if (_msgSender() != job.client) revert NotAuthorized();
-        
+        _releaseMilestoneInternal(jobId, mId);
+    }
+
+    function _releaseMilestoneInternal(uint256 jobId, uint256 mId) internal {
+        Job storage job = jobs[jobId];
         uint256 mask = 1 << mId;
         if ((milestoneBitmask[jobId] & mask) != 0) revert MilestoneAlreadyReleased();
         milestoneBitmask[jobId] |= mask;
@@ -320,6 +341,13 @@ contract FreelanceEscrow is FreelanceEscrowBase, PausableUpgradeable, IArbitrabl
 
         if (reputationContract != address(0)) {
             (bool success, ) = reputationContract.call(abi.encodeWithSignature("levelUp(address,uint256,uint256)", job.freelancer, job.categoryId, 1));
+            (success);
+            (success, ) = reputationContract.call(abi.encodeWithSignature("updateRating(address,uint8)", job.freelancer, rating));
+            (success);
+        }
+
+        if (rating == 5 && reviewSBT != address(0)) {
+            (bool success, ) = reviewSBT.call(abi.encodeWithSignature("mint(address)", job.freelancer));
             (success);
         }
 
@@ -471,7 +499,7 @@ contract FreelanceEscrow is FreelanceEscrowBase, PausableUpgradeable, IArbitrabl
     function _sendFunds(address to, address token, uint256 amt) internal {
         if (token == address(0)) {
             (bool s, ) = payable(to).call{value: amt}("");
-            require(s, "failed");
+            if (!s) revert TransferFailed();
         } else {
             IERC20(token).safeTransfer(to, amt);
         }

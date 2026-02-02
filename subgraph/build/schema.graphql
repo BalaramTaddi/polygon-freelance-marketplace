@@ -1,8 +1,19 @@
+type Freelancer @entity {
+  id: ID! # address
+  totalStars: BigInt!
+  totalJobsReviewed: BigInt!
+  averageRating: Int!
+  portfolioCID: String
+  jobs: [Job!]! @derivedFrom(field: "freelancerLookup")
+  reviews: [Review!]! @derivedFrom(field: "freelancer")
+}
+
 type Job @entity {
   id: ID!
   jobId: BigInt!
   client: Bytes! # address
-  freelancer: Bytes! # address
+  freelancer: Bytes! # address (old field, keeping for compatibility or removing if safe)
+  freelancerLookup: Freelancer # new relation
   token: Bytes! # address
   amount: BigInt!
   freelancerStake: BigInt!
@@ -44,7 +55,7 @@ type Milestone @entity {
 type Application @entity {
   id: ID! # jobId-freelancer
   job: Job!
-  freelancer: Bytes!
+  freelancer: Freelancer!
   stake: BigInt!
   createdAt: BigInt!
 }
@@ -53,6 +64,7 @@ type Review @entity {
   id: ID! # jobId
   job: Job!
   reviewer: Bytes!
+  freelancer: Freelancer!
   rating: Int!
   ipfsHash: String!
   createdAt: BigInt!

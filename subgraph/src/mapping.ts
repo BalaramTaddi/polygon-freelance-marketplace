@@ -5,9 +5,14 @@ import {
     FundsReleased,
     MilestoneReleased,
     DisputeRaised,
-    Ruling
+    Ruling,
+    ReviewSubmitted
 } from "../generated/FreelanceEscrow/FreelanceEscrow"
-import { Job, Milestone, GlobalStat } from "../generated/schema"
+import {
+    RatingUpdated,
+    PortfolioUpdated
+} from "../generated/FreelancerReputation/FreelancerReputation"
+import { Job, Milestone, GlobalStat, Freelancer, Review } from "../generated/schema"
 
 export function handleJobCreated(event: JobCreated): void {
     let job = new Job(event.params.jobId.toString())
@@ -28,6 +33,17 @@ export function handleJobCreated(event: JobCreated): void {
     job.totalPaidOut = BigInt.fromI32(0)
     job.createdAt = event.block.timestamp
     job.updatedAt = event.block.timestamp
+
+    // Handle Freelancer entity
+    let freelancer = Freelancer.load(event.params.freelancer.toHexString())
+    if (!freelancer) {
+        freelancer = new Freelancer(event.params.freelancer.toHexString())
+        freelancer.totalStars = BigInt.fromI32(0)
+        freelancer.totalJobsReviewed = BigInt.fromI32(0)
+        freelancer.averageRating = 0
+        freelancer.save()
+    }
+    job.freelancerLookup = freelancer.id
 
     // Default values for other fields in schema
     job.freelancerStake = BigInt.fromI32(0)
@@ -109,4 +125,43 @@ export function handleRuling(event: Ruling): void {
             job.save()
         }
     }
+}
+export function handleReviewSubmitted(event: ReviewSubmitted): void {
+    let job = Job.load(event.params.jobId.toString())
+    if (job) {
+        let review = new Review(event.params.jobId.toString())
+        review.job = job.id
+        review.reviewer = event.params.client
+        review.freelancer = job.freelancerLookup!
+        review.rating = event.params.rating
+        review.ipfsHash = event.params.review
+        review.createdAt = event.block.timestamp
+        review.save()
+
+        job.rating = event.params.rating
+        job.save()
+    }
+}
+
+export function handleRatingUpdated(event: RatingUpdated): void {
+    let freelancer = Freelancer.load(event.params.freelancer.toHexString())
+    if (!freelancer) {
+        freelancer = new Freelancer(event.params.freelancer.toHexString())
+    }
+    freelancer.averageRating = event.params.averageRating
+    freelancer.totalStars = event.params.totalJobs.times(BigInt.fromI32(event.params.averageRating)) // Approximation or we can track totalStars properly
+    freelancer.totalJobsReviewed = event.params.totalJobs
+    freelancer.save()
+}
+
+export function handlePortfolioUpdated(event: PortfolioUpdated): void {
+    let freelancer = Freelancer.load(event.params.freelancer.toHexString())
+    if (!freelancer) {
+        freelancer = new Freelancer(event.params.freelancer.toHexString())
+        freelancer.totalStars = BigInt.fromI32(0)
+        freelancer.totalJobsReviewed = BigInt.fromI32(0)
+        freelancer.averageRating = 0
+    }
+    freelancer.portfolioCID = event.params.cid
+    freelancer.save()
 }

@@ -16,6 +16,9 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
  * but here it follows standard ERC1155 for reputation accumulation.
  */
 contract FreelancerReputation is Initializable, ERC1155Upgradeable, AccessControlUpgradeable, UUPSUpgradeable {
+    event RatingUpdated(address indexed freelancer, uint8 averageRating, uint256 totalJobs);
+    event PortfolioUpdated(address indexed freelancer, string cid);
+
     /// @notice Role authorized to mint reputation points (usually the Escrow contract)
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     /// @notice Role authorized to authorize UUPS upgrades
@@ -23,6 +26,11 @@ contract FreelancerReputation is Initializable, ERC1155Upgradeable, AccessContro
 
     /// @notice ID for the general Karma category (used for fee discounts)
     uint256 public constant KARMA_ID = 0;
+
+    mapping(address => uint256) public totalStars;
+    mapping(address => uint256) public totalJobsReviewed;
+    mapping(address => uint8) public averageRating;
+    mapping(address => string) public portfolioCID;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -61,6 +69,27 @@ contract FreelancerReputation is Initializable, ERC1155Upgradeable, AccessContro
      */
     function levelUp(address to, uint256 id, uint256 amount) public onlyRole(MINTER_ROLE) {
         _mint(to, id, amount, "");
+    }
+
+    /**
+     * @notice Updates the freelancer's average rating
+     * @param freelancer The freelancer's address
+     * @param rating The new rating received (0-5)
+     */
+    function updateRating(address freelancer, uint8 rating) external onlyRole(MINTER_ROLE) {
+        totalStars[freelancer] += rating;
+        totalJobsReviewed[freelancer]++;
+        averageRating[freelancer] = uint8(totalStars[freelancer] / totalJobsReviewed[freelancer]);
+        emit RatingUpdated(freelancer, averageRating[freelancer], totalJobsReviewed[freelancer]);
+    }
+
+    /**
+     * @notice Updates the freelancer's portfolio IPFS CID
+     * @param cid The IPFS CID for the portfolio metadata
+     */
+    function updatePortfolio(string calldata cid) external {
+        portfolioCID[msg.sender] = cid;
+        emit PortfolioUpdated(msg.sender, cid);
     }
 
     /**
