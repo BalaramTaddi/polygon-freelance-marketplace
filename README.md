@@ -34,11 +34,17 @@ graph TD
         AA[Biconomy Paymaster]
     end
     
+    subgraph "Data Indexing"
+        Graph[The Graph Protocol]
+    end
+    
     User <-->|Connect / Gasless| Frontend
     Frontend <--> Backend
     Backend <--> DB
     Backend <--> IPFS
     Frontend <-->|Transactions| Escrow
+    Frontend <..>|Query Data| Graph
+    Escrow -.->|Events| Graph
     Escrow <--> SBT
     Escrow <--> Rep
     Escrow <--> Poly
@@ -101,5 +107,16 @@ cd ../contracts && npm install
 - Backend: `cd backend && npm run dev`
 - Frontend: `cd frontend && npm run dev`
 
+## 🎥 Application Demo
+**[Watch the Full Walkthrough (Loom)](https://www.loom.com/share/placeholder-video-link)**
+*Processing flow: Job Creation (Gasless) -> Milestone Release -> NFT Minting*
+
 ## 📄 License
 Distributed under the MIT License. See `LICENSE` for more information.
+
+## 🔍 Contract Verification
+If deploying to a new network, verify contracts using Hardhat:
+```bash
+npx hardhat verify --network polygon_amoy <CONTRACT_ADDRESS> <CONSTRUCTOR_ARGS>
+```
+*Ensure `POLYGONSCAN_API_KEY` is set in your `.env` file.*
