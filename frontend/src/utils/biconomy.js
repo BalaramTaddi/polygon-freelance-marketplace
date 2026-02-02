@@ -1,8 +1,3 @@
-/**
- * Biconomy Account Abstraction Integration
- * Enables gasless work submission for freelancers
- */
-
 import { createSmartAccountClient } from "@biconomy/account";
 import { createWalletClient, custom, encodeFunctionData } from "viem";
 import { polygonAmoy } from "viem/chains";
@@ -10,6 +5,29 @@ import { polygonAmoy } from "viem/chains";
 // Biconomy Paymaster URL (replace with your own from Biconomy Dashboard)
 const PAYMASTER_URL = import.meta.env.VITE_BICONOMY_PAYMASTER_URL || "";
 const BUNDLER_URL = import.meta.env.VITE_BICONOMY_BUNDLER_URL || "";
+
+/**
+ * Initialize Social Login using Biconomy/Particle
+ * @returns {Promise<object>} Social Login instance
+ */
+export async function initSocialLogin() {
+    try {
+        const { ParticleAuthModule, ParticleProvider } = await import("@biconomy/particle-auth");
+
+        const particle = new ParticleAuthModule.ParticleAuth({
+            projectId: "b850d5e1-8f5c-4d8e-9c7a-5e1d5e5e5e5e", // Replace with real Particle Project ID
+            clientKey: "c6ed5e5e-5e5e-5e5e-5e5e-5e5e5e5e5e5e", // Replace with real Particle Client Key
+            appId: "a123e5e5-5e5e-5e5e-5e5e-5e5e5e5e5e5e",     // Replace with real Particle App ID
+            chainId: 80002, // Amoy
+            wallet: { displayWalletEntry: true }
+        });
+
+        return particle;
+    } catch (error) {
+        console.error('[BICONOMY] Social Login init failed:', error);
+        return null;
+    }
+}
 
 /**
  * Create a Biconomy Smart Account for gasless transactions
@@ -27,6 +45,7 @@ export async function createBiconomySmartAccount(signer) {
             signer: signer,
             bundlerUrl: BUNDLER_URL,
             biconomyPaymasterApiKey: PAYMASTER_URL,
+            rpcUrl: 'https://rpc-amoy.polygon.technology'
         });
 
         console.log('[BICONOMY] Smart Account created:', smartAccount.accountAddress);
@@ -39,33 +58,24 @@ export async function createBiconomySmartAccount(signer) {
 
 /**
  * Submit work gaslessly using Biconomy
- * @param {object} smartAccount - Biconomy Smart Account
- * @param {string} contractAddress - FreelanceEscrow contract address
- * @param {object} contractABI - Contract ABI
- * @param {number} jobId - Job ID
- * @param {string} ipfsHash - IPFS hash of submitted work
- * @returns {Promise<string>} Transaction hash
  */
 export async function submitWorkGasless(smartAccount, contractAddress, contractABI, jobId, ipfsHash) {
     if (!smartAccount) {
-        throw new Error('Smart Account not initialized. Use standard transaction instead.');
+        throw new Error('Smart Account not initialized.');
     }
 
     try {
-        // Encode the function call
         const data = encodeFunctionData({
             abi: contractABI,
             functionName: 'submitWork',
-            args: [jobId, ipfsHash]
+            args: [BigInt(jobId), ipfsHash]
         });
 
-        // Build the transaction
         const tx = {
             to: contractAddress,
             data: data,
         };
 
-        // Send as a gasless transaction through Biconomy
         const userOpResponse = await smartAccount.sendTransaction(tx);
         const { transactionHash } = await userOpResponse.waitForTxHash();
 
@@ -79,11 +89,6 @@ export async function submitWorkGasless(smartAccount, contractAddress, contractA
 
 /**
  * Create a job gaslessly using Biconomy
- * @param {object} smartAccount - Biconomy Smart Account
- * @param {string} contractAddress - FreelanceEscrow contract address
- * @param {object} contractABI - Contract ABI
- * @param {object} params - Job parameters
- * @returns {Promise<string>} Transaction hash
  */
 export async function createJobGasless(smartAccount, contractAddress, contractABI, params) {
     if (!smartAccount) {
@@ -113,42 +118,6 @@ export async function createJobGasless(smartAccount, contractAddress, contractAB
     }
 }
 
-/**
- * Check if Biconomy is available and configured
- * @returns {boolean}
- */
 export function isBiconomyAvailable() {
     return !!(PAYMASTER_URL && BUNDLER_URL);
-}
-
-/**
- * Estimate gas savings with Biconomy
- * @param {object} provider - Ethereum provider
- * @param {string} contractAddress - Contract address
- * @param {object} contractABI - Contract ABI
- * @param {number} jobId - Job ID
- * @param {string} ipfsHash - IPFS hash
- * @returns {Promise<object>} Gas estimation
- */
-export async function estimateGasSavings(publicClient, contractAddress, contractABI, jobId, ipfsHash) {
-    try {
-        const gasEstimate = await publicClient.estimateContractGas({
-            address: contractAddress,
-            abi: contractABI,
-            functionName: 'submitWork',
-            args: [BigInt(jobId), ipfsHash],
-        });
-
-        const gasPrice = await publicClient.getGasPrice();
-        const estimatedCost = (gasEstimate * gasPrice) / 10n ** 18n; // Approximate MATIC
-
-        return {
-            gasEstimate,
-            gasCostInMATIC: estimatedCost.toString(),
-            savedWithBiconomy: true
-        };
-    } catch (error) {
-        console.error('[BICONOMY] Gas estimation failed:', error);
-        return null;
-    }
 }

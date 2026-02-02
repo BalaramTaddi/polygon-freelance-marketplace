@@ -14,6 +14,8 @@
     "@biconomy/account": "^4.5.7",
     "@biconomy/bundler": "^3.1.4",
     "@biconomy/common": "^3.1.4",
+    "@biconomy/modules": "^3.1.4",
+    "@biconomy/particle-auth": "^3.1.4",
     "@biconomy/paymaster": "^3.1.4",
     "@huddle01/react": "^2.6.4",
     "@rainbow-me/rainbowkit": "^2.2.10",

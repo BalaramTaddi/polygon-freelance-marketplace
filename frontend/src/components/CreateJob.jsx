@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAccount, useWalletClient, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
 import { parseEther, parseUnits, erc20Abi } from 'viem';
-import { Send, Loader2, Info, CreditCard, Plus, Trash2, Calendar, Target, DollarSign, Cpu } from 'lucide-react';
+import { Send, Loader2, Info, CreditCard, Plus, Trash2, Calendar, Target, DollarSign, Cpu, Sparkles } from 'lucide-react';
 import StripeOnrampModal from './StripeOnrampModal';
 import FreelanceEscrowABI from '../contracts/FreelanceEscrow.json';
 import { CONTRACT_ADDRESS, SUPPORTED_TOKENS } from '../constants';
@@ -10,7 +10,7 @@ import { uploadJSONToIPFS } from '../utils/ipfs';
 import { useTransactionToast } from '../hooks/useTransactionToast';
 import { createBiconomySmartAccount, createJobGasless } from '../utils/biconomy';
 
-function CreateJob({ onJobCreated, gasless }) {
+function CreateJob({ onJobCreated, gasless, smartAccount }) {
     const [freelancer, setFreelancer] = useState('');
     const [amount, setAmount] = useState('');
     const [title, setTitle] = useState('');
@@ -23,13 +23,7 @@ function CreateJob({ onJobCreated, gasless }) {
     const [isStripeModalOpen, setIsStripeModalOpen] = useState(false);
     const { address } = useAccount();
     const { data: walletClient } = useWalletClient();
-    const [smartAccount, setSmartAccount] = useState(null);
-
-    React.useEffect(() => {
-        if (gasless && walletClient && !smartAccount) {
-            createBiconomySmartAccount(walletClient).then(setSmartAccount).catch(console.error);
-        }
-    }, [gasless, walletClient, smartAccount]);
+    // Use smartAccount from props
 
     const { data: hash, writeContract, isPending, error } = useWriteContract();
     const { data: jobCount } = useReadContract({

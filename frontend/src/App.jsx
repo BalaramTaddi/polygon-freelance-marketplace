@@ -19,18 +19,60 @@ import { NotificationManager } from './components/NotificationManager';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useAccount, useBalance } from 'wagmi';
+import { initSocialLogin, createBiconomySmartAccount } from './utils/biconomy';
+import { createWalletClient, custom } from 'viem';
+import { polygonAmoy } from 'viem/chains';
+import { Mail, LogOut, ShieldCheck } from 'lucide-react';
 
 function App() {
   const { address } = useAccount();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [portfolioAddress, setPortfolioAddress] = useState(null);
   const [chatPeerAddress, setChatPeerAddress] = useState(null);
-  const [isGasless, setIsGasless] = useState(false);
+  const [isGasless, setIsGasless] = useState(true); // Default to true for SUPREME experience
+  const [smartAccount, setSmartAccount] = useState(null);
+  const [socialProvider, setSocialProvider] = useState(null);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-  const onSelectChat = (peer) => {
-    setChatPeerAddress(peer);
-    setActiveTab('chat');
+  const handleSocialLogin = async () => {
+    setIsLoggingIn(true);
+    try {
+      const particle = await initSocialLogin();
+      if (!particle) throw new Error("Failed to init social login");
+
+      const userInfo = await particle.auth.login();
+      console.log("[SOCIAL] Logged in user:", userInfo);
+
+      const { ParticleProvider } = await import("@biconomy/particle-auth");
+      const provider = new ParticleProvider(particle.auth);
+
+      const walletClient = createWalletClient({
+        chain: polygonAmoy,
+        transport: custom(provider)
+      });
+
+      const sa = await createBiconomySmartAccount(walletClient);
+      setSmartAccount(sa);
+      setSocialProvider(particle);
+      toast.success("Welcome, Supreme Member!");
+    } catch (err) {
+      console.error("[SOCIAL] Login error:", err);
+      toast.error("Social login failed.");
+    } finally {
+      setIsLoggingIn(false);
+    }
   };
+
+  const handleLogout = async () => {
+    if (socialProvider) {
+      await socialProvider.auth.logout();
+    }
+    setSmartAccount(null);
+    setSocialProvider(null);
+    toast.info("Logged out successfully");
+  };
+
+  const effectiveAddress = smartAccount ? smartAccount.accountAddress : address;
 
   const renderContent = () => {
     if (portfolioAddress) {
@@ -38,18 +80,18 @@ function App() {
     }
 
     switch (activeTab) {
-      case 'dashboard': return <Dashboard />;
-      case 'jobs': return <JobsList onUserClick={setPortfolioAddress} onSelectChat={onSelectChat} gasless={isGasless} />;
-      case 'create': return <CreateJob />;
-      case 'nfts': return <NFTGallery />;
-      case 'chat': return <Chat peerAddress={chatPeerAddress} />;
+      case 'dashboard': return <Dashboard address={effectiveAddress} />;
+      case 'jobs': return <JobsList onUserClick={setPortfolioAddress} onSelectChat={onSelectChat} gasless={isGasless} smartAccount={smartAccount} />;
+      case 'create': return <CreateJob smartAccount={smartAccount} effectiveAddress={effectiveAddress} />;
+      case 'nfts': return <NFTGallery address={effectiveAddress} />;
+      case 'chat': return <Chat peerAddress={chatPeerAddress} address={effectiveAddress} />;
       case 'leaderboard': return <Leaderboard onUserClick={setPortfolioAddress} />;
-      case 'governance': return <DaoDashboard />;
-      case 'justice': return <ArbitrationDashboard />;
-      case 'manager': return <ManagerDashboard />;
+      case 'governance': return <DaoDashboard address={effectiveAddress} />;
+      case 'justice': return <ArbitrationDashboard address={effectiveAddress} />;
+      case 'manager': return <ManagerDashboard address={effectiveAddress} />;
       case 'terms': return <TermsOfService />;
       case 'privacy': return <PrivacyPolicy />;
-      default: return <Dashboard />;
+      default: return <Dashboard address={effectiveAddress} />;
     }
   };
 
@@ -144,6 +186,33 @@ function App() {
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
               <span className="text-[11px] font-bold tracking-widest uppercase opacity-80">Mainnet Synced</span>
             </div>
+
+            {!smartAccount ? (
+              <button
+                onClick={handleSocialLogin}
+                disabled={isLoggingIn}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary hover:bg-primary-hover text-white font-bold text-xs transition-all shadow-lg shadow-primary/20"
+              >
+                {isLoggingIn ? <div className="loading-spinner h-4 w-4" /> : <Mail size={16} />}
+                {isLoggingIn ? "Initializing..." : "SignIn / Google"}
+              </button>
+            ) : (
+              <div className="flex items-center gap-3">
+                <div className="flex flex-col items-end">
+                  <div className="flex items-center gap-1.5">
+                    <ShieldCheck size={12} className="text-primary" />
+                    <span className="text-[10px] font-black text-white tracking-widest uppercase">Smart Account</span>
+                  </div>
+                  <span className="text-[11px] font-bold text-text-dim">
+                    {smartAccount.accountAddress.slice(0, 6)}...{smartAccount.accountAddress.slice(-4)}
+                  </span>
+                </div>
+                <button onClick={handleLogout} className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-text-muted hover:text-white transition-colors">
+                  <LogOut size={16} />
+                </button>
+              </div>
+            )}
+
             <ConnectButton />
           </div>
         </header>

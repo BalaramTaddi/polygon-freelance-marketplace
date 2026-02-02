@@ -17,9 +17,19 @@ import { useTokenPrice } from '../hooks/useTokenPrice';
 
 const statusLabels = ['Created', 'Accepted', 'Ongoing', 'Disputed', 'Arbitration', 'Completed', 'Cancelled'];
 
-function JobsList({ onUserClick, onSelectChat, gasless }) {
-    const { address } = useAccount();
+function JobsList({ onUserClick, onSelectChat, gasless, smartAccount: propSmartAccount, address: propAddress }) {
+    const { address: wagmiAddress } = useAccount();
+    const address = propAddress || wagmiAddress;
     const { data: walletClient } = useWalletClient();
+    const [smartAccount, setSmartAccount] = React.useState(null);
+
+    React.useEffect(() => {
+        if (propSmartAccount) {
+            setSmartAccount(propSmartAccount);
+        } else if (gasless && walletClient && !smartAccount) {
+            createBiconomySmartAccount(walletClient).then(setSmartAccount).catch(console.error);
+        }
+    }, [gasless, walletClient, smartAccount, propSmartAccount]);
     const [filter, setFilter] = React.useState('All');
     const [searchQuery, setSearchQuery] = React.useState('');
     const [minBudget, setMinBudget] = React.useState('');

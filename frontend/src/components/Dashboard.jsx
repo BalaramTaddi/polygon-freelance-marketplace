@@ -8,8 +8,11 @@ import { api } from '../services/api';
 import LiveJobFeed from './LiveJobFeed';
 import AiRecommendations from './AiRecommendations';
 
-function Dashboard() {
-    const { address, isConnected } = useAccount();
+function Dashboard({ address: propAddress }) {
+    const { address: wagmiAddress, isConnected: isWagmiConnected } = useAccount();
+    const address = propAddress || wagmiAddress;
+    const isConnected = !!address;
+
     const { openConnectModal } = useConnectModal();
     const { signMessageAsync } = useSignMessage();
 
