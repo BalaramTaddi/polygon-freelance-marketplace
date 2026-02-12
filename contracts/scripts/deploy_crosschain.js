@@ -60,7 +60,8 @@ const CHAIN_CONFIGS = {
         ccipRouter: "0x2a9C5afB0d0e4BAb2BCdaE109EC4b0c4Be15a165",
         lzEndpoint: "0x6EDCE65403992e310A62460808c4b910D972f10f",
         chainSelector: "3478487238524512106",
-        lzEid: 40231
+        lzEid: 40231,
+        wormhole: "0x6b9C011F43AA28e932Db81283d65b77058888eAf"
     }
 };
 
@@ -154,7 +155,54 @@ async function main() {
     deployments.omniReputation = omniReputationAddress;
 
     // ============================================
-    // 4. Configure CCIP Bridge
+    // 4. Deploy OmniGovernance
+    // ============================================
+    console.log("\n📦 Deploying OmniGovernance...");
+    const OmniGovernance = await hre.ethers.getContractFactory("OmniGovernance");
+    const omniGovernance = await OmniGovernance.deploy(
+        config.lzEndpoint,
+        deployer.address
+    );
+    await omniGovernance.waitForDeployment();
+    const omniGovernanceAddress = await omniGovernance.getAddress();
+    console.log("✅ OmniGovernance deployed to:", omniGovernanceAddress);
+    deployments.omniGovernance = omniGovernanceAddress;
+
+    // ============================================
+    // 5. Deploy OmniDispute
+    // ============================================
+    console.log("\n📦 Deploying OmniDispute...");
+    const OmniDispute = await hre.ethers.getContractFactory("OmniDispute");
+    const omniDispute = await OmniDispute.deploy(
+        config.lzEndpoint,
+        deployer.address
+    );
+    await omniDispute.waitForDeployment();
+    const omniDisputeAddress = await omniDispute.getAddress();
+    console.log("✅ OmniDispute deployed to:", omniDisputeAddress);
+    deployments.omniDispute = omniDisputeAddress;
+
+    // ============================================
+    // 6. Deploy WormholeAdapter
+    // ============================================
+    if (config.wormhole) {
+        console.log("\n📦 Deploying WormholeAdapter...");
+        const WormholeAdapter = await hre.ethers.getContractFactory("WormholeAdapter");
+        const solanaProgramPlaceholder = hre.ethers.ZeroHash; // Should be actual Solana program ID in production
+        const wormholeAdapter = await WormholeAdapter.deploy(
+            config.wormhole,
+            solanaProgramPlaceholder,
+            escrowManagerAddress,
+            deployer.address
+        );
+        await wormholeAdapter.waitForDeployment();
+        const wormholeAdapterAddress = await wormholeAdapter.getAddress();
+        console.log("✅ WormholeAdapter deployed to:", wormholeAdapterAddress);
+        deployments.wormholeAdapter = wormholeAdapterAddress;
+    }
+
+    // ============================================
+    // 7. Configure CCIP Bridge
     // ============================================
     console.log("\n⚙️  Configuring CCIP Bridge...");
 
@@ -186,7 +234,10 @@ async function main() {
         contracts: {
             ccipBridge: ccipBridgeAddress,
             escrowManager: escrowManagerAddress,
-            omniReputation: omniReputationAddress
+            omniReputation: omniReputationAddress,
+            omniGovernance: omniGovernanceAddress,
+            omniDispute: omniDisputeAddress,
+            wormholeAdapter: deployments.wormholeAdapter || null
         },
         config: {
             ccipRouter: config.ccipRouter,

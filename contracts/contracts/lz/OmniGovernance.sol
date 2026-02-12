@@ -240,7 +240,8 @@ contract OmniGovernance is OApp, AccessControl, ReentrancyGuard, Pausable {
                 support,
                 votes,
                 targetChains[i],
-                options[i]
+                options[i],
+                targetChains.length
             );
         }
     }
@@ -281,7 +282,8 @@ contract OmniGovernance is OApp, AccessControl, ReentrancyGuard, Pausable {
         uint8 support,
         uint256 votes,
         uint32 dstEid,
-        bytes calldata options
+        bytes calldata options,
+        uint256 totalChains
     ) internal {
         bytes32 peer = peers[dstEid];
         if (peer == bytes32(0)) revert InvalidChain();
@@ -303,8 +305,8 @@ contract OmniGovernance is OApp, AccessControl, ReentrancyGuard, Pausable {
             payInLzToken: false
         });
 
-        // Split fee evenly (caller should send enough)
-        lzEndpointV2.send{value: msg.value / 10}(params, payable(msg.sender));
+        // Split fee evenly across target chains
+        lzEndpointV2.send{value: msg.value / totalChains}(params, payable(msg.sender));
     }
 
     /**

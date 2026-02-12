@@ -59,6 +59,16 @@ async function main() {
         currentDeployment.contracts.omniReputation
     );
 
+    const omniGovernance = await hre.ethers.getContractAt(
+        "OmniGovernance",
+        currentDeployment.contracts.omniGovernance
+    );
+
+    const omniDispute = await hre.ethers.getContractAt(
+        "OmniDispute",
+        currentDeployment.contracts.omniDispute
+    );
+
     // ============================================
     // 1. Configure CCIP Bridge - Supported Chains
     // ============================================
@@ -150,15 +160,22 @@ async function main() {
     for (const [net, dep] of Object.entries(allDeployments)) {
         if (net === network) continue;
 
-        console.log(`  - Setting peer for ${dep.chainName} (EID: ${dep.config.lzEid})...`);
+        console.log(`  - Setting peers for ${dep.chainName} (EID: ${dep.config.lzEid})...`);
 
-        // Convert address to bytes32
-        const peerAddress = dep.contracts.omniReputation;
-        const peerBytes32 = hre.ethers.zeroPadValue(peerAddress, 32);
+        // 1. Reputation Peer
+        const repPeer = hre.ethers.zeroPadValue(dep.contracts.omniReputation, 32);
+        await (await omniReputation.setPeer(dep.config.lzEid, repPeer)).wait();
+        console.log("    ✓ Reputation Peer set");
 
-        const tx = await omniReputation.setPeer(dep.config.lzEid, peerBytes32);
-        await tx.wait();
-        console.log("    ✓ Peer set");
+        // 2. Governance Peer
+        const govPeer = hre.ethers.zeroPadValue(dep.contracts.omniGovernance, 32);
+        await (await omniGovernance.setPeer(dep.config.lzEid, govPeer)).wait();
+        console.log("    ✓ Governance Peer set");
+
+        // 3. Dispute Peer
+        const disputePeer = hre.ethers.zeroPadValue(dep.contracts.omniDispute, 32);
+        await (await omniDispute.setPeer(dep.config.lzEid, disputePeer)).wait();
+        console.log("    ✓ Dispute Peer set");
     }
 
     // ============================================
@@ -192,6 +209,24 @@ async function main() {
                     name: d.chainName,
                     eid: d.config.lzEid,
                     address: d.contracts.omniReputation
+                }))
+        },
+        omniGovernance: {
+            peers: Object.values(allDeployments)
+                .filter(d => d.network !== network)
+                .map(d => ({
+                    name: d.chainName,
+                    eid: d.config.lzEid,
+                    address: d.contracts.omniGovernance
+                }))
+        },
+        omniDispute: {
+            peers: Object.values(allDeployments)
+                .filter(d => d.network !== network)
+                .map(d => ({
+                    name: d.chainName,
+                    eid: d.config.lzEid,
+                    address: d.contracts.omniDispute
                 }))
         }
     };

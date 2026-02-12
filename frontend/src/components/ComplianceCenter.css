@@ -1,0 +1,592 @@
+/* Compliance Center Styles */
+
+.compliance-center {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.compliance-header {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.compliance-header h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 0.5rem;
+}
+
+.compliance-header p {
+    color: #718096;
+    font-size: 1.1rem;
+}
+
+/* Tabs */
+.compliance-tabs {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.compliance-tabs button {
+    padding: 1rem 2rem;
+    background: none;
+    border: none;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #718096;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-bottom: 3px solid transparent;
+}
+
+.compliance-tabs button:hover {
+    color: #667eea;
+}
+
+.compliance-tabs button.active {
+    color: #667eea;
+    border-bottom-color: #667eea;
+}
+
+/* Tab Content */
+.tab-content {
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.tab-content h2 {
+    font-size: 2rem;
+    margin-bottom: 2rem;
+    color: #2d3748;
+}
+
+/* KYC Status Card */
+.kyc-status-card {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 0.5rem 1.5rem;
+    border-radius: 50px;
+    font-weight: 600;
+    font-size: 1.1rem;
+    margin-bottom: 1.5rem;
+}
+
+.status-badge[data-level="1"] {
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+    color: white;
+}
+
+.status-badge[data-level="2"] {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+}
+
+.status-badge[data-level="3"] {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+}
+
+.status-badge[data-level="4"] {
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    color: white;
+}
+
+.status-details {
+    margin-bottom: 2rem;
+}
+
+.status-details p {
+    margin: 0.5rem 0;
+    color: #4a5568;
+}
+
+.status-details strong {
+    color: #2d3748;
+    margin-right: 0.5rem;
+}
+
+/* Transaction Limits */
+.transaction-limits h3 {
+    font-size: 1.3rem;
+    margin-bottom: 1rem;
+    color: #2d3748;
+}
+
+.limits-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.limit-item {
+    background: #f7fafc;
+    padding: 1rem;
+    border-radius: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.limit-label {
+    color: #718096;
+    font-size: 0.9rem;
+}
+
+.limit-value {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: #2d3748;
+}
+
+/* KYC Levels */
+.kyc-onboarding {
+    text-align: center;
+}
+
+.info-text {
+    font-size: 1.1rem;
+    color: #718096;
+    margin-bottom: 3rem;
+}
+
+.kyc-levels {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 3rem;
+}
+
+.level-card {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.level-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
+}
+
+.level-card.featured {
+    border: 2px solid #667eea;
+    position: relative;
+}
+
+.level-card.featured::before {
+    content: "RECOMMENDED";
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 0.3rem 1rem;
+    border-radius: 50px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.level-card h3 {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.level-card p {
+    color: #718096;
+    margin-bottom: 1.5rem;
+}
+
+.level-card ul {
+    list-style: none;
+    padding: 0;
+    margin: 1.5rem 0;
+    text-align: left;
+}
+
+.level-card li {
+    padding: 0.5rem 0;
+    color: #4a5568;
+}
+
+.level-card li::before {
+    content: "✓";
+    color: #10b981;
+    font-weight: 700;
+    margin-right: 0.5rem;
+}
+
+.level-card button {
+    width: 100%;
+    padding: 0.75rem 1.5rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.3s ease;
+}
+
+.level-card button:hover {
+    opacity: 0.9;
+}
+
+.level-card button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Provider Logos */
+.provider-logos {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid #e2e8f0;
+}
+
+.provider-logos p {
+    color: #718096;
+    margin: 0;
+}
+
+.provider-logos img {
+    height: 30px;
+    opacity: 0.7;
+    transition: opacity 0.3s ease;
+}
+
+.provider-logos img:hover {
+    opacity: 1;
+}
+
+/* GDPR Rights */
+.gdpr-rights {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 3rem;
+}
+
+.right-card {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+.right-card h3 {
+    font-size: 1.3rem;
+    margin-bottom: 1rem;
+}
+
+.right-card p {
+    color: #718096;
+    margin-bottom: 1.5rem;
+}
+
+.right-card button {
+    padding: 0.75rem 1.5rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.3s ease;
+}
+
+.right-card button.danger {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+}
+
+.right-card button:hover {
+    opacity: 0.9;
+}
+
+.right-card button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Consent Management */
+.consent-management {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+}
+
+.consent-management h3 {
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.consent-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.consent-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background: #f7fafc;
+    border-radius: 8px;
+}
+
+.consent-info h4 {
+    margin: 0 0 0.5rem 0;
+    color: #2d3748;
+}
+
+.consent-info p {
+    margin: 0;
+    color: #718096;
+    font-size: 0.9rem;
+}
+
+.required-badge {
+    display: inline-block;
+    background: #fbbf24;
+    color: white;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-left: 0.5rem;
+}
+
+/* Toggle Switch */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #cbd5e0;
+    transition: 0.4s;
+    border-radius: 34px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: 0.4s;
+    border-radius: 50%;
+}
+
+input:checked+.slider {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+input:checked+.slider:before {
+    transform: translateX(26px);
+}
+
+input:disabled+.slider {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Privacy Info */
+.privacy-info {
+    background: #f7fafc;
+    border-left: 4px solid #667eea;
+    padding: 1.5rem;
+    border-radius: 8px;
+}
+
+.privacy-info p {
+    margin: 0;
+    color: #4a5568;
+    line-height: 1.8;
+}
+
+/* Tax Reports */
+.tax-summary {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 3rem;
+}
+
+.tax-summary h3 {
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+}
+
+.summary-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.summary-item .label {
+    color: #718096;
+    font-size: 0.9rem;
+}
+
+.summary-item .value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #2d3748;
+}
+
+.tax-reports {
+    margin-bottom: 2rem;
+}
+
+.tax-reports h3 {
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.report-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.report-card h4 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.2rem;
+}
+
+.report-card p {
+    margin: 0;
+    color: #718096;
+}
+
+.report-card button {
+    padding: 0.75rem 1.5rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.3s ease;
+    white-space: nowrap;
+}
+
+.report-card button:hover {
+    opacity: 0.9;
+}
+
+.tax-disclaimer {
+    background: #fef3c7;
+    border-left: 4px solid #fbbf24;
+    padding: 1.5rem;
+    border-radius: 8px;
+}
+
+.tax-disclaimer p {
+    margin: 0;
+    color: #92400e;
+    line-height: 1.6;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .compliance-center {
+        padding: 1rem;
+    }
+
+    .compliance-header h1 {
+        font-size: 2rem;
+    }
+
+    .compliance-tabs {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .compliance-tabs button {
+        padding: 0.75rem 1rem;
+        border-bottom: none;
+        border-left: 3px solid transparent;
+    }
+
+    .compliance-tabs button.active {
+        border-left-color: #667eea;
+    }
+
+    .kyc-levels,
+    .gdpr-rights {
+        grid-template-columns: 1fr;
+    }
+
+    .report-card {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .report-card button {
+        width: 100%;
+    }
+}

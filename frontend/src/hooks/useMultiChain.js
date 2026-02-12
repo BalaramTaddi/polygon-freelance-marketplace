@@ -69,6 +69,22 @@ const SUPPORTED_CHAINS = {
         icon: '🔷',
         color: '#28A0F0',
         explorer: 'https://sepolia.arbiscan.io'
+    },
+    'solana': { // Solana Mainnet
+        name: 'Solana',
+        wormholeId: 1,
+        lzEid: 30168,
+        icon: '☀️',
+        color: '#14F195',
+        explorer: 'https://explorer.solana.com'
+    },
+    'solana-devnet': { // Solana Devnet
+        name: 'Solana Devnet',
+        wormholeId: 1,
+        lzEid: 40168,
+        icon: '☀️',
+        color: '#14F195',
+        explorer: 'https://explorer.solana.com?cluster=devnet'
     }
 };
 
@@ -96,15 +112,15 @@ export const useMultiChain = () => {
     // Get mainnet chains only
     const getMainnetChains = () => {
         return Object.entries(SUPPORTED_CHAINS)
-            .filter(([id]) => [137, 1, 8453, 42161].includes(Number(id)))
-            .map(([id, info]) => ({ id: Number(id), ...info }));
+            .filter(([id]) => [137, 1, 8453, 42161, 'solana'].includes(id))
+            .map(([id, info]) => ({ id, ...info }));
     };
 
     // Get testnet chains only
     const getTestnetChains = () => {
         return Object.entries(SUPPORTED_CHAINS)
-            .filter(([id]) => [80002, 11155111, 84532, 421614].includes(Number(id)))
-            .map(([id, info]) => ({ id: Number(id), ...info }));
+            .filter(([id]) => [80002, 11155111, 84532, 421614, 'solana-devnet'].includes(id))
+            .map(([id, info]) => ({ id, ...info }));
     };
 
     // Switch to a specific chain
@@ -168,7 +184,9 @@ export const useMultiChain = () => {
             80002: 'https://rpc-amoy.polygon.technology',
             11155111: 'https://rpc.sepolia.org',
             84532: 'https://sepolia.base.org',
-            421614: 'https://sepolia-rollup.arbitrum.io/rpc'
+            421614: 'https://sepolia-rollup.arbitrum.io/rpc',
+            'solana': 'https://api.mainnet-beta.solana.com',
+            'solana-devnet': 'https://api.devnet.solana.com'
         };
         return rpcUrls[chainId] || '';
     };

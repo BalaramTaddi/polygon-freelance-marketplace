@@ -256,6 +256,26 @@ contract CrossChainEscrowManager is CCIPReceiver, AccessControl, ReentrancyGuard
     }
 
     /**
+     * @notice Update job status from an authorized adapter (e.g. Wormhole)
+     * @param localJobId The local job ID
+     * @param newStatus The new status to set
+     */
+    function updateJobStatus(
+        uint256 localJobId,
+        JobStatus newStatus
+    ) external onlyRole(MANAGER_ROLE) {
+        CrossChainJob storage job = crossChainJobs[localJobId];
+        if (job.localJobId == 0) revert JobNotFound(localJobId);
+        
+        job.status = newStatus;
+        
+        // If completed, we might want to emit an event specifically for this
+        if (newStatus == JobStatus.Completed) {
+            emit CrossChainPaymentReleased(localJobId, job.amount, bytes32(0));
+        }
+    }
+
+    /**
      * @notice Cancel a cross-chain job
      * @param localJobId The local job ID
      */

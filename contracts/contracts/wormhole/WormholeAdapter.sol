@@ -34,12 +34,27 @@ interface IWormhole {
     }
 }
 
+interface ICrossChainEscrowManager {
+    enum JobStatus {
+        None,
+        Created,
+        Accepted,
+        Ongoing,
+        Submitted,
+        Completed,
+        Disputed,
+        Cancelled
+    }
+    function updateJobStatus(uint256 localJobId, JobStatus newStatus) external;
+}
+
 /**
  * @title WormholeAdapter
  * @notice Bridges the PolyLance marketplace to Solana via Wormhole
  */
 contract WormholeAdapter is Ownable {
     IWormhole public immutable wormhole;
+    ICrossChainEscrowManager public escrowManager;
     
     // Solana Chain ID in Wormhole is 1
     uint16 public constant SOLANA_CHAIN_ID = 1;
@@ -50,9 +65,15 @@ contract WormholeAdapter is Ownable {
     event MessageSent(uint64 sequence, bytes payload);
     event MessageReceived(bytes32 emitterAddress, bytes payload);
 
-    constructor(address _wormhole, bytes32 _solanaProgram, address _owner) Ownable(_owner) {
+    constructor(
+        address _wormhole, 
+        bytes32 _solanaProgram, 
+        address _escrowManager,
+        address _owner
+    ) Ownable(_owner) {
         wormhole = IWormhole(_wormhole);
         solanaProgramAddress = _solanaProgram;
+        escrowManager = ICrossChainEscrowManager(_escrowManager);
     }
 
     /**
@@ -82,12 +103,29 @@ contract WormholeAdapter is Ownable {
         processedMessages[vm.hash] = true;
         
         // Handle logic based on payload
-        // Example: Release payment on EVM based on Solana event
+        // Payload format: [msgType: 1 byte][jobId: 32 bytes][status: 1 byte]
+        require(vm.payload.length >= 34, "Invalid payload length");
+        
+        uint8 msgType = uint8(vm.payload[0]);
+        uint256 jobId;
+        bytes memory payload = vm.payload;
+        assembly {
+            jobId := mload(add(payload, 33))
+        }
+        uint8 status = uint8(vm.payload[33]);
+
+        if (msgType == 1) { // UPDATE_STATUS
+             escrowManager.updateJobStatus(jobId, ICrossChainEscrowManager.JobStatus(status));
+        }
         
         emit MessageReceived(vm.emitterAddress, vm.payload);
     }
 
     function setSolanaProgram(bytes32 _program) external onlyOwner {
         solanaProgramAddress = _program;
+    }
+
+    function setEscrowManager(address _escrowManager) external onlyOwner {
+        escrowManager = ICrossChainEscrowManager(_escrowManager);
     }
 }

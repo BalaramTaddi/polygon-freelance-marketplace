@@ -19,6 +19,9 @@ function CreateJob({ onJobCreated, gasless, smartAccount }) {
     const [description, setDescription] = useState('');
     const [category, setCategory] = useState('Development');
     const [selectedToken, setSelectedToken] = useState(SUPPORTED_TOKENS[0]);
+    const [paymentToken, setPaymentToken] = useState(SUPPORTED_TOKENS[0]);
+    const [paymentAmount, setPaymentAmount] = useState('');
+    const [yieldStrategy, setYieldStrategy] = useState(0); // 0: NONE, 1: AAVE, 2: COMPOUND, 3: MORPHO
     const [milestones, setMilestones] = useState([{ amount: '', description: '' }]);
     const [durationDays, setDurationDays] = useState('7');
     const [isApproving, setIsApproving] = useState(false);
@@ -84,7 +87,12 @@ function CreateJob({ onJobCreated, gasless, smartAccount }) {
             ipfsHash,
             deadline: BigInt(deadline),
             mAmounts: milestones.filter(m => m.amount).map(m => parseUnits(m.amount, selectedToken.decimals)),
-            mHashes: milestones.filter(m => m.amount).map(m => m.description || "")
+            mHashes: milestones.filter(m => m.amount).map(m => m.description || ""),
+            mIsUpfront: milestones.map(() => false),
+            yieldStrategy: yieldStrategy,
+            paymentToken: paymentToken.address,
+            paymentAmount: paymentToken.address === '0x0000000000000000000000000000000000000000' ? 0n : parseUnits(paymentAmount || amount, paymentToken.decimals),
+            minAmountOut: parseUnits(amount, selectedToken.decimals) * 99n / 100n // 1% slippage
         };
 
         if (gasless && smartAccount) {
@@ -122,7 +130,7 @@ function CreateJob({ onJobCreated, gasless, smartAccount }) {
                 abi: FreelanceEscrowABI.abi,
                 functionName: 'createJob',
                 args: [params],
-                value: selectedToken.symbol === 'MATIC' ? parseEther(amount) : 0n
+                value: paymentToken.symbol === 'MATIC' ? parseEther(paymentAmount || amount) : 0n
             });
         } catch (error) {
             handleError(error);
@@ -256,6 +264,68 @@ function CreateJob({ onJobCreated, gasless, smartAccount }) {
                                     value={durationDays}
                                     onChange={(e) => setDurationDays(e.target.value)}
                                     required
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="glass-panel mb-8 !bg-emerald-500/5 !border-emerald-500/10">
+                    <div className="flex items-center gap-3 mb-6">
+                        <Cpu size={20} className="text-emerald-400" />
+                        <h4 className="text-sm font-black uppercase tracking-widest text-emerald-400">Yield Optimization</h4>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="input-group mb-0">
+                            <label className="input-label">DeFi Strategy</label>
+                            <select
+                                className="input-field"
+                                value={yieldStrategy}
+                                onChange={(e) => setYieldStrategy(Number(e.target.value))}
+                            >
+                                <option value={0}>None (No Staking)</option>
+                                <option value={1}>Aave V3 (Instant Yield)</option>
+                                <option value={2}>Compound V3 (Optimized)</option>
+                                <option value={3}>Morpho Blue (Higher APY)</option>
+                            </select>
+                        </div>
+                        <div className="flex items-center gap-4 text-xs text-text-muted mt-6">
+                            <Info size={14} />
+                            <span>Funds earn yield in chosen protocol until released.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="glass-panel mb-8 !bg-primary/5 !border-primary/10">
+                    <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center gap-3">
+                            <CreditCard size={20} className="text-primary" />
+                            <h4 className="text-sm font-black uppercase tracking-widest text-primary">Instant Conversion</h4>
+                        </div>
+                        <div className="badge !bg-primary/20 !text-primary text-[10px]">Quantum Swap Enabled</div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="input-group mb-0">
+                            <label className="input-label">Pay With</label>
+                            <select
+                                className="input-field"
+                                value={paymentToken.symbol}
+                                onChange={(e) => setPaymentToken(SUPPORTED_TOKENS.find(t => t.symbol === e.target.value))}
+                            >
+                                {SUPPORTED_TOKENS.map(t => <option key={t.symbol}>{t.symbol}</option>)}
+                            </select>
+                        </div>
+                        <div className="input-group mb-0 md:col-span-2">
+                            <label className="input-label">Payment Amount (Optional if same Asset)</label>
+                            <div className="relative">
+                                <DollarSign size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-dim" />
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    placeholder={amount}
+                                    className="input-field pl-12"
+                                    value={paymentAmount}
+                                    onChange={(e) => setPaymentAmount(e.target.value)}
                                 />
                             </div>
                         </div>

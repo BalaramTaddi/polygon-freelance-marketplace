@@ -12,6 +12,22 @@ import "./FreelanceEscrowLibrary.sol";
 
 import "./IArbitrator.sol";
 
+interface IYieldManager {
+    enum Strategy { NONE, AAVE, COMPOUND, MORPHO }
+    function deposit(Strategy strategy, address token, uint256 amount) external;
+    function withdraw(Strategy strategy, address token, uint256 amount, address receiver) external;
+}
+
+interface ISwapManager {
+    function swap(address tokenIn, address tokenOut, uint256 amountIn, uint256 amountOutMin, address recipient) external payable returns (uint256);
+}
+
+/**
+ * @title FreelanceEscrowBase
+ * @notice Base storage and core structures for the PolyLance Escrow system.
+ * @dev Contains state variables, structs, and common events used across the protocol.
+ * Designed to be inherited by the main FreelanceEscrow logic contract.
+ */
 abstract contract FreelanceEscrowBase is 
     Initializable, 
     ERC721Upgradeable, 
@@ -28,21 +44,25 @@ abstract contract FreelanceEscrowBase is
         bool isUpfront;
     }
 
+    /**
+     * @dev Structure representing a freelance job in the system.
+     */
     struct Job {
-        address client;          
-        uint32 id;               
-        uint48 deadline;         
-        JobStatus status;        
-        uint8 rating;            
-        address freelancer;      
-        uint16 categoryId;       
-        uint16 milestoneCount;   
-        bool paid;               
-        address token;           
-        uint256 amount;
-        uint256 freelancerStake;
-        uint256 totalPaidOut;
-        string ipfsHash;
+        address client;          /// @dev The individual/entity creating the job
+        uint32 id;               /// @dev Unique job identifier
+        uint48 deadline;         /// @dev Unix timestamp for job deadline
+        JobStatus status;        /// @dev Current status in the lifecycle
+        uint8 rating;            /// @dev Rating given upon completion (0-5)
+        address freelancer;      /// @dev The individual/entity performing the work
+        uint16 categoryId;       /// @dev Job Category (Dev, Design, etc.)
+        uint16 milestoneCount;   /// @dev Total number of milestones
+        bool paid;               /// @dev Whether final payment has been processed
+        IYieldManager.Strategy yieldStrategy; /// @dev Selected DeFi yield strategy
+        address token;           /// @dev ERC20 token address (0 for native)
+        uint256 amount;          /// @dev Total job budget/amount
+        uint256 freelancerStake; /// @dev Amount staked by freelancer (anti-spam)
+        uint256 totalPaidOut;    /// @dev Total amount released to freelancer so far
+        string ipfsHash;         /// @dev IPFS hash for job details/work submission
     }
 
     struct Application {
@@ -69,6 +89,8 @@ abstract contract FreelanceEscrowBase is
     address internal _trustedForwarder; 
     address public entryPoint;
     address public vault;
+    address public yieldManager;
+    address public swapManager;
     uint256 public platformFeeBps;
 
     error NotAuthorized();

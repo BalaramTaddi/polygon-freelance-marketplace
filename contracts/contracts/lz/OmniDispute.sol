@@ -99,7 +99,17 @@ contract OmniDispute is OApp, AccessControl, ReentrancyGuard, Pausable {
         address client,
         address freelancer,
         string calldata evidenceIpfs
-    ) external returns (uint256) {
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) returns (uint256) {
+        return _initiateDispute(jobId, sourceChain, client, freelancer, evidenceIpfs);
+    }
+
+    function _initiateDispute(
+        uint256 jobId,
+        uint32 sourceChain,
+        address client,
+        address freelancer,
+        string memory evidenceIpfs
+    ) internal returns (uint256) {
         disputeCount++;
         uint256 disputeId = disputeCount;
 
@@ -177,7 +187,7 @@ contract OmniDispute is OApp, AccessControl, ReentrancyGuard, Pausable {
 
         if (msgType == MessageType.INITIATE_DISPUTE) {
             (, uint256 jobId, address client, address freelancer, string memory evidence) = abi.decode(_message, (MessageType, uint256, address, address, string));
-            this.initiateDispute(jobId, _srcEid, client, freelancer, evidence);
+            _initiateDispute(jobId, _srcEid, client, freelancer, evidence);
         }
     }
 

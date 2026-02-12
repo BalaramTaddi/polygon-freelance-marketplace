@@ -133,14 +133,14 @@ const CreateCrossChainJob = ({ onClose, onSuccess }) => {
             );
 
             // Get destination chain selector
-            const destinationChainInfo = chains.find(c => c.id === Number(formData.destinationChain));
+            const destinationChainInfo = chains.find(c => c.id.toString() === formData.destinationChain.toString());
             const destinationSelector = destinationChainInfo?.ccipSelector;
 
             // Get token address
             const tokenAddress = getTokenAddress(formData.token, currentChain.id);
 
             // Calculate total fee
-            const totalFee = estimatedFee ? ethers.parseEther(estimatedFee.nativeFee.toString()) : ethers.parseEther('0.01');
+            const totalFee = estimatedFee ? ethers.parseUnits(estimatedFee.nativeFee.toString(), 18) : ethers.parseEther('0.01');
 
             // Create cross-chain job
             const tx = await escrowManager.createCrossChainJob(
@@ -185,7 +185,9 @@ const CreateCrossChainJob = ({ onClose, onSuccess }) => {
             137: { USDC: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359' },
             1: { USDC: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48' },
             8453: { USDC: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' },
-            42161: { USDC: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831' }
+            42161: { USDC: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831' },
+            'solana': { USDC: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v' }, // Placeholder SPL USDC
+            'solana-devnet': { USDC: '4zMMC9srtvS2PPSdtYCRSshPFCy8nK2JatfS"f7C32D4' } // Placeholder devnet USDC
         };
         return tokens[chainId]?.[symbol] || ethers.ZeroAddress;
     };
@@ -464,10 +466,10 @@ const CreateCrossChainJob = ({ onClose, onSuccess }) => {
                                     <div className="arrow-large">→</div>
                                     <div className="chain-box">
                                         <span className="chain-icon">
-                                            {chains.find(c => c.id === Number(formData.destinationChain))?.icon}
+                                            {chains.find(c => c.id.toString() === formData.destinationChain.toString())?.icon}
                                         </span>
                                         <span>
-                                            {chains.find(c => c.id === Number(formData.destinationChain))?.name}
+                                            {chains.find(c => c.id.toString() === formData.destinationChain.toString())?.name}
                                         </span>
                                     </div>
                                 </div>

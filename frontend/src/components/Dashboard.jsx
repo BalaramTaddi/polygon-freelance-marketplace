@@ -8,6 +8,7 @@ import { api } from '../services/api';
 import LiveJobFeed from './LiveJobFeed';
 import AiRecommendations from './AiRecommendations';
 import WithdrawButton from './WithdrawButton';
+import YieldManagerDashboard from './YieldManagerDashboard';
 
 function Dashboard({ address: propAddress }) {
     const { address: wagmiAddress, isConnected: isWagmiConnected } = useAccount();
@@ -217,6 +218,10 @@ function Dashboard({ address: propAddress }) {
 
             <div className="mb-12 max-w-md">
                 <WithdrawButton address={address} />
+            </div>
+
+            <div className="mb-20">
+                <YieldManagerDashboard address={address} />
             </div>
 
             {/* Stats Cards Grid */}

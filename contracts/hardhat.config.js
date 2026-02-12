@@ -12,7 +12,7 @@ module.exports = {
             evmVersion: "cancun",
             optimizer: {
                 enabled: true,
-                runs: 200
+                runs: 1
             },
             viaIR: true
         }
@@ -30,7 +30,8 @@ module.exports = {
     },
     networks: {
         hardhat: {
-            allowUnlimitedContractSize: true
+            allowUnlimitedContractSize: true,
+            hardfork: "shanghai"
         },
         localhost: {
             url: "http://127.0.0.1:8545",

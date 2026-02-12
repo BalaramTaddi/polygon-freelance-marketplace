@@ -1,26 +1,226 @@
-An unexpected error occurred:
+[dotenv@17.2.3] injecting env (3) from .env -- tip: ΓÜÖ∩╕Å  load multiple .env files with { path: ['.env.local', '.env'] }
+Warning: Unused function parameter. Remove or comment out the variable name to silence this warning.
+  --> contracts/PrivacyShield.sol:52:9:
+   |
+52 |         uint256 threshold
+   |         ^^^^^^^^^^^^^^^^^
 
-Error: Cannot find module '@nomicfoundation/hardhat-ethers'
-Require stack:
-- C:\Users\akhil\.gemini\antigravity\scratch\polygon-freelance-marketplace\contracts\hardhat.config.js
-- C:\Users\akhil\.gemini\antigravity\scratch\polygon-freelance-marketplace\contracts\node_modules\hardhat\internal\core\config\config-loading.js
-- C:\Users\akhil\.gemini\antigravity\scratch\polygon-freelance-marketplace\contracts\node_modules\hardhat\internal\cli\cli.js
-- C:\Users\akhil\.gemini\antigravity\scratch\polygon-freelance-marketplace\contracts\node_modules\hardhat\internal\cli\bootstrap.js
-    at Function.Module._resolveFilename (node:internal/modules/cjs/loader:1383:15)
-    at defaultResolveImpl (node:internal/modules/cjs/loader:1025:19)
-    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1030:22)
-    at Function.Module._load (node:internal/modules/cjs/loader:1192:37)
-    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
-    at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
-    at Module.require (node:internal/modules/cjs/loader:1463:12)
-    at require (node:internal/modules/helpers:147:16)
-    at Object.<anonymous> (C:\Users\akhil\.gemini\antigravity\scratch\polygon-freelance-marketplace\contracts\hardhat.config.js:1:1)
-    at Module._compile (node:internal/modules/cjs/loader:1706:14) {
-  code: 'MODULE_NOT_FOUND',
-  requireStack: [
-    'C:\\Users\\akhil\\.gemini\\antigravity\\scratch\\polygon-freelance-marketplace\\contracts\\hardhat.config.js',
-    'C:\\Users\\akhil\\.gemini\\antigravity\\scratch\\polygon-freelance-marketplace\\contracts\\node_modules\\hardhat\\internal\\core\\config\\config-loading.js',
-    'C:\\Users\\akhil\\.gemini\\antigravity\\scratch\\polygon-freelance-marketplace\\contracts\\node_modules\\hardhat\\internal\\cli\\cli.js',
-    'C:\\Users\\akhil\\.gemini\\antigravity\\scratch\\polygon-freelance-marketplace\\contracts\\node_modules\\hardhat\\internal\\cli\\bootstrap.js'
-  ]
-}
+
+Warning: Unused local variable.
+   --> contracts/FreelanceEscrow.sol:479:13:
+    |
+479 |             uint256 cost = IArbitrator(arbitrator).arbitrationCost("");
+    |             ^^^^^^^^^^^^
+
+
+Warning: Unused function parameter. Remove or comment out the variable name to silence this warning.
+   --> contracts/FreelanceGovernance.sol:204:50:
+    |
+204 |     function stakeConviction(uint256 proposalId, bool support) public {
+    |                                                  ^^^^^^^^^^^^
+
+
+Warning: Unused local variable.
+   --> contracts/ccip/CCIPTokenBridge.sol:238:28:
+    |
+238 |         (address receiver, address originalSender, ) = abi.decode(
+    |                            ^^^^^^^^^^^^^^^^^^^^^^
+
+
+Warning: Unused local variable.
+   --> contracts/ccip/CrossChainEscrowManager.sol:388:13:
+    |
+388 |             bytes memory jobData
+    |             ^^^^^^^^^^^^^^^^^^^^
+
+
+Warning: Unused local variable.
+   --> contracts/ccip/CrossChainEscrowManager.sol:424:34:
+    |
+424 |         (, uint256 localJobId, , address freelancer, uint256 amount) = abi.decode(
+    |                                  ^^^^^^^^^^^^^^^^^^
+
+
+Warning: Unused local variable.
+   --> contracts/ccip/CrossChainEscrowManager.sol:424:54:
+    |
+424 |         (, uint256 localJobId, , address freelancer, uint256 amount) = abi.decode(
+    |                                                      ^^^^^^^^^^^^^^
+
+
+Warning: Unused local variable.
+   --> contracts/ccip/CrossChainEscrowManager.sol:448:34:
+    |
+448 |         (, uint256 localJobId, , address initiator, string memory evidence) = abi.decode(
+    |                                  ^^^^^^^^^^^^^^^^^
+
+
+Warning: Unused local variable.
+   --> contracts/ccip/CrossChainEscrowManager.sol:448:53:
+    |
+448 |         (, uint256 localJobId, , address initiator, string memory evidence) = abi.decode(
+    |                                                     ^^^^^^^^^^^^^^^^^^^^^^
+
+
+Warning: Unused function parameter. Remove or comment out the variable name to silence this warning.
+  --> contracts/lz/CrossChainGovernor.sol:62:9:
+   |
+62 |         address _executor,
+   |         ^^^^^^^^^^^^^^^^^
+
+
+Warning: Unused function parameter. Remove or comment out the variable name to silence this warning.
+  --> contracts/lz/CrossChainGovernor.sol:63:9:
+   |
+63 |         bytes memory _extraData
+   |         ^^^^^^^^^^^^^^^^^^^^^^^
+
+
+Warning: Unused function parameter. Remove or comment out the variable name to silence this warning.
+   --> contracts/lz/OmniDispute.sol:170:9:
+    |
+170 |         address _executor,
+    |         ^^^^^^^^^^^^^^^^^
+
+
+Warning: Unused function parameter. Remove or comment out the variable name to silence this warning.
+   --> contracts/lz/OmniDispute.sol:171:9:
+    |
+171 |         bytes memory _extraData
+    |         ^^^^^^^^^^^^^^^^^^^^^^^
+
+
+Warning: Unused function parameter. Remove or comment out the variable name to silence this warning.
+   --> contracts/lz/OmniGovernance.sol:408:9:
+    |
+408 |         address _executor,
+    |         ^^^^^^^^^^^^^^^^^
+
+
+Warning: Unused function parameter. Remove or comment out the variable name to silence this warning.
+   --> contracts/lz/OmniGovernance.sol:409:9:
+    |
+409 |         bytes memory _extraData
+    |         ^^^^^^^^^^^^^^^^^^^^^^^
+
+
+Warning: Unused function parameter. Remove or comment out the variable name to silence this warning.
+   --> contracts/lz/OmniGovernance.sol:423:30:
+    |
+423 |     function _handleVoteSync(uint32 srcEid, bytes memory message) internal {
+    |                              ^^^^^^^^^^^^^
+
+
+Warning: Unused local variable.
+   --> contracts/lz/OmniGovernance.sol:427:13:
+    |
+427 |             address voter,
+    |             ^^^^^^^^^^^^^
+
+
+Warning: Unused function parameter. Remove or comment out the variable name to silence this warning.
+   --> contracts/lz/OmniReputation.sol:251:9:
+    |
+251 |         address _executor,
+    |         ^^^^^^^^^^^^^^^^^
+
+
+Warning: Unused function parameter. Remove or comment out the variable name to silence this warning.
+   --> contracts/lz/OmniReputation.sol:252:9:
+    |
+252 |         bytes memory _extraData
+    |         ^^^^^^^^^^^^^^^^^^^^^^^
+
+
+Warning: Unused local variable.
+   --> contracts/lz/OmniReputation.sol:274:13:
+    |
+274 |             uint256 totalEarned,
+    |             ^^^^^^^^^^^^^^^^^^^
+
+
+Warning: Unused local variable.
+   --> contracts/lz/OmniReputation.sol:275:13:
+    |
+275 |             uint256 averageRating,
+    |             ^^^^^^^^^^^^^^^^^^^^^
+
+
+Warning: Unused local variable.
+   --> contracts/lz/OmniReputation.sol:316:26:
+    |
+316 |         (, address user, address requester) = abi.decode(
+    |                          ^^^^^^^^^^^^^^^^^
+
+
+Warning: Unused local variable.
+   --> contracts/lz/OmniReputation.sol:324:9:
+    |
+324 |         bytes memory responseMessage = abi.encode(
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+Warning: Unused function parameter. Remove or comment out the variable name to silence this warning.
+ --> contracts/test/MockArbitrator.sol:9:28:
+  |
+9 |     function createDispute(uint256 _choices, bytes calldata _extraData) external payable override returns (uint256 disputeID) {
+  |                            ^^^^^^^^^^^^^^^^
+
+
+Warning: Unused function parameter. Remove or comment out the variable name to silence this warning.
+ --> contracts/test/MockArbitrator.sol:9:46:
+  |
+9 |     function createDispute(uint256 _choices, bytes calldata _extraData) external payable override returns (uint256 disputeID) {
+  |                                              ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+Warning: Unused function parameter. Remove or comment out the variable name to silence this warning.
+  --> contracts/test/MockArbitrator.sol:14:30:
+   |
+14 |     function arbitrationCost(bytes calldata _extraData) external view override returns (uint256 cost) {
+   |                              ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+Warning: Unused function parameter. Remove or comment out the variable name to silence this warning.
+  --> contracts/test/MockWormhole.sol:28:9:
+   |
+28 |         bytes memory payload,
+   |         ^^^^^^^^^^^^^^^^^^^^
+
+
+Warning: Function state mutability can be restricted to pure
+  --> contracts/test/Invariants.sol:11:5:
+   |
+11 |     function echidna_escrow_balance_safety() public view returns (bool) {
+   |     ^ (Relevant source part starts here and spans across multiple lines).
+
+
+Warning: Function state mutability can be restricted to pure
+  --> contracts/test/MockArbitrator.sol:14:5:
+   |
+14 |     function arbitrationCost(bytes calldata _extraData) external view override returns (uint256 cost) {
+   |     ^ (Relevant source part starts here and spans across multiple lines).
+
+
+Warning: Contract code size is 26066 bytes and exceeds 24576 bytes (a limit introduced in Spurious Dragon). This contract may not be deployable on Mainnet. Consider enabling the optimizer (with a low "runs" value!), turning off revert strings, or using libraries.
+  --> contracts/FreelanceEscrow.sol:26:1:
+   |
+26 | contract FreelanceEscrow is FreelanceEscrowBase, PausableUpgradeable, IArbitrable {
+   | ^ (Relevant source part starts here and spans across multiple lines).
+
+
+Warning: Contract code size is 26437 bytes and exceeds 24576 bytes (a limit introduced in Spurious Dragon). This contract may not be deployable on Mainnet. Consider enabling the optimizer (with a low "runs" value!), turning off revert strings, or using libraries.
+  --> contracts/FreelanceEscrowV2.sol:10:1:
+   |
+10 | contract FreelanceEscrowV2 is FreelanceEscrow {
+   | ^ (Relevant source part starts here and spans across multiple lines).
+
+
+Warning: Contract code size is 26193 bytes and exceeds 24576 bytes (a limit introduced in Spurious Dragon). This contract may not be deployable on Mainnet. Consider enabling the optimizer (with a low "runs" value!), turning off revert strings, or using libraries.
+ --> contracts/test/Invariants.sol:6:1:
+  |
+6 | contract Invariants is FreelanceEscrow {
+  | ^ (Relevant source part starts here and spans across multiple lines).
+
+
+Compiled 135 Solidity files successfully (evm target: cancun).
