@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useAccount, useNetwork, useSwitchNetwork } from 'wagmi';
+import { useAccount, useSwitchChain } from 'wagmi';
 import { useEthersSigner } from '../hooks/useEthersSigner';
 import { ethers } from 'ethers';
 
@@ -89,9 +89,8 @@ const SUPPORTED_CHAINS = {
 };
 
 export const useMultiChain = () => {
-    const { address } = useAccount();
-    const { chain } = useNetwork();
-    const { switchNetwork } = useSwitchNetwork();
+    const { address, chain } = useAccount();
+    const { switchChain } = useSwitchChain();
     const signer = useEthersSigner();
 
     const [balances, setBalances] = useState({});
@@ -125,13 +124,13 @@ export const useMultiChain = () => {
 
     // Switch to a specific chain
     const switchToChain = async (chainId) => {
-        if (!switchNetwork) {
-            console.error('Switch network not available');
+        if (!switchChain) {
+            console.error('Switch chain not available');
             return false;
         }
 
         try {
-            await switchNetwork(chainId);
+            await switchChain({ chainId });
             return true;
         } catch (error) {
             console.error('Failed to switch network:', error);
