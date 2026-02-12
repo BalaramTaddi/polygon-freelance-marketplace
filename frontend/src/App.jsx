@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import logo from './assets/logo.png';
-import { Briefcase, PlusCircle, LayoutDashboard, Ticket, MessageSquare, Trophy, User, Gavel, Cpu, Activity } from 'lucide-react';
+import { Briefcase, PlusCircle, LayoutDashboard, Ticket, MessageSquare, Trophy, User, Gavel, Cpu, Activity, Globe } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Dashboard from './components/Dashboard';
 import CreateJob from './components/CreateJob';
@@ -15,6 +15,8 @@ import TermsOfService from './components/TermsOfService';
 import PrivacyPolicy from './components/PrivacyPolicy';
 import ArbitrationDashboard from './components/ArbitrationDashboard';
 import ManagerDashboard from './components/ManagerDashboard';
+import CrossChainDashboard from './components/CrossChainDashboard';
+import CreateCrossChainJob from './components/CreateCrossChainJob';
 import { NotificationManager } from './components/NotificationManager';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -27,6 +29,7 @@ import { Mail, LogOut, ShieldCheck } from 'lucide-react';
 function App() {
   const { address } = useAccount();
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [isCrossChainCreateOpen, setIsCrossChainCreateOpen] = useState(false);
   const [portfolioAddress, setPortfolioAddress] = useState(null);
   const [chatPeerAddress, setChatPeerAddress] = useState(null);
   const [isGasless, setIsGasless] = useState(true); // Default to true for SUPREME experience
@@ -89,6 +92,7 @@ function App() {
       case 'governance': return <DaoDashboard address={effectiveAddress} />;
       case 'justice': return <ArbitrationDashboard address={effectiveAddress} />;
       case 'manager': return <ManagerDashboard address={effectiveAddress} />;
+      case 'cross-chain': return <CrossChainDashboard address={effectiveAddress} />;
       case 'terms': return <TermsOfService />;
       case 'privacy': return <PrivacyPolicy />;
       default: return <Dashboard address={effectiveAddress} />;
@@ -138,6 +142,9 @@ function App() {
           </button>
           <button className={`nav-item ${activeTab === 'justice' ? 'active' : ''}`} onClick={() => setActiveTab('justice')}>
             <Gavel size={20} /> Justice
+          </button>
+          <button className={`nav-item ${activeTab === 'cross-chain' ? 'active' : ''}`} onClick={() => setActiveTab('cross-chain')}>
+            <Globe size={20} /> Global Edge
           </button>
           <button className={`nav-item ${activeTab === 'nfts' ? 'active' : ''}`} onClick={() => setActiveTab('nfts')}>
             <Ticket size={20} /> Legacy Vault
