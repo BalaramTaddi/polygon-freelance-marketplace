@@ -227,7 +227,7 @@ contract CCIPTokenBridge is CCIPReceiver, AccessControl, ReentrancyGuard, Pausab
      * @param message The CCIP message
      */
     function _ccipReceive(
-        Client.Any2EVMMessage memory message
+        Client.Any2EVMMessage calldata message
     ) internal override {
         bytes32 messageId = message.messageId;
         
@@ -340,6 +340,10 @@ contract CCIPTokenBridge is CCIPReceiver, AccessControl, ReentrancyGuard, Pausab
         uint256 amount
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         to.transfer(amount);
+    }
+
+    function supportsInterface(bytes4 interfaceId) public view virtual override(CCIPReceiver, AccessControl) returns (bool) {
+        return super.supportsInterface(interfaceId);
     }
 
     receive() external payable {}

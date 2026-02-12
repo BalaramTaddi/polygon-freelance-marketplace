@@ -3,6 +3,7 @@ import { useMultiChain } from '../hooks/useMultiChain';
 import { ethers } from 'ethers';
 import { useEthersSigner } from '../hooks/useEthersSigner';
 import { toast } from 'react-hot-toast';
+import { CROSS_CHAIN_ESCROW_MANAGER_ADDRESS, CONTRACT_ADDRESS } from '../constants';
 
 const CreateCrossChainJob = ({ onClose, onSuccess }) => {
     const {
@@ -107,7 +108,7 @@ const CreateCrossChainJob = ({ onClose, onSuccess }) => {
             const ipfsHash = 'QmExample...'; // Placeholder
 
             // Step 2: Call CrossChainEscrowManager
-            const escrowManagerAddress = '0x...'; // Get from deployment
+            const escrowManagerAddress = CROSS_CHAIN_ESCROW_MANAGER_ADDRESS;
             const escrowManagerABI = [
                 'function createCrossChainJob(uint64 destinationChain, address freelancer, uint256 amount, address token, bytes calldata jobData) external payable returns (uint256 localJobId, bytes32 messageId)'
             ];

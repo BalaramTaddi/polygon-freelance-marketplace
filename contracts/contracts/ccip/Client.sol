@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 // End consumer library.
 library Client {
+  /// @dev RMN depends on this struct, if changing, please notify the RMN team.
   struct EVMTokenAmount {
     address token; // token address on the local chain.
     uint256 amount; // Amount of tokens.
@@ -23,5 +24,14 @@ library Client {
     EVMTokenAmount[] tokenAmounts; // Token transfers
     address feeToken; // Address of feeToken. address(0) means you will send msg.value.
     bytes extraArgs; // Populate this with _argsToBytes(EVMExtraArgsV1)
+  }
+
+  // ExtraArgs v1
+  struct EVMExtraArgsV1 {
+    uint256 gasLimit;
+  }
+
+  function _argsToBytes(EVMExtraArgsV1 memory extraArgs) internal pure returns (bytes memory) {
+    return abi.encodePacked(bytes4(keccak256("CCIP EVMExtraArgsV1")), abi.encode(extraArgs));
   }
 }

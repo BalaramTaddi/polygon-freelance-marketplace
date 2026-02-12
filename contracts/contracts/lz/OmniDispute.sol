@@ -176,7 +176,7 @@ contract OmniDispute is OApp, AccessControl, ReentrancyGuard, Pausable {
         MessageType msgType = abi.decode(_message, (MessageType));
 
         if (msgType == MessageType.INITIATE_DISPUTE) {
-            (,, uint256 jobId, address client, address freelancer, string memory evidence) = abi.decode(_message, (MessageType, uint256, address, address, string));
+            (, uint256 jobId, address client, address freelancer, string memory evidence) = abi.decode(_message, (MessageType, uint256, address, address, string));
             this.initiateDispute(jobId, _srcEid, client, freelancer, evidence);
         }
     }

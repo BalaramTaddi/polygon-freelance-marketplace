@@ -352,7 +352,7 @@ contract CrossChainEscrowManager is CCIPReceiver, AccessControl, ReentrancyGuard
      * @notice Handle incoming CCIP messages
      */
     function _ccipReceive(
-        Client.Any2EVMMessage memory message
+        Client.Any2EVMMessage calldata message
     ) internal override {
         bytes32 messageId = message.messageId;
         
@@ -377,7 +377,7 @@ contract CrossChainEscrowManager is CCIPReceiver, AccessControl, ReentrancyGuard
         emit MessageReceived(messageId, message.sourceChainSelector, msgType);
     }
 
-    function _handleCreateJob(Client.Any2EVMMessage memory message) internal {
+    function _handleCreateJob(Client.Any2EVMMessage calldata message) internal {
         (
             ,
             uint256 remoteJobId,
@@ -406,7 +406,7 @@ contract CrossChainEscrowManager is CCIPReceiver, AccessControl, ReentrancyGuard
         job.lastMessageId = message.messageId;
     }
 
-    function _handleAcceptJob(Client.Any2EVMMessage memory message) internal {
+    function _handleAcceptJob(Client.Any2EVMMessage calldata message) internal {
         (, uint256 localJobId, uint256 remoteJobId, address freelancer) = abi.decode(
             message.data,
             (MessageType, uint256, uint256, address)
@@ -420,7 +420,7 @@ contract CrossChainEscrowManager is CCIPReceiver, AccessControl, ReentrancyGuard
         }
     }
 
-    function _handleReleasePayment(Client.Any2EVMMessage memory message) internal {
+    function _handleReleasePayment(Client.Any2EVMMessage calldata message) internal {
         (, uint256 localJobId, , address freelancer, uint256 amount) = abi.decode(
             message.data,
             (MessageType, uint256, uint256, address, uint256)
@@ -432,7 +432,7 @@ contract CrossChainEscrowManager is CCIPReceiver, AccessControl, ReentrancyGuard
         }
     }
 
-    function _handleCancelJob(Client.Any2EVMMessage memory message) internal {
+    function _handleCancelJob(Client.Any2EVMMessage calldata message) internal {
         (, uint256 localJobId, ) = abi.decode(
             message.data,
             (MessageType, uint256, uint256)
@@ -444,7 +444,7 @@ contract CrossChainEscrowManager is CCIPReceiver, AccessControl, ReentrancyGuard
         }
     }
 
-    function _handleInitiateDispute(Client.Any2EVMMessage memory message) internal {
+    function _handleInitiateDispute(Client.Any2EVMMessage calldata message) internal {
         (, uint256 localJobId, , address initiator, string memory evidence) = abi.decode(
             message.data,
             (MessageType, uint256, uint256, address, string)
@@ -511,6 +511,10 @@ contract CrossChainEscrowManager is CCIPReceiver, AccessControl, ReentrancyGuard
 
     function unpause() external onlyRole(PAUSER_ROLE) {
         _unpause();
+    }
+
+    function supportsInterface(bytes4 interfaceId) public view virtual override(CCIPReceiver, AccessControl) returns (bool) {
+        return super.supportsInterface(interfaceId);
     }
 
     receive() external payable {}
