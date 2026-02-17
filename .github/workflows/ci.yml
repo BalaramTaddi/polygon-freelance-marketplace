@@ -34,7 +34,10 @@ jobs:
         with:
           node-version: '20'
       - name: Install Dependencies
-        run: cd frontend && npm install --legacy-peer-deps
+        run: |
+          cd frontend
+          rm -f package-lock.json
+          npm install --legacy-peer-deps
       - name: Run Frontend Tests
         env:
           CI: true
