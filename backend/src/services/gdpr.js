@@ -1,10 +1,19 @@
 import crypto from 'crypto';
-import { Console } from 'console';
+
 import { Consent, DataAccessRecord } from '../models/GDPR.js';
 import { Profile } from '../models/Profile.js';
 
 const ALGORITHM = 'aes-256-cbc';
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || crypto.randomBytes(32); // Use env var in prod
+
+let ENCRYPTION_KEY;
+if (process.env.ENCRYPTION_KEY) {
+    ENCRYPTION_KEY = Buffer.from(process.env.ENCRYPTION_KEY, 'hex');
+} else {
+    console.warn('⚠️  WARNING: ENCRYPTION_KEY env var is not set! Using a random key.');
+    console.warn('⚠️  Any encrypted data will be LOST on server restart.');
+    console.warn('⚠️  Generate a key with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
+    ENCRYPTION_KEY = crypto.randomBytes(32);
+}
 const IV_LENGTH = 16;
 
 /**

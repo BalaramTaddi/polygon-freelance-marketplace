@@ -1,6 +1,6 @@
 import { createSmartAccountClient } from "@biconomy/account";
-import { createWalletClient, custom, encodeFunctionData } from "viem";
-import { polygonAmoy } from "viem/chains";
+import { encodeFunctionData } from "viem";
+
 
 // Biconomy Paymaster URL (replace with your own from Biconomy Dashboard)
 const PAYMASTER_URL = import.meta.env.VITE_BICONOMY_PAYMASTER_URL || "";

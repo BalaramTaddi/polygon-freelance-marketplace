@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: polylance-backend
+    env: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    plan: free
+    branch: main
+    envVars:
+      - key: NODE_VERSION
+        value: 20.11.0
+      - key: PORT
+        value: 10000
+      - key: MONGODB_URI
+        fromGroup: shared-secrets
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: PINATA_API_KEY
+        sync: false
+      - key: PINATA_SECRET_KEY
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: FRONTEND_URL
+        value: https://polygon-freelance-marketplace-onf5efcpb.vercel.app

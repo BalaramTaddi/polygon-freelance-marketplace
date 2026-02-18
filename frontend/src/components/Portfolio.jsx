@@ -1,15 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { User, Briefcase, MapPin, Link as LinkIcon, Award, ExternalLink, Globe, Github, Twitter, Zap, Coins } from 'lucide-react';
-import { motion } from 'framer-motion';
 import { useReadContract } from 'wagmi';
 import { erc20Abi, formatEther } from 'viem';
-import { POLY_TOKEN_ADDRESS } from '../constants';
+import { POLY_TOKEN_ADDRESS, CONTRACT_ADDRESS } from '../constants';
 import { api } from '../services/api';
 import Reputation3D from './Reputation3D';
+import { useAnimeAnimations } from '../hooks/useAnimeAnimations';
 
 function Portfolio({ address, onBack }) {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
+    const sidebarRef = useRef(null);
+    const mainRef = useRef(null);
+    const { slideInLeft, slideInRight, staggerFadeIn } = useAnimeAnimations();
 
     useEffect(() => {
         if (address) {
@@ -21,168 +24,177 @@ function Portfolio({ address, onBack }) {
     }, [address]);
 
     const { data: plnBalance } = useReadContract({
-        address: POLY_TOKEN_ADDRESS,
-        abi: erc20Abi,
-        functionName: 'balanceOf',
-        args: [address],
+        address: POLY_TOKEN_ADDRESS, abi: erc20Abi, functionName: 'balanceOf', args: [address],
     });
 
+    // Animate on data load
+    useEffect(() => {
+        if (!loading && data?.profile?.address) {
+            if (sidebarRef.current) slideInLeft(sidebarRef.current, 40);
+            if (mainRef.current) slideInRight(mainRef.current, 40);
+            setTimeout(() => staggerFadeIn('.portfolio-skill-tag', 50), 400);
+            setTimeout(() => staggerFadeIn('.portfolio-job-card', 80), 500);
+        }
+    }, [loading, data]);
+
+    const cardBg = {
+        padding: 24, borderRadius: 14,
+        background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)',
+    };
+
     if (loading) return (
-        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 0' }}>
-            <div className="skeleton h-8 w-32 mb-8" />
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div className="skeleton h-[600px] w-full" />
-                <div className="md:col-span-2 space-y-8">
-                    <div className="skeleton h-20 w-1/2" />
-                    <div className="skeleton h-60 w-full" />
-                    <div className="skeleton h-60 w-full" />
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+            <div className="skeleton" style={{ height: 28, width: 120, marginBottom: 28 }} />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 32 }}>
+                <div className="skeleton" style={{ height: 500, borderRadius: 14 }} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                    <div className="skeleton" style={{ height: 60, width: '50%' }} />
+                    <div className="skeleton" style={{ height: 200, borderRadius: 14 }} />
+                    <div className="skeleton" style={{ height: 200, borderRadius: 14 }} />
                 </div>
             </div>
         </div>
     );
 
     if (!data?.profile?.address) return (
-        <div className="flex flex-col items-center justify-center py-20">
-            <User size={60} className="text-white/10 mb-6" />
-            <h3 className="text-2xl font-bold">Profile not found</h3>
-            <p className="text-text-muted mt-2">This address hasn't registered a PolyLance identity yet.</p>
-            {onBack && <button onClick={onBack} className="mt-8 btn-ghost">Return to Marketplace</button>}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 20px' }}>
+            <User size={60} style={{ color: 'rgba(255,255,255,0.06)', marginBottom: 20 }} />
+            <h3 style={{ fontSize: '1.3rem', fontWeight: 700 }}>Profile not found</h3>
+            <p style={{ color: 'var(--text-secondary)', marginTop: 8 }}>This address hasn't registered a PolyLance identity yet.</p>
+            {onBack && <button onClick={onBack} className="btn btn-ghost" style={{ marginTop: 28, borderRadius: 10 }}>Return to Marketplace</button>}
         </div>
     );
 
     const { profile, jobs } = data;
     const completedJobs = jobs.filter(j => j.status === 'Completed' || j.status === 2 || j.status === 4);
-
-    // Calculate average rating
     const ratedJobs = completedJobs.filter(j => j.rating > 0);
     const avgRating = ratedJobs.length > 0
         ? (ratedJobs.reduce((acc, j) => acc + j.rating, 0) / ratedJobs.length).toFixed(1)
         : null;
 
     return (
-        <div style={{ maxWidth: '1200px', margin: '0 auto', paddingBottom: '100px' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto', paddingBottom: 80 }}>
             {onBack && (
-                <button
-                    onClick={onBack}
-                    className="flex items-center gap-2 text-primary hover:text-white mb-10 group transition-all"
-                    style={{ fontWeight: 800, textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.15em' }}
-                >
-                    <span className="group-hover:-translate-x-1 transition-transform">←</span> Return to Marketplace
+                <button onClick={onBack} className="btn btn-ghost btn-sm" style={{ marginBottom: 32, borderRadius: 8, gap: 8 }}>
+                    ← Return to Marketplace
                 </button>
             )}
 
-            <div className="grid-portfolio" style={{ display: 'grid', gap: '40px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 36 }}>
                 {/* Profile Sidebar */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
-                    <div className="glass-card" style={{ textAlign: 'center', padding: '40px 20px' }}>
-                        <div style={{ width: '100%', height: '200px', margin: '0 auto 10px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(138, 43, 226, 0.1)', borderRadius: '20px' }}>
-                            {/* <Reputation3D level={Math.floor((profile.reputationScore || 0) / 100) + 1} /> */}
-                            <User size={80} color="var(--primary)" style={{ opacity: 0.5 }} />
+                <div ref={sidebarRef} style={{ display: 'flex', flexDirection: 'column', gap: 20, opacity: 0 }}>
+                    <div style={{ ...cardBg, textAlign: 'center', padding: '36px 20px' }}>
+                        <div style={{
+                            width: '100%', height: 180, margin: '0 auto 14px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            background: 'rgba(124,92,252,0.06)', borderRadius: 16,
+                        }}>
+                            <User size={70} style={{ color: 'var(--accent-light)', opacity: 0.4 }} />
                         </div>
-                        <h2 style={{ fontSize: '1.8rem', marginBottom: '8px' }}>{profile.name || 'Anonymous Creator'}</h2>
+                        <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: 8 }}>{profile.name || 'Anonymous Creator'}</h2>
 
                         {avgRating && (
-                            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '5px', color: '#fbbf24', marginBottom: '15px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 5, color: '#fbbf24', marginBottom: 14 }}>
                                 {'★'.repeat(Math.round(avgRating))}
-                                <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginLeft: '5px' }}>({avgRating})</span>
+                                <span style={{ color: 'var(--text-tertiary)', fontSize: '0.88rem', marginLeft: 5 }}>({avgRating})</span>
                             </div>
                         )}
 
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center', marginBottom: '20px' }}>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center', marginBottom: 18 }}>
                             {profile.skills?.split(',').map((skill, idx) => (
-                                <span key={idx} className="badge" style={{ border: '1px solid var(--primary)', color: 'var(--primary)', background: 'rgba(138, 43, 226, 0.05)', fontSize: '0.75rem' }}>
-                                    {skill.trim()}
-                                </span>
-                            )) || <span className="badge">General Creator</span>}
+                                <span key={idx} className="portfolio-skill-tag" style={{
+                                    fontSize: '0.72rem', fontWeight: 600, padding: '3px 10px', borderRadius: 6,
+                                    border: '1px solid rgba(124,92,252,0.2)', color: 'var(--accent-light)',
+                                    background: 'rgba(124,92,252,0.04)', opacity: 0,
+                                }}>{skill.trim()}</span>
+                            )) || <span style={{ fontSize: '0.72rem', padding: '3px 10px', borderRadius: 6, background: 'rgba(255,255,255,0.04)', color: 'var(--text-tertiary)' }}>General Creator</span>}
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
-                            <div className="glass-card" style={{ padding: '15px' }}>
-                                <div style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--primary)' }}>{profile.completedJobs}</div>
-                                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>JOBS</div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+                            <div style={{ ...cardBg, padding: 14 }}>
+                                <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--accent-light)' }}>{profile.completedJobs}</div>
+                                <div style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>JOBS</div>
                             </div>
-                            <div className="glass-card" style={{ padding: '15px' }}>
-                                <div style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--primary)' }}>{profile.totalEarned.toFixed(1)}</div>
-                                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>MATIC</div>
+                            <div style={{ ...cardBg, padding: 14 }}>
+                                <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--accent-light)' }}>{profile.totalEarned.toFixed(1)}</div>
+                                <div style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>MATIC</div>
                             </div>
                         </div>
 
-                        <div className="glass-card !bg-primary/5 !border-primary/20 mb-8">
-                            <div style={{ fontSize: '1.5rem', fontWeight: 900, color: 'var(--primary)', letterSpacing: '2px' }}>{profile.reputationScore || 0}</div>
-                            <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', fontWeight: 800 }}>REPUTATION SCORE</div>
+                        <div style={{ ...cardBg, padding: 14, marginBottom: 18, background: 'rgba(124,92,252,0.03)', borderColor: 'rgba(124,92,252,0.12)' }}>
+                            <div style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--accent-light)', letterSpacing: 2 }}>{profile.reputationScore || 0}</div>
+                            <div style={{ fontSize: '0.62rem', color: 'var(--text-tertiary)', fontWeight: 800 }}>REPUTATION SCORE</div>
                         </div>
 
-                        <p style={{ color: 'var(--text-muted)', lineHeight: '1.6', marginBottom: '30px', fontSize: '0.95rem' }}>
+                        <p style={{ color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 24, fontSize: '0.9rem' }}>
                             {profile.bio || "This creator hasn't added a bio yet. Their work on PolyLance speaks for itself."}
                         </p>
 
-                        <div style={{ display: 'flex', justifyContent: 'center', gap: '20px' }}>
-                            <a href="#" className="btn-nav" style={{ color: 'inherit' }} title="Website"><Globe size={20} /></a>
-                            <a href="#" className="btn-nav" style={{ color: 'inherit' }} title="GitHub"><Github size={20} /></a>
-                            <a href="#" className="btn-nav" style={{ color: 'inherit' }} title="Twitter"><Twitter size={20} /></a>
+                        <div style={{ display: 'flex', justifyContent: 'center', gap: 16 }}>
+                            {[Globe, Github, Twitter].map((Icon, i) => (
+                                <a key={i} href="#" style={{
+                                    width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', color: 'var(--text-tertiary)',
+                                    transition: 'all 0.2s ease', textDecoration: 'none',
+                                }}>
+                                    <Icon size={16} />
+                                </a>
+                            ))}
                         </div>
                     </div>
 
-                    <div className="glass-card">
-                        <h3 style={{ marginBottom: '20px' }}>Wallet Identity</h3>
-                        <div style={{ background: 'rgba(255,255,255,0.02)', padding: '15px', borderRadius: '12px', wordBreak: 'break-all', fontSize: '0.85rem', border: '1px solid var(--glass-border)' }}>
+                    <div style={cardBg}>
+                        <h3 style={{ marginBottom: 16, fontSize: '1rem', fontWeight: 700 }}>Wallet Identity</h3>
+                        <div style={{ background: 'rgba(255,255,255,0.02)', padding: 14, borderRadius: 10, wordBreak: 'break-all', fontSize: '0.82rem', border: '1px solid var(--border)' }}>
                             {profile.address}
                         </div>
-                        <p style={{ fontSize: '0.8rem', color: '#10b981', marginTop: '10px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <p style={{ fontSize: '0.78rem', color: 'var(--success)', marginTop: 10, display: 'flex', alignItems: 'center', gap: 5 }}>
                             <Award size={14} /> Verified on Polygon
                         </p>
                     </div>
 
-                    <div className="glass-card" style={{ background: 'linear-gradient(135deg, rgba(138, 43, 226, 0.1), rgba(34, 211, 238, 0.1))' }}>
-                        <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
-                            <Zap size={20} color="var(--accent-cyan)" /> Rewards & Stake
+                    <div key={profile.address} className="portfolio-job-card" style={{ ...cardBg, background: 'linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01))', padding: 28, transition: 'all 0.2s', opacity: 0, transform: 'translateY(20px)' }}>
+                        <h3 style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18, fontSize: '1rem', fontWeight: 700 }}>
+                            <Zap size={18} style={{ color: '#22d3ee' }} /> Rewards & Stake
                         </h3>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>PLN Balance</span>
-                                <span style={{ fontWeight: 700, color: 'var(--accent-cyan)' }}>
-                                    {plnBalance ? parseFloat(formatEther(plnBalance)).toFixed(0) : '0'} PLN
-                                </span>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Reputation</span>
-                                <span style={{ fontWeight: 700 }}>{profile.reputationScore || 0} RP</span>
-                            </div>
-                            <button className="btn-primary" style={{ width: '100%', padding: '10px', fontSize: '0.8rem', marginTop: '10px', background: 'var(--accent-cyan)' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                            {[
+                                { label: 'PLN Balance', value: `${plnBalance ? parseFloat(formatEther(plnBalance)).toFixed(0) : '0'} PLN`, color: '#22d3ee' },
+                                { label: 'Reputation', value: `${profile.reputationScore || 0} RP` },
+                            ].map((item, i) => (
+                                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>{item.label}</span>
+                                    <span style={{ fontWeight: 700, color: item.color || 'var(--text-primary)' }}>{item.value}</span>
+                                </div>
+                            ))}
+                            <button className="btn btn-primary" style={{ width: '100%', borderRadius: 10, marginTop: 8, background: '#22d3ee', fontSize: '0.82rem' }}>
                                 Stake PLN (Coming Soon)
                             </button>
                         </div>
                     </div>
                 </div>
 
-                {/* Main Content: Proof of Work */}
-                <div>
-                    <h2 style={{ marginBottom: '30px', fontSize: '2rem' }}>Proof of <span className="gradient-text">Work</span></h2>
+                {/* Main: Proof of Work */}
+                <div ref={mainRef} style={{ opacity: 0 }}>
+                    <h2 style={{ marginBottom: 28, fontSize: '1.8rem', fontWeight: 900 }}>
+                        Proof of <span style={{ background: 'linear-gradient(135deg, var(--accent-light), var(--accent))', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Work</span>
+                    </h2>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                         {completedJobs.length === 0 ? (
-                            <div className="glass-card" style={{ textAlign: 'center', padding: '100px 40px', background: 'rgba(255,255,255,0.01)', border: '1px dashed var(--glass-border)' }}>
-                                <motion.div
-                                    initial={{ scale: 0.8, opacity: 0 }}
-                                    animate={{ scale: 1, opacity: 1 }}
-                                    transition={{ duration: 0.5 }}
-                                >
-                                    <Briefcase size={64} style={{ opacity: 0.1, marginBottom: '24px', color: 'var(--primary)' }} />
-                                    <h3 style={{ marginBottom: '10px', opacity: 0.5 }}>Future Success in Progress</h3>
-                                    <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>This creator hasn't finalized any contracts yet. Stake on their potential today!</p>
-                                </motion.div>
+                            <div style={{ ...cardBg, textAlign: 'center', padding: '80px 40px', borderStyle: 'dashed' }}>
+                                <div>
+                                    <Briefcase size={56} style={{ opacity: 0.08, marginBottom: 20, color: 'var(--accent-light)' }} />
+                                    <h3 style={{ marginBottom: 10, opacity: 0.5 }}>Future Success in Progress</h3>
+                                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>
+                                        This creator hasn't finalized any contracts yet. Stake on their potential today!
+                                    </p>
+                                </div>
                             </div>
                         ) : (
-                            completedJobs.map((job, i) => (
-                                <motion.div
-                                    key={job.jobId}
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: i * 0.1 }}
-                                    className="glass-card"
-                                    style={{ display: 'flex', gap: '20px', alignItems: 'start' }}
-                                >
-                                    <div style={{ width: '120px', height: '120px', borderRadius: '16px', overflow: 'hidden', flexShrink: 0 }}>
+                            completedJobs.map((job) => (
+                                <div key={job.jobId} className="portfolio-job-card"
+                                    style={{ ...cardBg, display: 'flex', gap: 20, alignItems: 'flex-start', opacity: 0, transform: 'translateY(20px)' }}>
+                                    <div style={{ width: 110, height: 110, borderRadius: 14, overflow: 'hidden', flexShrink: 0 }}>
                                         <img
                                             src={`https://images.unsplash.com/photo-1639762681485-074b7f938ba0?auto=format&fit=crop&w=300&q=80&sig=${job.jobId}`}
                                             alt="NFT Certificate"
@@ -190,34 +202,43 @@ function Portfolio({ address, onBack }) {
                                         />
                                     </div>
                                     <div style={{ flex: 1 }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                                            <h3 style={{ margin: 0 }}>{job.title}</h3>
-                                            <span className="badge" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', border: 'none' }}>COMPLETED</span>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                                            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>{job.title}</h3>
+                                            <span style={{
+                                                fontSize: '0.62rem', fontWeight: 700, padding: '3px 10px', borderRadius: 5,
+                                                background: 'rgba(16,185,129,0.08)', color: 'var(--success)',
+                                            }}>COMPLETED</span>
                                         </div>
-                                        <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '15px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                        <p style={{
+                                            fontSize: '0.88rem', color: 'var(--text-secondary)', marginBottom: 14, lineHeight: 1.6,
+                                            display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                                        }}>
                                             {job.description}
                                         </p>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem', color: 'var(--primary)', fontWeight: 600 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.78rem', color: 'var(--accent-light)', fontWeight: 600 }}>
                                                 <Award size={14} /> NFT Proof-of-Work
                                             </div>
-                                            <a href={`https://polygonscan.com/address/${CONTRACT_ADDRESS}`} target="_blank" rel="noreferrer" style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            <a href={`https://polygonscan.com/address/${CONTRACT_ADDRESS}`} target="_blank" rel="noreferrer"
+                                                style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
                                                 Check Ledger <ExternalLink size={12} />
                                             </a>
                                         </div>
-
                                         {job.review && (
-                                            <div style={{ marginTop: '15px', padding: '12px', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', borderLeft: '3px solid #fbbf24' }}>
-                                                <div style={{ color: '#fbbf24', fontSize: '0.8rem', marginBottom: '4px' }}>
+                                            <div style={{
+                                                marginTop: 14, padding: 12, borderRadius: 10,
+                                                background: 'rgba(255,255,255,0.02)', borderLeft: '3px solid #fbbf24',
+                                            }}>
+                                                <div style={{ color: '#fbbf24', fontSize: '0.78rem', marginBottom: 4 }}>
                                                     {'★'.repeat(job.rating)} Verified Review
                                                 </div>
-                                                <p style={{ fontSize: '0.85rem', fontStyle: 'italic', color: 'var(--text)' }}>
+                                                <p style={{ fontSize: '0.82rem', fontStyle: 'italic', color: 'var(--text-secondary)' }}>
                                                     "{job.review}"
                                                 </p>
                                             </div>
                                         )}
                                     </div>
-                                </motion.div>
+                                </div>
                             ))
                         )}
                     </div>

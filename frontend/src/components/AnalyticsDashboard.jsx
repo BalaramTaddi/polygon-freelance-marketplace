@@ -1,96 +1,101 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
-    LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-    AreaChart, Area, PieChart, Pie, Cell
+    AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+    PieChart, Pie, Cell
 } from 'recharts';
 import {
     Activity, Users, Briefcase, DollarSign, TrendingUp,
-    PieChart as PieIcon, BarChart3, Loader2, Globe
+    PieChart as PieIcon, Loader2, Globe
 } from 'lucide-react';
-import { motion } from 'framer-motion';
 import { api } from '../services/api';
+import { useAnimeAnimations } from '../hooks/useAnimeAnimations';
 
 const COLORS = ['#8b5cf6', '#a855f7', '#d946ef', '#ec4899', '#f43f5e', '#f97316'];
+const cardBg = { padding: 32, borderRadius: 14, background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)' };
+const dimLabel = { fontSize: '0.62rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-tertiary)', marginBottom: 4 };
 
 export default function AnalyticsDashboard() {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
+    const statRefs = useRef([]);
+    const { countUp, staggerFadeIn, revealOnScroll } = useAnimeAnimations();
 
-    useEffect(() => {
-        fetchAnalytics();
-    }, []);
-
+    useEffect(() => { fetchAnalytics(); }, []);
     const fetchAnalytics = async () => {
-        try {
-            const stats = await api.getAnalytics();
-            setData(stats);
-        } catch (error) {
-            console.error('Failed to fetch analytics:', error);
-        } finally {
-            setLoading(false);
-        }
+        try { const stats = await api.getAnalytics(); setData(stats); }
+        catch (error) { console.error('Failed to fetch analytics:', error); }
+        finally { setLoading(false); }
     };
 
-    if (loading) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-                <Loader2 className="animate-spin text-primary" size={40} />
-                <p className="text-text-dim font-bold tracking-widest uppercase text-xs">Synchronizing Neural Data...</p>
-            </div>
-        );
-    }
+    useEffect(() => {
+        if (!loading && data) {
+            staggerFadeIn('.analytics-stat-card', 100);
+            revealOnScroll('.analytics-reveal');
 
+            // Animate numbers
+            statRefs.current.forEach((el) => {
+                if (el) {
+                    const val = parseFloat(el.getAttribute('data-value').replace(/[^0-9.]/g, ''));
+                    if (!isNaN(val)) countUp(el, val, 2000);
+                }
+            });
+        }
+    }, [loading, data]);
+
+    if (loading) return (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 400, gap: 16 }}>
+            <Loader2 size={40} style={{ color: 'var(--accent-light)', animation: 'spin 1s linear infinite' }} />
+            <p style={dimLabel}>Synchronizing Neural Data...</p>
+        </div>
+    );
+
+    const statColors = ['#34d399', '#60a5fa', 'var(--accent-light)', '#a855f7'];
     const stats = [
-        { label: 'Total Value Locked', value: `$${parseFloat(data.tvl || 0).toLocaleString()}`, icon: DollarSign, color: 'text-emerald-400' },
-        { label: 'Network Citizens', value: data.totalUsers, icon: Users, color: 'text-blue-400' },
-        { label: 'Active Contracts', value: data.totalJobs, icon: Briefcase, color: 'text-primary' },
-        { label: 'Total Ecosystem Volume', value: `$${parseFloat(data.totalVolume || 0).toLocaleString()}`, icon: Activity, color: 'text-purple-400' },
+        { label: 'Total Value Locked', value: `$${parseFloat(data.tvl || 0).toLocaleString()}`, icon: DollarSign, color: statColors[0] },
+        { label: 'Network Citizens', value: data.totalUsers, icon: Users, color: statColors[1] },
+        { label: 'Active Contracts', value: data.totalJobs, icon: Briefcase, color: statColors[2] },
+        { label: 'Total Ecosystem Volume', value: `$${parseFloat(data.totalVolume || 0).toLocaleString()}`, icon: Activity, color: statColors[3] },
     ];
 
     return (
-        <div className="space-y-8 pb-12">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 32, paddingBottom: 48 }}>
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
                 {stats.map((stat, i) => (
-                    <motion.div
-                        key={i}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: i * 0.1 }}
-                        className="glass-card !p-6 flex items-center justify-between group hover:border-primary/50 transition-all duration-500"
-                    >
+                    <div key={i} className="analytics-stat-card"
+                        style={{ ...cardBg, display: 'flex', alignItems: 'center', justifyContent: 'space-between', transition: 'border-color 0.3s ease', opacity: 0, transform: 'translateY(20px)' }}>
                         <div>
-                            <p className="text-[10px] font-black text-text-muted uppercase tracking-widest mb-1">{stat.label}</p>
-                            <h3 className="text-2xl font-black text-white tracking-tighter">{stat.value}</h3>
+                            <p style={dimLabel}>{stat.label}</p>
+                            <h3 style={{ fontSize: '1.5rem', fontWeight: 900, letterSpacing: '-0.03em' }}>
+                                {stat.label.includes('Value') || stat.label.includes('Volume') ? '$' : ''}
+                                <span ref={el => statRefs.current[i] = el} data-value={stat.value}>0</span>
+                            </h3>
                         </div>
-                        <div className={`p-3 rounded-2xl bg-white/5 ${stat.color} group-hover:scale-110 transition-transform duration-500`}>
+                        <div style={{ padding: 12, borderRadius: 16, background: 'rgba(255,255,255,0.04)', color: stat.color }}>
                             <stat.icon size={24} />
                         </div>
-                    </motion.div>
+                    </div>
                 ))}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 24 }}>
                 {/* Growth Trends */}
-                <motion.div
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="lg:col-span-2 glass-card !p-8 h-[400px] flex flex-col"
-                >
-                    <div className="flex items-center justify-between mb-8">
+                <div className="analytics-reveal"
+                    style={{ ...cardBg, height: 400, display: 'flex', flexDirection: 'column', opacity: 0, transform: 'translateY(30px)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 32 }}>
                         <div>
-                            <h3 className="text-lg font-black text-white flex items-center gap-2">
-                                <TrendingUp size={20} className="text-primary" />
-                                Ecosystem Growth
+                            <h3 style={{ fontSize: '1.1rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <TrendingUp size={20} style={{ color: 'var(--accent-light)' }} /> Ecosystem Growth
                             </h3>
-                            <p className="text-xs text-text-muted font-medium">Daily contract creation volume</p>
+                            <p style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)', fontWeight: 500 }}>Daily contract creation volume</p>
                         </div>
-                        <div className="px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-[10px] font-black text-primary uppercase tracking-widest">
-                            Live Metrics
-                        </div>
+                        <span style={{
+                            padding: '4px 12px', borderRadius: 20,
+                            background: 'rgba(124,92,252,0.08)', border: '1px solid rgba(124,92,252,0.15)',
+                            ...dimLabel, color: 'var(--accent-light)', marginBottom: 0,
+                        }}>Live Metrics</span>
                     </div>
-
-                    <div className="flex-1 w-full">
+                    <div style={{ flex: 1, width: '100%' }}>
                         <ResponsiveContainer width="100%" height="100%">
                             <AreaChart data={data.trends}>
                                 <defs>
@@ -100,124 +105,87 @@ export default function AnalyticsDashboard() {
                                     </linearGradient>
                                 </defs>
                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                                <XAxis
-                                    dataKey="date"
-                                    stroke="rgba(255,255,255,0.3)"
-                                    fontSize={10}
-                                    tickLine={false}
-                                    axisLine={false}
-                                    tickFormatter={(val) => new Date(val).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}
-                                />
-                                <YAxis
-                                    stroke="rgba(255,255,255,0.3)"
-                                    fontSize={10}
-                                    tickLine={false}
-                                    axisLine={false}
-                                />
-                                <Tooltip
-                                    contentStyle={{
-                                        backgroundColor: '#02040a',
-                                        border: '1px solid rgba(255,255,255,0.1)',
-                                        borderRadius: '12px',
-                                        fontSize: '12px',
-                                        fontWeight: '700'
-                                    }}
-                                    itemStyle={{ color: '#8b5cf6' }}
-                                />
-                                <Area
-                                    type="monotone"
-                                    dataKey="count"
-                                    stroke="#8b5cf6"
-                                    strokeWidth={3}
-                                    fillOpacity={1}
-                                    fill="url(#colorCount)"
-                                    animationDuration={2000}
-                                />
+                                <XAxis dataKey="date" stroke="rgba(255,255,255,0.3)" fontSize={10} tickLine={false} axisLine={false}
+                                    tickFormatter={(val) => new Date(val).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })} />
+                                <YAxis stroke="rgba(255,255,255,0.3)" fontSize={10} tickLine={false} axisLine={false} />
+                                <Tooltip contentStyle={{ backgroundColor: '#02040a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, fontSize: 12, fontWeight: 700 }}
+                                    itemStyle={{ color: '#8b5cf6' }} />
+                                <Area type="monotone" dataKey="count" stroke="#8b5cf6" strokeWidth={3} fillOpacity={1} fill="url(#colorCount)" animationDuration={2000} />
                             </AreaChart>
                         </ResponsiveContainer>
                     </div>
-                </motion.div>
+                </div>
 
                 {/* Category Distribution */}
-                <motion.div
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="glass-card !p-8 h-[400px] flex flex-col"
-                >
-                    <div className="mb-8">
-                        <h3 className="text-lg font-black text-white flex items-center gap-2">
-                            <PieIcon size={20} className="text-primary" />
-                            Sector Load
+                <div className="analytics-reveal"
+                    style={{ ...cardBg, height: 400, display: 'flex', flexDirection: 'column', opacity: 0, transform: 'translateY(30px)' }}>
+                    <div style={{ marginBottom: 32 }}>
+                        <h3 style={{ fontSize: '1.1rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <PieIcon size={20} style={{ color: 'var(--accent-light)' }} /> Sector Load
                         </h3>
-                        <p className="text-xs text-text-muted font-medium">Work distribution by category</p>
+                        <p style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)', fontWeight: 500 }}>Work distribution by category</p>
                     </div>
-
-                    <div className="flex-1 w-full relative">
+                    <div style={{ flex: 1, width: '100%', position: 'relative' }}>
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
-                                <Pie
-                                    data={data.categoryDistribution}
-                                    cx="50%"
-                                    cy="50%"
-                                    innerRadius={60}
-                                    outerRadius={80}
-                                    paddingAngle={5}
-                                    dataKey="value"
-                                >
+                                <Pie data={data.categoryDistribution} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
                                     {data.categoryDistribution.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                     ))}
                                 </Pie>
-                                <Tooltip
-                                    contentStyle={{
-                                        backgroundColor: '#02040a',
-                                        border: '1px solid rgba(255,255,255,0.1)',
-                                        borderRadius: '12px',
-                                        fontSize: '12px'
-                                    }}
-                                />
+                                <Tooltip contentStyle={{ backgroundColor: '#02040a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, fontSize: 12 }} />
                             </PieChart>
                         </ResponsiveContainer>
-                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                            <span className="text-[10px] font-black text-text-muted uppercase">Global</span>
-                            <span className="text-xl font-black text-white">RECAP</span>
+                        <div style={{
+                            position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+                            alignItems: 'center', justifyContent: 'center', pointerEvents: 'none',
+                        }}>
+                            <span style={{ ...dimLabel, marginBottom: 0 }}>Global</span>
+                            <span style={{ fontSize: '1.2rem', fontWeight: 900 }}>RECAP</span>
                         </div>
                     </div>
-
-                    <div className="mt-4 grid grid-cols-2 gap-2">
+                    <div style={{ marginTop: 16, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                         {data.categoryDistribution.slice(0, 4).map((entry, i) => (
-                            <div key={i} className="flex items-center gap-2">
-                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                                <span className="text-[10px] font-bold text-text-dim truncate">{entry.name}</span>
+                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: COLORS[i % COLORS.length] }} />
+                                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {entry.name}
+                                </span>
                             </div>
                         ))}
                     </div>
-                </motion.div>
+                </div>
             </div>
 
-            {/* Neural Insights Section */}
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="glass-card !bg-primary/5 border-primary/20 !p-8"
-            >
-                <div className="flex flex-col md:flex-row items-center gap-8">
-                    <div className="p-6 rounded-[2.5rem] bg-primary/20 text-primary shadow-2xl shadow-primary/20 shrink-0">
-                        <Globe size={48} className="animate-[spin_10s_linear_infinite]" />
+            {/* Neural Insights */}
+            <div className="analytics-reveal"
+                style={{ ...cardBg, background: 'rgba(124,92,252,0.04)', borderColor: 'rgba(124,92,252,0.15)', opacity: 0, transform: 'translateY(30px)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 32, flexWrap: 'wrap' }}>
+                    <div style={{
+                        padding: 24, borderRadius: 40, background: 'rgba(124,92,252,0.12)',
+                        color: 'var(--accent-light)', boxShadow: '0 25px 50px -12px rgba(124,92,252,0.2)', flexShrink: 0,
+                    }}>
+                        <Globe size={48} style={{ animation: 'spin 10s linear infinite' }} />
                     </div>
                     <div>
-                        <div className="flex items-center gap-2 mb-2">
-                            <span className="px-2 py-0.5 rounded bg-primary text-white text-[10px] font-black uppercase">AI Protocol</span>
-                            <h3 className="text-xl font-black text-white">Neural Network Insight</h3>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                            <span style={{
+                                padding: '2px 8px', borderRadius: 4, background: 'var(--accent-light)', color: '#fff',
+                                fontSize: '0.62rem', fontWeight: 900, textTransform: 'uppercase',
+                            }}>AI Protocol</span>
+                            <h3 style={{ fontSize: '1.2rem', fontWeight: 900 }}>Neural Network Insight</h3>
                         </div>
-                        <p className="text-text-dim text-sm leading-relaxed max-w-3xl font-medium">
-                            Synthesizing on-chain data: The PolyLance ecosystem is currently operating at <span className="text-primary font-bold">SUPREME</span> efficiency.
-                            Active contract volume has grown significantly in the last period, with a focus on <span className="text-emerald-400 font-bold">{data.categoryDistribution[0]?.name || 'High-Tier'}</span> projects.
-                            Reputation synchronization across Neural Nodes is maintaining a network average of <span className="text-blue-400 font-bold">{data.avgReputation.toFixed(1)}/100</span>.
+                        <p style={{ color: 'var(--text-tertiary)', fontSize: '0.88rem', lineHeight: 1.7, maxWidth: 700, fontWeight: 500 }}>
+                            Synthesizing on-chain data: The PolyLance ecosystem is currently operating at{' '}
+                            <span style={{ color: 'var(--accent-light)', fontWeight: 700 }}>SUPREME</span> efficiency.
+                            Active contract volume has grown significantly in the last period, with a focus on{' '}
+                            <span style={{ color: '#34d399', fontWeight: 700 }}>{data.categoryDistribution[0]?.name || 'High-Tier'}</span> projects.
+                            Reputation synchronization across Neural Nodes is maintaining a network average of{' '}
+                            <span style={{ color: '#60a5fa', fontWeight: 700 }}>{data.avgReputation.toFixed(1)}/100</span>.
                         </p>
                     </div>
                 </div>
-            </motion.div>
+            </div>
         </div>
     );
 }

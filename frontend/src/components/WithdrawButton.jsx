@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useWriteContract, useReadContract, usePublicClient } from 'wagmi';
 import { Coins, Loader2, RefreshCcw } from 'lucide-react';
 import FreelanceEscrowABI from '../contracts/FreelanceEscrow.json';
 import { CONTRACT_ADDRESS, SUPPORTED_TOKENS } from '../constants';
-import { formatEther } from 'viem';
+import { formatUnits } from 'viem';
 import { showPendingToast, updateToastToSuccess, updateToastToError, handleError } from '../utils/feedback';
 
 export default function WithdrawButton({ address }) {
@@ -11,7 +11,6 @@ export default function WithdrawButton({ address }) {
     const [selectedToken, setSelectedToken] = useState(SUPPORTED_TOKENS[0].address);
     const [isConfirming, setIsConfirming] = useState(false);
 
-    // Read Balance from Escalated "balances" mapping
     const { data: balanceData, refetch, isLoading: isReading } = useReadContract({
         address: CONTRACT_ADDRESS,
         abi: FreelanceEscrowABI.abi,
@@ -21,9 +20,6 @@ export default function WithdrawButton({ address }) {
 
     const { writeContractAsync, isPending } = useWriteContract();
 
-    // We handle the waiting manually/imperatively or via the feedback util if we wanted to block
-    // But since we want to show the pending toast with link immediately:
-
     const handleWithdraw = async () => {
         try {
             const hash = await writeContractAsync({
@@ -32,15 +28,10 @@ export default function WithdrawButton({ address }) {
                 functionName: 'withdraw',
                 args: [selectedToken],
             });
-
-            // Show pending toast with link
             const toastId = showPendingToast(hash);
             setIsConfirming(true);
-
-            // Wait for transaction receipt
             const receipt = await client.waitForTransactionReceipt({ hash });
             setIsConfirming(false);
-
             if (receipt.status === 'success') {
                 updateToastToSuccess(toastId, "Withdrawal Successful!");
                 refetch();
@@ -54,44 +45,49 @@ export default function WithdrawButton({ address }) {
     };
 
     return (
-        <div className="glass-card p-6 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-white/5">
-            <h3 className="text-sm font-black text-text-dim uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-                <Coins size={16} /> Withdrawable Balance
-            </h3>
+        <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+                <Coins size={16} style={{ color: 'var(--accent-light)' }} />
+                <h3 style={{ fontSize: '0.82rem', fontWeight: 700 }}>Withdrawable Balance</h3>
+            </div>
 
-            <div className="flex gap-2 mb-4">
+            <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
                 {SUPPORTED_TOKENS.map(token => (
                     <button
                         key={token.symbol}
                         onClick={() => setSelectedToken(token.address)}
-                        className={`text-xs font-bold px-3 py-1 rounded-lg border transition-all ${selectedToken === token.address
-                            ? 'bg-primary/20 border-primary text-primary'
-                            : 'bg-white/5 border-white/5 hover:bg-white/10'
-                            }`}
+                        style={{
+                            fontSize: '0.72rem', fontWeight: 700, padding: '5px 12px',
+                            borderRadius: 8, cursor: 'pointer', transition: 'all 0.15s ease',
+                            background: selectedToken === token.address ? 'rgba(124,92,252,0.12)' : 'rgba(255,255,255,0.03)',
+                            border: `1px solid ${selectedToken === token.address ? 'rgba(124,92,252,0.3)' : 'var(--border)'}`,
+                            color: selectedToken === token.address ? 'var(--accent-light)' : 'var(--text-tertiary)',
+                        }}
                     >
                         {token.symbol}
                     </button>
                 ))}
             </div>
 
-            <div className="flex items-end justify-between">
+            <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
                 <div>
-                    <div className="text-3xl font-black tracking-tight flex items-center gap-2">
-                        {balanceData ? formatEther(balanceData) : '0.0'}
-                        {isReading && <Loader2 size={16} className="animate-spin opacity-50" />}
+                    <div style={{ fontSize: '1.6rem', fontWeight: 800, letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: 8 }}>
+                        {balanceData ? formatUnits(balanceData, SUPPORTED_TOKENS.find(t => t.address === selectedToken)?.decimals || 18) : '0.0'}
+                        {isReading && <Loader2 size={14} style={{ opacity: 0.4, animation: 'spin 1s linear infinite' }} />}
                     </div>
-                    <span className="text-xs text-text-muted">Available to claim</span>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>Available to claim</span>
                 </div>
 
                 <button
                     onClick={handleWithdraw}
                     disabled={!balanceData || balanceData === 0n || isPending || isConfirming}
-                    className="btn-primary !py-2 !px-4 text-xs flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="btn btn-primary btn-sm"
+                    style={{ borderRadius: 10, display: 'flex', alignItems: 'center', gap: 6, opacity: (!balanceData || balanceData === 0n || isPending || isConfirming) ? 0.5 : 1 }}
                 >
                     {isPending || isConfirming ? (
-                        <><Loader2 className="animate-spin" size={14} /> Processing</>
+                        <><Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> Processing</>
                     ) : (
-                        <><RefreshCcw size={14} /> Withdraw</>
+                        <><RefreshCcw size={13} /> Withdraw</>
                     )}
                 </button>
             </div>

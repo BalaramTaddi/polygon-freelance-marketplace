@@ -105,20 +105,20 @@ export const useMultiChain = () => {
 
     // Get all supported chain IDs
     const getSupportedChainIds = () => {
-        return Object.keys(SUPPORTED_CHAINS).map(Number);
+        return Object.keys(SUPPORTED_CHAINS).filter(k => !isNaN(Number(k))).map(Number);
     };
 
     // Get mainnet chains only
     const getMainnetChains = () => {
         return Object.entries(SUPPORTED_CHAINS)
-            .filter(([id]) => [137, 1, 8453, 42161, 'solana'].includes(id))
+            .filter(([id]) => ['137', '1', '8453', '42161', 'solana'].includes(id))
             .map(([id, info]) => ({ id, ...info }));
     };
 
     // Get testnet chains only
     const getTestnetChains = () => {
         return Object.entries(SUPPORTED_CHAINS)
-            .filter(([id]) => [80002, 11155111, 84532, 421614, 'solana-devnet'].includes(id))
+            .filter(([id]) => ['80002', '11155111', '84532', '421614', 'solana-devnet'].includes(id))
             .map(([id, info]) => ({ id, ...info }));
     };
 
@@ -147,6 +147,8 @@ export const useMultiChain = () => {
 
         try {
             for (const [chainId, chainInfo] of Object.entries(SUPPORTED_CHAINS)) {
+                // Skip non-EVM chains (e.g. Solana) — they can't use ethers JsonRpcProvider
+                if (isNaN(Number(chainId))) continue;
                 try {
                     // Create provider for each chain
                     const provider = new ethers.JsonRpcProvider(getRpcUrl(Number(chainId)));
@@ -192,9 +194,7 @@ export const useMultiChain = () => {
 
     // Estimate cross-chain fee
     const estimateCrossChainFee = async (
-        destinationChainId,
-        messageType,
-        contractAddress
+        destinationChainId
     ) => {
         if (!signer) return null;
 

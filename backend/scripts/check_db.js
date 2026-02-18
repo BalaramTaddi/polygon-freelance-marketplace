@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
-import { Profile } from './src/models/Profile.js';
-import { JobMetadata } from './src/models/JobMetadata.js';
+import { Profile } from '../src/models/Profile.js';
+import { JobMetadata } from '../src/models/JobMetadata.js';
 
 dotenv.config();
 

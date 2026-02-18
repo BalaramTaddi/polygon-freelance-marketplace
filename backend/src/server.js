@@ -4,7 +4,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { verifyMessage, createPublicClient, http } from 'viem';
 import { polygonAmoy } from 'viem/chains';
-import { startSyncer } from './syncer.js';
+import { startSyncer } from './services/syncer.js';
 import crypto from 'crypto';
 import Stripe from 'stripe';
 import { Profile } from './models/Profile.js';
@@ -15,12 +15,14 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import multer from 'multer';
-import { uploadJSONToIPFS, uploadFileToIPFS } from './ipfs.js';
+import { uploadJSONToIPFS, uploadFileToIPFS } from './services/ipfs.js';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import hpp from 'hpp';
 import { body, validationResult } from 'express-validator';
 import { GDPRService } from './services/gdpr.js';
+
+
 
 const apiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
@@ -45,7 +47,13 @@ app.use(helmet({
 }));
 app.use(hpp()); // Prevent HTTP Parameter Pollution
 app.use(cors({
-    origin: process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',') : ['https://localhost:5173', 'https://localhost:5174', 'http://localhost:5173', 'http://localhost:5174', 'https://polygon-freelance-marketplace-onf5efcpb.vercel.app'],
+    origin: process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',') : [
+        'https://localhost:5173', 'https://localhost:5174', 'https://localhost:5175',
+        'https://localhost:5176', 'https://localhost:5177',
+        'http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175',
+        'http://localhost:5176', 'http://localhost:5177',
+        'https://polygon-freelance-marketplace-onf5efcpb.vercel.app'
+    ],
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
@@ -301,7 +309,7 @@ app.get('/api/portfolios/:address', async (req, res) => {
 app.post('/api/profiles/polish-bio', apiLimiter, async (req, res) => {
     const { name, category, skills, bio } = req.body;
     try {
-        const { polishProfileBio } = await import('./aiMatcher.js');
+        const { polishProfileBio } = await import('./services/aiMatcher.js');
         const polishedBio = await polishProfileBio(name, category, skills, bio);
         res.json({ polishedBio });
     } catch (error) {
@@ -328,7 +336,7 @@ app.get('/api/jobs/match/:jobId', apiLimiter, async (req, res) => {
             ]
         }).limit(20);
 
-        const { calculateMatchScore } = await import('./aiMatcher.js');
+        const { calculateMatchScore } = await import('./services/aiMatcher.js');
 
         const matches = await Promise.all(freelancers.map(async (f) => {
             const result = await calculateMatchScore(job.description, f);
@@ -347,10 +355,28 @@ app.get('/api/jobs/match/:jobId', apiLimiter, async (req, res) => {
     }
 });
 
+app.get('/api/match/:jobId/:address', apiLimiter, async (req, res) => {
+    const { jobId, address } = req.params;
+    try {
+        const job = await JobMetadata.findOne({ jobId: parseInt(jobId) });
+        if (!job) return res.status(404).json({ error: 'Job not found' });
+
+        const profile = await Profile.findOne({ address: { $regex: new RegExp(`^${address}$`, 'i') } });
+        if (!profile) return res.status(404).json({ error: 'Profile not found' });
+
+        const { calculateMatchScore } = await import('./services/aiMatcher.js');
+        const result = await calculateMatchScore(job.description, profile);
+
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 app.get('/api/disputes/analyze/:jobId', apiLimiter, async (req, res) => {
     const { jobId } = req.params;
     try {
-        const { analyzeDispute } = await import('./aiMatcher.js');
+        const { analyzeDispute } = await import('./services/aiMatcher.js');
         const job = await JobMetadata.findOne({ jobId: parseInt(jobId) });
         // Mocking chat and work for the Supreme demo, in prod these fetch from DB
         const result = await analyzeDispute(job, [], {});
@@ -363,7 +389,7 @@ app.get('/api/disputes/analyze/:jobId', apiLimiter, async (req, res) => {
 app.get('/api/search', async (req, res) => {
     const { q } = req.query;
     try {
-        const { determineSearchIntent } = await import('./aiMatcher.js');
+        const { determineSearchIntent } = await import('./services/aiMatcher.js');
         const intent = await determineSearchIntent(q);
 
         let filter = {};
@@ -393,27 +419,11 @@ app.get('/api/recommendations/:address', async (req, res) => {
 
         if (!profile) return res.status(404).json({ error: 'Profile not found' });
 
-        const { calculateJobRecommendations } = await import('./aiMatcher.js');
+        const { calculateJobRecommendations } = await import('./services/aiMatcher.js');
         const recommendedIds = await calculateJobRecommendations(profile, allJobs);
 
         const recommendedJobs = allJobs.filter(j => recommendedIds.includes(j.jobId));
         res.json(recommendedJobs);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-app.get('/api/match/:jobId/:address', async (req, res) => {
-    const { jobId, address } = req.params;
-    try {
-        const job = await JobMetadata.findOne({ jobId: parseInt(jobId) });
-        const profile = await Profile.findOne({ address: address.toLowerCase() });
-
-        if (!job || !profile) return res.status(404).json({ error: 'Job or profile not found' });
-
-        const { calculateMatchScore } = await import('./aiMatcher.js');
-        const matchData = await calculateMatchScore(job.description, profile);
-        res.json(matchData);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -425,7 +435,7 @@ app.post('/api/disputes/:jobId/analyze', async (req, res) => {
         const job = await JobMetadata.findOne({ jobId: parseInt(jobId) });
         if (!job) return res.status(404).json({ error: 'Job not found' });
 
-        const { analyzeDispute } = await import('./aiMatcher.js');
+        const { analyzeDispute } = await import('./services/aiMatcher.js');
         // In a real app, we'd fetch actual chat logs and work metadata
         const analysis = await analyzeDispute(job, [], job.evidence || []);
 
@@ -436,15 +446,6 @@ app.post('/api/disputes/:jobId/analyze', async (req, res) => {
         await job.save();
 
         res.json(job.disputeData);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-app.get('/api/disputes', async (req, res) => {
-    try {
-        const disputes = await JobMetadata.find({ status: 3 });
-        res.json(disputes);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -490,11 +491,11 @@ app.get('/api/analytics', async (req, res) => {
         }, {});
 
         // Monthly Trends (Jobs Created)
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 30); // 30 day history
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
         const trends = await JobMetadata.aggregate([
-            { $match: { createdAt: { $gte: sevenDaysAgo } } },
+            { $match: { createdAt: { $gte: thirtyDaysAgo } } },
             {
                 $group: {
                     _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },

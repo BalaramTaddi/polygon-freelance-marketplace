@@ -1,33 +1,37 @@
-import React from 'react';
 import { toast } from 'react-toastify';
-import { ExternalLink, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { ExternalLink, CheckCircle, XCircle } from 'lucide-react';
 
 const EXPLORER_URL = "https://amoy.polygonscan.com/tx/";
 
 export const showPendingToast = (hash) => {
     return toast.loading(
-        <div className="flex flex-col gap-1">
-            <span className="font-bold text-sm">Processing Transaction...</span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <span style={{ fontWeight: 700, fontSize: '0.88rem' }}>Processing Transaction...</span>
             {hash && (
                 <a
                     href={`${EXPLORER_URL}${hash}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 underline"
+                    style={{
+                        display: 'flex', alignItems: 'center', gap: 4,
+                        fontSize: '0.75rem', color: '#818cf8',
+                        textDecoration: 'underline',
+                    }}
                 >
                     View on Polygonscan <ExternalLink size={10} />
                 </a>
             )}
-        </div>
+        </div>,
+        { theme: 'dark' }
     );
 };
 
 export const updateToastToSuccess = (toastId, message) => {
     toast.update(toastId, {
         render: (
-            <div className="flex items-center gap-2">
-                <CheckCircle size={18} className="text-emerald-400" />
-                <span className="font-bold text-sm">{message}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <CheckCircle size={18} style={{ color: '#34d399' }} />
+                <span style={{ fontWeight: 700, fontSize: '0.88rem' }}>{message}</span>
             </div>
         ),
         type: "success",
@@ -51,9 +55,9 @@ export const updateToastToError = (toastId, error) => {
 
     toast.update(toastId, {
         render: (
-            <div className="flex items-center gap-2">
-                <XCircle size={18} className="text-red-400" />
-                <span className="font-bold text-sm">{message}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <XCircle size={18} style={{ color: '#f87171' }} />
+                <span style={{ fontWeight: 700, fontSize: '0.88rem' }}>{message}</span>
             </div>
         ),
         type: "error",
@@ -76,6 +80,7 @@ export const handleError = (error) => {
     }
 
     toast.error(message, {
-        position: "bottom-right"
+        position: "bottom-right",
+        theme: "dark"
     });
 };

@@ -1,415 +1,144 @@
-import React, { useState, useEffect } from 'react';
-import { useAccount, useContractRead, useContractWrite } from 'wagmi';
-import { formatUnits } from 'viem';
+import React, { useState } from 'react';
+import { useWriteContract } from 'wagmi';
+import { parseUnits } from 'viem';
+import {
+  FileText, CheckCircle2, CircleDollarSign, BarChart3,
+  ShieldCheck, Clock, TrendingUp, Info, ArrowUpRight
+} from 'lucide-react';
 import InvoiceNFTABI from '../abis/InvoiceNFT.json';
 
 const INVOICE_STATUS = {
-    0: { label: 'Pending', color: '#f59e0b', icon: '⏳' },
-    1: { label: 'Verified', color: '#3b82f6', icon: '✓' },
-    2: { label: 'Financed', color: '#8b5cf6', icon: '💰' },
-    3: { label: 'Paid', color: '#22c55e', icon: '✅' },
-    4: { label: 'Defaulted', color: '#ef4444', icon: '❌' },
-    5: { label: 'Disputed', color: '#f97316', icon: '⚠️' }
+  0: { label: 'Pending', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.1)', icon: <Clock size={16} /> },
+  1: { label: 'Verified', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.1)', icon: <CheckCircle2 size={16} /> },
+  2: { label: 'Financed', color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.1)', icon: <CircleDollarSign size={16} /> },
+  3: { label: 'Paid', color: '#22c55e', bg: 'rgba(34, 197, 94, 0.1)', icon: <CheckCircle2 size={16} /> },
+  4: { label: 'Defaulted', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.1)', icon: <Info size={16} /> },
+  5: { label: 'Disputed', color: '#f97316', bg: 'rgba(249, 115, 22, 0.1)', icon: <Info size={16} /> }
 };
 
 export default function InvoiceMarketplace({ contractAddress }) {
-    const { address } = useAccount();
-    const [invoices, setInvoices] = useState([]);
-    const [selectedInvoice, setSelectedInvoice] = useState(null);
-    const [offerAmount, setOfferAmount] = useState('');
+  const [offerAmount, setOfferAmount] = useState('');
 
-    // Fetch user's invoices (as issuer)
-    const { data: issuerInvoices } = useContractRead({
-        address: contractAddress,
-        abi: InvoiceNFTABI,
-        functionName: 'getIssuerInvoices',
-        args: [address],
-        enabled: !!address
+  const { writeContract, isPending: isFinancing } = useWriteContract();
+
+  const handleFinance = (invoiceId) => {
+    if (!offerAmount) return;
+    writeContract({
+      address: contractAddress,
+      abi: InvoiceNFTABI.abi,
+      functionName: 'financeInvoice',
+      args: [BigInt(invoiceId), parseUnits(offerAmount, 6)]
     });
+  };
 
-    // Finance invoice
-    const { write: financeInvoice, isLoading: isFinancing } = useContractWrite({
-        address: contractAddress,
-        abi: InvoiceNFTABI,
-        functionName: 'financeInvoice'
-    });
+  const calculateAPR = (faceValue, offerAmount, daysUntilDue) => {
+    const profit = faceValue - offerAmount;
+    const apr = (profit / offerAmount) * (365 / daysUntilDue) * 100;
+    return apr.toFixed(1);
+  };
 
-    const handleFinance = (invoiceId) => {
-        if (!offerAmount) return;
+  // Mock data for UI
+  const invoices = [
+    { id: 1, issuer: '0x742...bEb', debtor: 'Acme Corp', faceValue: 10000, dueDate: Date.now() + 60 * 24 * 60 * 60 * 1000, status: 1, isVerified: true },
+    { id: 2, issuer: '0x862...119', debtor: 'TechStart Inc', faceValue: 25000, dueDate: Date.now() + 45 * 24 * 60 * 60 * 1000, status: 1, isVerified: true },
+    { id: 3, issuer: '0xdD2...44C0', debtor: 'Global Services LLC', faceValue: 50000, dueDate: Date.now() + 90 * 24 * 60 * 60 * 1000, status: 1, isVerified: true }
+  ];
 
-        financeInvoice({
-            args: [BigInt(invoiceId), parseUnits(offerAmount, 6)],
-            value: 0n // Assuming USDC payment
-        });
-    };
+  return (
+    <div style={{ padding: '24px 0' }}>
+      <header style={{ textAlign: 'center', marginBottom: 48 }}>
+        <h1 style={{ fontSize: '2.5rem', fontWeight: 900, marginBottom: 12, background: 'linear-gradient(135deg, #fff, rgba(255,255,255,0.6))', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          Invoice Liquidity
+        </h1>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem', maxWidth: 650, margin: '0 auto' }}>
+          Finance verified corporate invoices for immediate liquidity and earn high-yield returns as an institutional funder.
+        </p>
+      </header>
 
-    const calculateDiscount = (faceValue, offerAmount) => {
-        const discount = ((faceValue - offerAmount) / faceValue) * 100;
-        return discount.toFixed(2);
-    };
-
-    const calculateAPR = (faceValue, offerAmount, daysUntilDue) => {
-        const profit = faceValue - offerAmount;
-        const apr = (profit / offerAmount) * (365 / daysUntilDue) * 100;
-        return apr.toFixed(2);
-    };
-
-    return (
-        <div className="invoice-marketplace">
-            <div className="marketplace-header">
-                <h1>📄 Invoice Marketplace</h1>
-                <p>Finance invoices at a discount and earn yield</p>
+      {/* Metrics */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 20, marginBottom: 48 }}>
+        {[
+          { label: 'Market Depth', value: '$1.4M', icon: <CircleDollarSign size={24} />, color: 'var(--accent-light)' },
+          { label: 'Active Notes', value: '38', icon: <FileText size={24} />, color: 'var(--info)' },
+          { label: 'Avg Yield', value: '14.2%', icon: <TrendingUp size={24} />, color: 'var(--success)' }
+        ].map((stat, i) => (
+          <div key={i} className="card" style={{ display: 'flex', alignItems: 'center', gap: 20, padding: 24 }}>
+            <div style={{ width: 52, height: 52, borderRadius: 12, background: `${stat.color}10`, color: stat.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {stat.icon}
             </div>
-
-            <div className="marketplace-stats">
-                <div className="stat-card">
-                    <div className="stat-icon">💼</div>
-                    <div className="stat-content">
-                        <div className="stat-value">24</div>
-                        <div className="stat-label">Active Invoices</div>
-                    </div>
-                </div>
-                <div className="stat-card">
-                    <div className="stat-icon">💰</div>
-                    <div className="stat-content">
-                        <div className="stat-value">$1.2M</div>
-                        <div className="stat-label">Total Volume</div>
-                    </div>
-                </div>
-                <div className="stat-card">
-                    <div className="stat-icon">📈</div>
-                    <div className="stat-content">
-                        <div className="stat-value">12.5%</div>
-                        <div className="stat-label">Avg APR</div>
-                    </div>
-                </div>
+            <div>
+              <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#fff' }}>{stat.value}</div>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{stat.label}</div>
             </div>
+          </div>
+        ))}
+      </div>
 
-            <div className="invoice-grid">
-                {/* Example invoices - in production, fetch from contract */}
-                {[
-                    {
-                        id: 1,
-                        issuer: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb',
-                        debtor: 'Acme Corp',
-                        faceValue: 10000,
-                        dueDate: Date.now() + 60 * 24 * 60 * 60 * 1000,
-                        status: 1,
-                        isVerified: true
-                    },
-                    {
-                        id: 2,
-                        issuer: '0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199',
-                        debtor: 'TechStart Inc',
-                        faceValue: 25000,
-                        dueDate: Date.now() + 45 * 24 * 60 * 60 * 1000,
-                        status: 1,
-                        isVerified: true
-                    },
-                    {
-                        id: 3,
-                        issuer: '0xdD2FD4581271e230360230F9337D5c0430Bf44C0',
-                        debtor: 'Global Services LLC',
-                        faceValue: 50000,
-                        dueDate: Date.now() + 90 * 24 * 60 * 60 * 1000,
-                        status: 1,
-                        isVerified: true
-                    }
-                ].map((invoice) => {
-                    const daysUntilDue = Math.floor((invoice.dueDate - Date.now()) / (24 * 60 * 60 * 1000));
-                    const suggestedOffer = invoice.faceValue * 0.95; // 5% discount
-                    const apr = calculateAPR(invoice.faceValue, suggestedOffer, daysUntilDue);
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: 24 }}>
+        {invoices.map((invoice) => {
+          const daysLeft = Math.floor((invoice.dueDate - Date.now()) / (24 * 60 * 60 * 1000));
+          const suggested = invoice.faceValue * 0.94;
+          const apr = calculateAPR(invoice.faceValue, suggested, daysLeft);
+          const status = INVOICE_STATUS[invoice.status];
 
-                    return (
-                        <div key={invoice.id} className="invoice-card">
-                            <div className="invoice-header">
-                                <div className="invoice-id">Invoice #{invoice.id}</div>
-                                <div
-                                    className="invoice-status"
-                                    style={{ color: INVOICE_STATUS[invoice.status].color }}
-                                >
-                                    {INVOICE_STATUS[invoice.status].icon} {INVOICE_STATUS[invoice.status].label}
-                                </div>
-                            </div>
+          return (
+            <div key={invoice.id} className="card" style={{ position: 'relative', overflow: 'hidden' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                <div style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text-tertiary)' }}>INV-{invoice.id.toString().padStart(6, '0')}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 20, background: status.bg, color: status.color, fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase' }}>
+                  {status.icon} {status.label}
+                </div>
+              </div>
 
-                            <div className="invoice-details">
-                                <div className="detail-row">
-                                    <span className="detail-label">Debtor:</span>
-                                    <span className="detail-value">{invoice.debtor}</span>
-                                </div>
-                                <div className="detail-row">
-                                    <span className="detail-label">Face Value:</span>
-                                    <span className="detail-value face-value">${invoice.faceValue.toLocaleString()}</span>
-                                </div>
-                                <div className="detail-row">
-                                    <span className="detail-label">Due In:</span>
-                                    <span className="detail-value">{daysUntilDue} days</span>
-                                </div>
-                                <div className="detail-row">
-                                    <span className="detail-label">Suggested Offer:</span>
-                                    <span className="detail-value suggested-offer">${suggestedOffer.toLocaleString()}</span>
-                                </div>
-                            </div>
+              <div style={{ marginBottom: 24 }}>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 4 }}>Debtor Entity</div>
+                <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#fff' }}>{invoice.debtor}</div>
+              </div>
 
-                            <div className="invoice-metrics">
-                                <div className="metric">
-                                    <div className="metric-label">Discount</div>
-                                    <div className="metric-value discount">5%</div>
-                                </div>
-                                <div className="metric">
-                                    <div className="metric-label">Est. APR</div>
-                                    <div className="metric-value apr">{apr}%</div>
-                                </div>
-                                {invoice.isVerified && (
-                                    <div className="verified-badge">
-                                        ✓ AI Verified
-                                    </div>
-                                )}
-                            </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24, padding: '16px 0', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
+                <div>
+                  <div style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 4 }}>Face Value</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#fff' }}>${invoice.faceValue.toLocaleString()}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 4 }}>Due In</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--accent-light)' }}>{daysLeft} Days</div>
+                </div>
+              </div>
 
-                            <div className="finance-section">
-                                <input
-                                    type="number"
-                                    placeholder="Your offer (USDC)"
-                                    className="offer-input"
-                                    onChange={(e) => setOfferAmount(e.target.value)}
-                                />
-                                <button
-                                    className="btn-finance"
-                                    onClick={() => handleFinance(invoice.id)}
-                                    disabled={isFinancing}
-                                >
-                                    {isFinancing ? '⏳ Processing...' : '💰 Finance Invoice'}
-                                </button>
-                            </div>
-                        </div>
-                    );
-                })}
+              <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
+                <div style={{ flex: 1, padding: 12, borderRadius: 12, background: 'rgba(124, 92, 252, 0.05)', border: '1px solid rgba(124, 92, 252, 0.1)' }}>
+                  <div style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', fontWeight: 700, marginBottom: 4 }}>DISCOUNT</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#fff' }}>6.0%</div>
+                </div>
+                <div style={{ flex: 1, padding: 12, borderRadius: 12, background: 'rgba(52, 211, 153, 0.05)', border: '1px solid rgba(52, 211, 153, 0.1)' }}>
+                  <div style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', fontWeight: 700, marginBottom: 4 }}>EST. APR</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--success)' }}>{apr}%</div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: 10 }}>
+                <input
+                  className="form-input"
+                  type="number"
+                  placeholder="Offer (USDC)"
+                  style={{ flex: 1, height: 44 }}
+                  onChange={(e) => setOfferAmount(e.target.value)}
+                />
+                <button className="btn-primary" style={{ flex: 1.2, height: 44, gap: 8 }} onClick={() => handleFinance(invoice.id)} disabled={isFinancing}>
+                  {isFinancing ? 'Financing...' : <><CircleDollarSign size={16} /> Finance</>}
+                </button>
+              </div>
+
+              {invoice.isVerified && (
+                <div style={{ position: 'absolute', top: 50, right: -25, transform: 'rotate(45deg)', background: 'var(--success)', color: '#000', fontSize: '0.55rem', fontWeight: 900, padding: '4px 30px', boxShadow: '0 0 10px rgba(52, 211, 153, 0.4)' }}>
+                  AI VERIFIED
+                </div>
+              )}
             </div>
-
-            <style jsx>{`
-        .invoice-marketplace {
-          padding: 2rem;
-          max-width: 1400px;
-          margin: 0 auto;
-        }
-
-        .marketplace-header {
-          text-align: center;
-          margin-bottom: 3rem;
-        }
-
-        .marketplace-header h1 {
-          font-size: 2.5rem;
-          margin-bottom: 0.5rem;
-          background: linear-gradient(135deg, #6366f1, #a855f7);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-        }
-
-        .marketplace-header p {
-          color: #94a3b8;
-          font-size: 1.125rem;
-        }
-
-        .marketplace-stats {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-          gap: 1.5rem;
-          margin-bottom: 3rem;
-        }
-
-        .stat-card {
-          display: flex;
-          align-items: center;
-          gap: 1rem;
-          padding: 1.5rem;
-          background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(168, 85, 247, 0.1));
-          border: 1px solid rgba(99, 102, 241, 0.2);
-          border-radius: 12px;
-          transition: all 0.3s ease;
-        }
-
-        .stat-card:hover {
-          transform: translateY(-4px);
-          box-shadow: 0 10px 30px rgba(99, 102, 241, 0.2);
-        }
-
-        .stat-icon {
-          font-size: 2.5rem;
-        }
-
-        .stat-value {
-          font-size: 2rem;
-          font-weight: 700;
-          color: #e2e8f0;
-        }
-
-        .stat-label {
-          color: #94a3b8;
-          font-size: 0.875rem;
-        }
-
-        .invoice-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-          gap: 2rem;
-        }
-
-        .invoice-card {
-          background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.8));
-          border: 1px solid rgba(99, 102, 241, 0.2);
-          border-radius: 16px;
-          padding: 1.5rem;
-          transition: all 0.3s ease;
-        }
-
-        .invoice-card:hover {
-          transform: translateY(-4px);
-          box-shadow: 0 20px 40px rgba(99, 102, 241, 0.3);
-          border-color: rgba(99, 102, 241, 0.4);
-        }
-
-        .invoice-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 1.5rem;
-          padding-bottom: 1rem;
-          border-bottom: 1px solid rgba(99, 102, 241, 0.2);
-        }
-
-        .invoice-id {
-          font-weight: 700;
-          font-size: 1.125rem;
-          color: #e2e8f0;
-        }
-
-        .invoice-status {
-          font-size: 0.875rem;
-          font-weight: 600;
-        }
-
-        .invoice-details {
-          margin-bottom: 1.5rem;
-        }
-
-        .detail-row {
-          display: flex;
-          justify-content: space-between;
-          margin-bottom: 0.75rem;
-        }
-
-        .detail-label {
-          color: #94a3b8;
-          font-size: 0.875rem;
-        }
-
-        .detail-value {
-          color: #e2e8f0;
-          font-weight: 600;
-        }
-
-        .face-value {
-          color: #6366f1;
-          font-size: 1.125rem;
-        }
-
-        .suggested-offer {
-          color: #22c55e;
-        }
-
-        .invoice-metrics {
-          display: flex;
-          gap: 1rem;
-          margin-bottom: 1.5rem;
-          flex-wrap: wrap;
-        }
-
-        .metric {
-          flex: 1;
-          min-width: 80px;
-          text-align: center;
-          padding: 0.75rem;
-          background: rgba(99, 102, 241, 0.1);
-          border-radius: 8px;
-        }
-
-        .metric-label {
-          font-size: 0.75rem;
-          color: #94a3b8;
-          margin-bottom: 0.25rem;
-        }
-
-        .metric-value {
-          font-size: 1.25rem;
-          font-weight: 700;
-        }
-
-        .discount {
-          color: #f59e0b;
-        }
-
-        .apr {
-          color: #22c55e;
-        }
-
-        .verified-badge {
-          flex: 1;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 0.75rem;
-          background: rgba(34, 197, 94, 0.1);
-          border: 1px solid rgba(34, 197, 94, 0.3);
-          border-radius: 8px;
-          color: #22c55e;
-          font-size: 0.875rem;
-          font-weight: 600;
-        }
-
-        .finance-section {
-          display: flex;
-          gap: 0.75rem;
-        }
-
-        .offer-input {
-          flex: 1;
-          padding: 0.75rem;
-          background: rgba(15, 23, 42, 0.6);
-          border: 1px solid rgba(99, 102, 241, 0.3);
-          border-radius: 8px;
-          color: #e2e8f0;
-          font-size: 1rem;
-        }
-
-        .offer-input:focus {
-          outline: none;
-          border-color: #6366f1;
-        }
-
-        .btn-finance {
-          padding: 0.75rem 1.5rem;
-          background: linear-gradient(135deg, #6366f1, #a855f7);
-          color: white;
-          border: none;
-          border-radius: 8px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          white-space: nowrap;
-        }
-
-        .btn-finance:hover:not(:disabled) {
-          transform: translateY(-2px);
-          box-shadow: 0 10px 20px rgba(99, 102, 241, 0.4);
-        }
-
-        .btn-finance:disabled {
-          opacity: 0.6;
-          cursor: not-allowed;
-        }
-      `}</style>
-        </div>
-    );
+          );
+        })}
+      </div>
+    </div>
+  );
 }

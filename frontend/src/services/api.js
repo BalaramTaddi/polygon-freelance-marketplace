@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://localhost:3001/api';
 
 const handleResponse = async (response) => {
     if (!response.ok) {
@@ -51,6 +51,8 @@ export const api = {
 
     getMatchScore: (jobId, address) => safeFetch(`${API_URL}/match/${jobId}/${address}`),
 
+    getJobMatches: (jobId) => safeFetch(`${API_URL}/jobs/match/${jobId}`),
+
     createStripeOnrampSession: (address) => safeFetch(`${API_URL}/stripe/create-onramp-session`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -72,7 +74,6 @@ export const api = {
     }),
 
     // Auth helpers for Smart Accounts and SIWE
-    getNonce: (address) => safeFetch(`${API_URL}/auth/nonce/${address}`),
     verifySIWE: (message, signature) => safeFetch(`${API_URL}/auth/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

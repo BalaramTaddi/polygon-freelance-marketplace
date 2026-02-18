@@ -1,5 +1,4 @@
 import { useWriteContract, useAccount, usePublicClient } from 'wagmi';
-import { parseEther } from 'viem';
 import FreelanceEscrowABI from '../contracts/FreelanceEscrow.json';
 import { CONTRACT_ADDRESS } from '../constants';
 import { uploadJSONToIPFS } from '../utils/ipfs';

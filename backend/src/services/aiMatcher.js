@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import axios from 'axios';
-import { Profile } from './models/Profile.js';
+import { Profile } from '../models/Profile.js';
 
 // Load Gemini API Key from environment
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -149,11 +149,15 @@ function fallbackMatch(jobDescription, freelancerProfile) {
  * AI Profile Polish
  * Enhances a user's bio based on their skills and category.
  */
+
+function generateFallbackBio(name, category, skills, roughBio) {
+    return `[Auto-Enhanced] A highly skilled ${category} specialist with expertise in ${skills}. ${roughBio} Committed to delivering high-quality decentralized solutions on the Polygon network.`;
+}
+
 export async function polishProfileBio(name, category, skills, roughBio) {
     if (!process.env.GEMINI_API_KEY) {
         console.warn("[AI] Key missing, using fallback polish.");
-        // Fallback simulation for demo/dev without API key
-        return `[Auto-Enhanced] A highly skilled ${category} specialist with expertise in ${skills}. ${roughBio} Committed to delivering high-quality decentralized solutions on the Polygon network.`;
+        return generateFallbackBio(name, category, skills, roughBio);
     }
 
     try {
@@ -180,7 +184,8 @@ export async function polishProfileBio(name, category, skills, roughBio) {
         return (await result.response).text().trim();
     } catch (e) {
         console.error("AI Polish Error:", e);
-        return roughBio;
+        // Fallback to simulation if api fails (e.g. invalid key)
+        return generateFallbackBio(name, category, skills, roughBio);
     }
 }
 

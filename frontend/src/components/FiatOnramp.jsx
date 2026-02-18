@@ -1,33 +1,24 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { loadStripeOnramp } from '@stripe/crypto';
-import { api } from '../services/api'; // Ensure this path is correct based on folder structure
+import { api } from '../services/api';
 import { Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { toast } from 'react-toastify';
 
 const FiatOnramp = ({ address }) => {
     const onrampElementRef = useRef(null);
-    const [status, setStatus] = useState('idle'); // idle, loading, ready, error
+    const [status, setStatus] = useState('idle');
     const [onrampInstance, setOnrampInstance] = useState(null);
     const [clientSecret, setClientSecret] = useState('');
     const [stripeError, setStripeError] = useState(null);
 
     useEffect(() => {
-        // 1. Initialize Stripe Onramp SDK
         const initStripe = async () => {
             if (onrampInstance) return;
-
             try {
-                // Use public key from env or fallback (should be in .env)
                 const publishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
-
-                if (!publishableKey) {
-                    console.warn("Stripe Publishable Key not found in env, onramp might fail.");
-                }
-
-                const onramp = await loadStripeOnramp(publishableKey || 'pk_test_51...'); // Fallback for dev only
-                if (!onramp) {
-                    throw new Error("Failed to load Stripe Onramp SDK");
-                }
+                if (!publishableKey) console.warn("Stripe Publishable Key not found in env.");
+                const onramp = await loadStripeOnramp(publishableKey || 'pk_test_51...');
+                if (!onramp) throw new Error("Failed to load Stripe Onramp SDK");
                 setOnrampInstance(onramp);
             } catch (err) {
                 console.error("[ONRAMP] Init failed:", err);
@@ -35,33 +26,19 @@ const FiatOnramp = ({ address }) => {
                 setStripeError("Could not initialize Stripe Onramp.");
             }
         };
-
         initStripe();
     }, [onrampInstance]);
 
     useEffect(() => {
-        // 2. Fetch Session & Mount
         const createSessionAndMount = async () => {
             if (!onrampInstance || !address || clientSecret) return;
-
             setStatus('loading');
             try {
-                console.log("[ONRAMP] Creating session for:", address);
-                const response = await api.createStripeOnrampSession(address); // Use updated API method
-
+                const response = await api.createStripeOnrampSession(address);
                 if (response.error) throw new Error(response.error);
-
                 const { client_secret } = response;
                 setClientSecret(client_secret);
-
-                // Mount the Onramp UI
-                const session = onrampInstance.createSession({
-                    clientSecret: client_secret,
-                    appearance: {
-                        theme: 'dark', // Match app theme
-                    }
-                });
-
+                const session = onrampInstance.createSession({ clientSecret: client_secret, appearance: { theme: 'dark' } });
                 if (onrampElementRef.current) {
                     session.mount(onrampElementRef.current);
                     setStatus('ready');
@@ -75,53 +52,71 @@ const FiatOnramp = ({ address }) => {
                 toast.error("Fiat Onramp unreachable: " + err.message);
             }
         };
-
         createSessionAndMount();
     }, [onrampInstance, address, clientSecret]);
 
     return (
-        <div className="flex flex-col h-full w-full p-6 md:p-8 animate-in fade-in zoom-in duration-300">
-            <header className="mb-8">
-                <h1 className="text-3xl font-black tracking-tighter text-white mb-2 uppercase italic">
-                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-600">Fiat</span> To Crypto
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', padding: 28 }}>
+            <header style={{ marginBottom: 36 }}>
+                <h1 style={{ fontSize: '2rem', fontWeight: 900, letterSpacing: '-0.03em', marginBottom: 8 }}>
+                    <span style={{
+                        background: 'linear-gradient(135deg, #34d399, #059669)',
+                        WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                    }}>Fiat</span> To Crypto
                 </h1>
-                <p className="text-text-muted font-medium text-sm max-w-2xl">
+                <p style={{ color: 'var(--text-secondary)', fontWeight: 500, fontSize: '0.92rem', maxWidth: 600 }}>
                     Seamlessly convert your fiat currency into Polygon assets using Stripe's secure onramp.
                     Power up your wallet instantly.
                 </p>
             </header>
 
-            <div className="flex-1 min-h-[500px] flex justify-center">
-                <div className="w-full max-w-[480px] bg-[#1a1b26] border border-white/5 rounded-3xl overflow-hidden shadow-2xl relative">
-
-                    {/* Status Overlays */}
+            <div style={{ flex: 1, minHeight: 500, display: 'flex', justifyContent: 'center' }}>
+                <div style={{
+                    width: '100%', maxWidth: 480,
+                    background: '#1a1b26', border: '1px solid rgba(255,255,255,0.05)',
+                    borderRadius: 24, overflow: 'hidden',
+                    boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', position: 'relative',
+                }}>
+                    {/* Loading */}
                     {status === 'loading' && (
-                        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm">
-                            <Loader2 className="h-10 w-10 text-primary animate-spin mb-4" />
-                            <span className="text-white font-bold tracking-widest text-xs uppercase">Initializing Secure Link...</span>
+                        <div style={{
+                            position: 'absolute', inset: 0, zIndex: 20,
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                            background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(6px)',
+                        }}>
+                            <Loader2 size={40} style={{ color: 'var(--accent-light)', animation: 'spin 1s linear infinite', marginBottom: 16 }} />
+                            <span style={{ color: 'white', fontWeight: 700, letterSpacing: '0.12em', fontSize: '0.75rem', textTransform: 'uppercase' }}>
+                                Initializing Secure Link...
+                            </span>
                         </div>
                     )}
 
+                    {/* Error */}
                     {status === 'error' && (
-                        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/90 p-8 text-center">
-                            <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
-                            <h3 className="text-white font-bold text-lg mb-2">Connection Failed</h3>
-                            <p className="text-text-muted text-sm mb-6">{stripeError}</p>
-                            <button
-                                onClick={() => window.location.reload()}
-                                className="flex items-center gap-2 px-6 py-2 bg-white/10 hover:bg-white/20 rounded-full text-white text-xs font-bold transition-all"
-                            >
+                        <div style={{
+                            position: 'absolute', inset: 0, zIndex: 20,
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                            background: 'rgba(0,0,0,0.9)', padding: 32, textAlign: 'center',
+                        }}>
+                            <AlertCircle size={48} style={{ color: '#ef4444', marginBottom: 16 }} />
+                            <h3 style={{ color: 'white', fontWeight: 700, fontSize: '1.1rem', marginBottom: 8 }}>Connection Failed</h3>
+                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', marginBottom: 24 }}>{stripeError}</p>
+                            <button onClick={() => window.location.reload()}
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: 8, padding: '8px 24px',
+                                    background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 20,
+                                    color: 'white', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer',
+                                    transition: 'background 0.2s ease',
+                                }}
+                                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
+                                onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}>
                                 <RefreshCw size={14} /> Retry
                             </button>
                         </div>
                     )}
 
-                    {/* The Stripe Container */}
-                    <div
-                        id="onramp-element"
-                        ref={onrampElementRef}
-                        className="w-full h-full min-h-[600px]" // Stripe needs height
-                    />
+                    {/* Stripe element */}
+                    <div id="onramp-element" ref={onrampElementRef} style={{ width: '100%', height: '100%', minHeight: 600 }} />
                 </div>
             </div>
         </div>

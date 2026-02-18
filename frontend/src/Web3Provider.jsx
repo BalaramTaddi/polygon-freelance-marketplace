@@ -63,7 +63,6 @@ export function Web3Provider({ children }) {
 
     const config = useMemo(() => {
         const alchemyId = import.meta.env.VITE_ALCHEMY_ID;
-        const infuraId = import.meta.env.VITE_INFURA_ID;
 
         return getDefaultConfig({
             appName: 'PolyLance',

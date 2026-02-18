@@ -1,430 +1,236 @@
 import React, { useState } from 'react';
-import { useAccount, useWalletClient, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
-import { parseEther, parseUnits, erc20Abi } from 'viem';
-import { Send, Loader2, Info, CreditCard, Plus, Trash2, Calendar, Target, DollarSign, Cpu, Sparkles } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { initSocialLogin, createJobGasless } from '../utils/biconomy';
-import { showPendingToast, updateToastToSuccess, updateToastToError, handleError } from '../utils/feedback';
+import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { parseUnits } from 'viem';
+import { Send, Loader2, Info, Plus, Trash2, Target, Cpu, Sparkles } from 'lucide-react';
+import { createJobGasless } from '../utils/biconomy';
 import StripeOnrampModal from './StripeOnrampModal';
 import FreelanceEscrowABI from '../contracts/FreelanceEscrow.json';
 import { CONTRACT_ADDRESS, SUPPORTED_TOKENS } from '../constants';
-import { api } from '../services/api';
 import { uploadJSONToIPFS } from '../utils/ipfs';
 import { useTransactionToast } from '../hooks/useTransactionToast';
-import { createBiconomySmartAccount } from '../utils/biconomy';
+import { useAnimeAnimations } from '../hooks/useAnimeAnimations';
+
+const st = {
+    page: { maxWidth: 800, margin: '0 auto' },
+    header: { textAlign: 'center', marginBottom: 36 },
+    badge: {
+        display: 'inline-flex', alignItems: 'center', gap: 6,
+        padding: '5px 12px', borderRadius: 8,
+        background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.15)',
+        marginBottom: 18,
+    },
+    badgeText: {
+        fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase',
+        letterSpacing: '0.08em', color: 'var(--success)',
+    },
+    title: {
+        fontSize: '2rem', fontWeight: 900, letterSpacing: '-0.03em', marginBottom: 8, color: '#fff'
+    },
+    subtitle: {
+        fontSize: '0.9rem', color: 'var(--text-secondary)', maxWidth: 500, margin: '0 auto', lineHeight: 1.6,
+    },
+    form: {
+        borderRadius: 16, padding: 32,
+        background: 'linear-gradient(145deg, rgba(17,17,40,0.6), rgba(13,13,34,0.6))',
+        border: '1px solid var(--border)',
+    },
+    section: { marginBottom: 24 },
+    sectionTitle: {
+        display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14,
+    },
+    sectionLabel: { fontSize: '0.78rem', fontWeight: 700 },
+    row: (cols) => ({
+        display: 'grid', gridTemplateColumns: cols, gap: 14,
+    }),
+    inputWrap: { marginBottom: 14 },
+    label: { display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' },
+    input: { width: '100%', padding: '12px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'rgba(0,0,0,0.2)', color: 'var(--text-primary)', fontSize: '0.9rem' },
+    select: { width: '100%', padding: '12px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'rgba(0,0,0,0.2)', color: 'var(--text-primary)', fontSize: '0.9rem' },
+    actions: { display: 'flex', gap: 12, marginTop: 28 },
+};
 
 function CreateJob({ onJobCreated, gasless, smartAccount }) {
     const [freelancer, setFreelancer] = useState('');
     const [amount, setAmount] = useState('');
     const [title, setTitle] = useState('');
-    const [description, setDescription] = useState('');
     const [category, setCategory] = useState('Development');
     const [selectedToken, setSelectedToken] = useState(SUPPORTED_TOKENS[0]);
-    const [paymentToken, setPaymentToken] = useState(SUPPORTED_TOKENS[0]);
-    const [paymentAmount, setPaymentAmount] = useState('');
-    const [yieldStrategy, setYieldStrategy] = useState(0); // 0: NONE, 1: AAVE, 2: COMPOUND, 3: MORPHO
+    const [yieldStrategy, setYieldStrategy] = useState(0);
     const [milestones, setMilestones] = useState([{ amount: '', description: '' }]);
     const [durationDays, setDurationDays] = useState('7');
-    const [activeIpfsHash, setActiveIpfsHash] = useState('');
-    const [isApproving, setIsApproving] = useState(false);
     const [isStripeModalOpen, setIsStripeModalOpen] = useState(false);
     const [isProcessingGasless, setIsProcessingGasless] = useState(false);
     const { address } = useAccount();
-    const { data: walletClient } = useWalletClient();
-    // Use smartAccount from props
 
-    const { data: hash, writeContract, writeContractAsync, isPending, error } = useWriteContract();
-    const { data: jobCount } = useReadContract({
-        address: CONTRACT_ADDRESS,
-        abi: FreelanceEscrowABI.abi,
-        functionName: 'jobCount',
-    });
+    // Anime.js hooks
+    const headerRef = React.useRef(null);
+    const { slideInLeft, staggerFadeIn } = useAnimeAnimations();
 
+    React.useEffect(() => {
+        if (headerRef.current) slideInLeft(headerRef.current, 30);
+        setTimeout(() => staggerFadeIn('.create-job-section', 80), 200);
+    }, []);
+
+
+
+    const { data: hash, writeContract, isPending, error } = useWriteContract();
     const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
     useTransactionToast(hash, isPending, isConfirming, isSuccess, error);
 
     const handleAddMilestone = () => setMilestones([...milestones, { amount: '', description: '' }]);
     const handleRemoveMilestone = (idx) => setMilestones(milestones.filter((_, i) => i !== idx));
     const handleMilestoneChange = (index, field, value) => {
-        const newMilestones = [...milestones];
-        newMilestones[index][field] = value;
-        setMilestones(newMilestones);
-    };
-
-    const handleApprove = async () => {
-        if (selectedToken.address === '0x0000000000000000000000000000000000000000') return;
-        setIsApproving(true);
-        try {
-            const rawAmount = parseUnits(amount, selectedToken.decimals);
-            await writeContract({
-                address: selectedToken.address,
-                abi: erc20Abi,
-                functionName: 'approve',
-                args: [CONTRACT_ADDRESS, rawAmount],
-            });
-        } finally { setIsApproving(false); }
+        const n = [...milestones]; n[index][field] = value; setMilestones(n);
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!freelancer || !amount || !title) return;
         const rawAmount = parseUnits(amount, selectedToken.decimals);
-
-        let ipfsHash = description;
+        let ipfsHash = '';
         try {
             ipfsHash = await uploadJSONToIPFS({
-                title, description, category, client: address, freelancer, amount, token: selectedToken.symbol,
+                title, category, client: address, freelancer, amount, token: selectedToken.symbol,
                 milestones: milestones.map(m => ({ amount: m.amount, description: m.description }))
             });
-            setActiveIpfsHash(ipfsHash);
         } catch (err) { console.error('IPFS failed:', err); }
 
-        const currentTimestamp = Math.floor(Date.now() / 1000);
-        const deadline = durationDays > 0 ? currentTimestamp + (Number(durationDays) * 86400) : 0;
-
-        const params = {
-            categoryId: 1, // Defaulting to Development for now
-            freelancer: freelancer || '0x0000000000000000000000000000000000000000',
-            token: selectedToken.address,
-            amount: rawAmount,
-            ipfsHash,
-            deadline: BigInt(deadline),
-            mAmounts: milestones.filter(m => m.amount).map(m => parseUnits(m.amount, selectedToken.decimals)),
-            mHashes: milestones.filter(m => m.amount).map(m => m.description || ""),
-            mIsUpfront: milestones.map(() => false),
-            yieldStrategy: yieldStrategy,
-            paymentToken: paymentToken.address,
-            paymentAmount: paymentToken.address === '0x0000000000000000000000000000000000000000' ? 0n : parseUnits(paymentAmount || amount, paymentToken.decimals),
-            minAmountOut: parseUnits(amount, selectedToken.decimals) * 99n / 100n // 1% slippage
-        };
+        const deadline = Math.floor(Date.now() / 1000) + (Number(durationDays) * 86400);
 
         if (gasless && smartAccount) {
             setIsProcessingGasless(true);
-            const toastId = showPendingToast();
             try {
-                const txHash = await createJobGasless(smartAccount, CONTRACT_ADDRESS, FreelanceEscrowABI.abi, params);
-                updateToastToSuccess(toastId, "Gasless Job Created!");
-                // Trigger the same success logic as Wagmi
-                api.saveJobMetadata({
-                    jobId: Number(jobCount) + 1,
-                    title,
-                    description,
-                    category,
-                    ipfsHash,
-                    milestones: milestones.filter(m => m.amount).map(m => ({
-                        amount: m.amount,
-                        description: m.description,
-                        isReleased: false
-                    }))
-                })
-                    .then(() => onJobCreated()).catch(err => { console.error(err); onJobCreated(); });
-                setIsProcessingGasless(false);
-                return;
-            } catch (err) {
-                console.error('[BICONOMY] Gasless failed, falling back:', err);
-                updateToastToError(toastId, err);
-                setIsProcessingGasless(false);
-            }
+                const res = await createJobGasless(smartAccount, CONTRACT_ADDRESS, FreelanceEscrowABI.abi, {
+                    categoryId: 1, freelancer, token: selectedToken.address, amount: rawAmount, ipfsHash, deadline: BigInt(deadline),
+                    mAmounts: milestones.filter(m => m.amount).map(m => parseUnits(m.amount, selectedToken.decimals)),
+                    mHashes: milestones.filter(m => m.amount).map(m => m.description || "")
+                });
+                if (res) onJobCreated();
+            } catch (err) { console.error(err); }
+            finally { setIsProcessingGasless(false); }
+            return;
         }
 
-        try {
-            await writeContractAsync({
-                address: CONTRACT_ADDRESS,
-                abi: FreelanceEscrowABI.abi,
-                functionName: 'createJob',
-                args: [params],
-                value: paymentToken.symbol === 'MATIC' ? parseEther(paymentAmount || amount) : 0n
-            });
-        } catch (error) {
-            handleError(error);
-        }
+        writeContract({
+            address: CONTRACT_ADDRESS, abi: FreelanceEscrowABI.abi, functionName: 'createJob',
+            args: [1, freelancer, selectedToken.address, rawAmount, ipfsHash, BigInt(deadline),
+                milestones.filter(m => m.amount).map(m => parseUnits(m.amount, selectedToken.decimals)),
+                milestones.filter(m => m.amount).map(m => m.description || "")]
+        });
     };
 
-    React.useEffect(() => {
-        if (isSuccess && jobCount !== undefined) {
-            api.saveJobMetadata({
-                jobId: Number(jobCount),
-                title,
-                description,
-                category,
-                ipfsHash: activeIpfsHash, // Use the hash from state
-                milestones: milestones.filter(m => m.amount).map(m => ({
-                    amount: m.amount,
-                    description: m.description,
-                    isReleased: false
-                }))
-            })
-                .then(() => onJobCreated()).catch(err => { console.error(err); onJobCreated(); });
-        }
-    }, [isSuccess, jobCount, activeIpfsHash]);
+    React.useEffect(() => { if (isSuccess) onJobCreated(); }, [isSuccess]);
 
     return (
-        <div className="animate-fade">
-            <header className="mb-12 text-center">
-                <div className="flex justify-center mb-6">
-                    <div className="badge !bg-emerald-500/20 !text-emerald-400 !border-emerald-500/20 !px-4 !py-2 flex items-center gap-2 animate-bounce">
-                        <Sparkles size={14} />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Sponsorship Eligible: First Job Gas-Free</span>
-                    </div>
+        <div style={st.page}>
+            <div ref={headerRef} style={{ ...st.header, opacity: 0 }}>
+                <div style={st.badge}>
+                    <Sparkles size={12} className="text-emerald-400" />
+                    <span style={st.badgeText}>New Opportunity</span>
                 </div>
-                <h1 className="text-6xl font-black mb-6 tracking-tighter shimmer-text">
-                    Post a Mandate
-                </h1>
-                <p className="text-text-muted text-xl max-w-2xl mx-auto leading-relaxed font-medium mb-10">
-                    Secure the best talent with automated on-chain escrow protection.
-                </p>
-                {gasless && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="mt-4 inline-flex items-center gap-3 px-6 py-3 bg-primary/10 border border-primary/20 rounded-2xl"
-                    >
-                        <Sparkles size={18} className="text-primary animate-pulse" />
-                        <span className="text-xs font-black uppercase tracking-widest text-primary">Platform Sponsored: 100% Gas Free</span>
-                    </motion.div>
-                )}
-            </header>
+                <h1 style={st.title}>Initialize Contract</h1>
+                <p style={st.subtitle}>Create a secure, decentralized task agreement on the Polygon network.</p>
+            </div>
 
-            <form onSubmit={handleSubmit} className="glass-card max-w-4xl mx-auto p-12">
-                <div className="input-group">
-                    <label className="input-label">Project Identity</label>
-                    <div style={{ position: 'relative' }}>
-                        <Target size={18} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)' }} />
-                        <input
-                            type="text"
-                            placeholder="e.g. Next-Gen DEX Interface Design"
-                            className="input-field"
-                            style={{ paddingLeft: '48px' }}
-                            value={title}
-                            onChange={(e) => setTitle(e.target.value)}
-                            required
-                        />
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                {/* 1. Job Basics */}
+                <div className="card create-job-section" style={{ ...st.card, opacity: 0, transform: 'translateY(20px)' }}>
+                    <div style={st.inputWrap}>
+                        <label style={st.label}>Project Title</label>
+                        <input type="text" style={st.input} placeholder="e.g. DEX Interface Design"
+                            value={title} onChange={(e) => setTitle(e.target.value)} required />
                     </div>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                    <div className="input-group mb-0">
-                        <label className="input-label">Project Category</label>
-                        <select
-                            className="input-field"
-                            value={category}
-                            onChange={(e) => setCategory(e.target.value)}
-                        >
-                            <option>Development</option>
-                            <option>Design</option>
-                            <option>Marketing</option>
-                            <option>Writing</option>
-                        </select>
-                    </div>
-                    <div className="input-group mb-0">
-                        <label className="input-label">Talent Address (Pro)</label>
-                        <input
-                            type="text"
-                            placeholder="0x..."
-                            className="input-field"
-                            value={freelancer}
-                            onChange={(e) => setFreelancer(e.target.value)}
-                            required
-                        />
-                    </div>
-                </div>
-
-                <div className="glass-panel mb-8">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                        <div className="input-group mb-0 md:col-span-2">
-                            <label className="input-label">Budget</label>
-                            <div className="relative">
-                                <DollarSign size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-dim" />
-                                <input
-                                    type="number"
-                                    step="0.01"
-                                    placeholder="Amount"
-                                    className="input-field pl-12"
-                                    value={amount}
-                                    onChange={(e) => setAmount(e.target.value)}
-                                    required
-                                />
-                            </div>
-                        </div>
-                        <div className="input-group mb-0">
-                            <label className="input-label">Asset</label>
-                            <select
-                                className="input-field"
-                                value={selectedToken.symbol}
-                                onChange={(e) => setSelectedToken(SUPPORTED_TOKENS.find(t => t.symbol === e.target.value))}
-                            >
-                                {SUPPORTED_TOKENS.map(t => <option key={t.symbol}>{t.symbol}</option>)}
+                    <div style={{ ...st.row('1fr 1fr'), marginBottom: 20 }}>
+                        <div>
+                            <label style={st.label}>Category</label>
+                            <select style={st.select} value={category} onChange={(e) => setCategory(e.target.value)}>
+                                <option>Development</option><option>Design</option>
+                                <option>Marketing</option><option>Writing</option>
                             </select>
                         </div>
-                        <div className="input-group mb-0">
-                            <label className="input-label">Due Days</label>
-                            <div className="relative">
-                                <Calendar size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-dim" />
-                                <input
-                                    type="number"
-                                    placeholder="7"
-                                    className="input-field pl-12"
-                                    value={durationDays}
-                                    onChange={(e) => setDurationDays(e.target.value)}
-                                    required
-                                />
-                            </div>
+                        <div>
+                            <label style={st.label}>Freelancer Address</label>
+                            <input type="text" style={st.input} placeholder="0x..."
+                                value={freelancer} onChange={(e) => setFreelancer(e.target.value)} required />
                         </div>
                     </div>
                 </div>
 
-                <div className="glass-panel mb-8 !bg-emerald-500/5 !border-emerald-500/10">
-                    <div className="flex items-center gap-3 mb-6">
-                        <Cpu size={20} className="text-emerald-400" />
-                        <h4 className="text-sm font-black uppercase tracking-widest text-emerald-400">Yield Optimization</h4>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="input-group mb-0">
-                            <label className="input-label">DeFi Strategy</label>
-                            <select
-                                className="input-field"
-                                value={yieldStrategy}
-                                onChange={(e) => setYieldStrategy(Number(e.target.value))}
-                            >
-                                <option value={0}>None (No Staking)</option>
-                                <option value={1}>Aave V3 (Instant Yield)</option>
-                                <option value={2}>Compound V3 (Optimized)</option>
-                                <option value={3}>Morpho Blue (Higher APY)</option>
-                            </select>
-                        </div>
-                        <div className="flex items-center gap-4 text-xs text-text-muted mt-6">
-                            <Info size={14} />
-                            <span>Funds earn yield in chosen protocol until released.</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="glass-panel mb-8 !bg-primary/5 !border-primary/10">
-                    <div className="flex items-center justify-between mb-6">
-                        <div className="flex items-center gap-3">
-                            <CreditCard size={20} className="text-primary" />
-                            <h4 className="text-sm font-black uppercase tracking-widest text-primary">Instant Conversion</h4>
-                        </div>
-                        <div className="badge !bg-primary/20 !text-primary text-[10px]">Quantum Swap Enabled</div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="input-group mb-0">
-                            <label className="input-label">Pay With</label>
-                            <select
-                                className="input-field"
-                                value={paymentToken.symbol}
-                                onChange={(e) => setPaymentToken(SUPPORTED_TOKENS.find(t => t.symbol === e.target.value))}
-                            >
-                                {SUPPORTED_TOKENS.map(t => <option key={t.symbol}>{t.symbol}</option>)}
-                            </select>
-                        </div>
-                        <div className="input-group mb-0 md:col-span-2">
-                            <label className="input-label">Payment Amount (Optional if same Asset)</label>
-                            <div className="relative">
-                                <DollarSign size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-dim" />
-                                <input
-                                    type="number"
-                                    step="0.01"
-                                    placeholder={amount}
-                                    className="input-field pl-12"
-                                    value={paymentAmount}
-                                    onChange={(e) => setPaymentAmount(e.target.value)}
-                                />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {gasless && (
-                    <div className="glass-panel !bg-primary/[0.03] !border-primary/10 p-6 mb-8 flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
-                                <Cpu size={24} />
+                {/* 2. Budget & Duration */}
+                <div className="card create-job-section" style={{ ...st.card, opacity: 0, transform: 'translateY(20px)' }}>
+                    <div style={{ padding: 20, borderRadius: 14, background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)', marginBottom: 24 }}>
+                        <div style={{ ...st.row('2fr 1fr 1fr'), gap: 16 }}>
+                            <div>
+                                <label style={st.label}>Budget</label>
+                                <input type="number" step="0.01" style={st.input} placeholder="0.00"
+                                    value={amount} onChange={(e) => setAmount(e.target.value)} required />
                             </div>
                             <div>
-                                <h4 className="text-sm font-black uppercase tracking-tight">Quantum Gas Relay</h4>
-                                <p className="text-[10px] text-text-muted font-medium">Biconomy Paymaster active. No MATIC required for deployment.</p>
+                                <label style={st.label}>Asset</label>
+                                <select style={st.select} value={selectedToken.symbol}
+                                    onChange={(e) => setSelectedToken(SUPPORTED_TOKENS.find(t => t.symbol === e.target.value))}>
+                                    {SUPPORTED_TOKENS.map(t => <option key={t.symbol}>{t.symbol}</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label style={st.label}>Duration (days)</label>
+                                <input type="number" style={st.input} placeholder="7"
+                                    value={durationDays} onChange={(e) => setDurationDays(e.target.value)} required />
                             </div>
                         </div>
-                        <div className="px-4 py-2 bg-emerald-500/10 text-emerald-500 rounded-xl border border-emerald-500/20 text-[10px] font-black uppercase tracking-widest">
-                            Ready
+                    </div>
+                </div>
+
+                {/* 3. Yield Strategy */}
+                <div className="card create-job-section" style={{ ...st.card, opacity: 0, transform: 'translateY(20px)' }}>
+                    <div style={{ padding: 20, borderRadius: 14, background: 'rgba(52,211,153,0.03)', border: '1px solid rgba(52,211,153,0.1)', marginBottom: 24 }}>
+                        <div style={st.sectionTitle}>
+                            <Cpu size={16} style={{ color: 'var(--success)' }} />
+                            <span style={{ ...st.sectionLabel, color: 'var(--success)' }}>Yield Strategy</span>
+                        </div>
+                        <div style={st.row('1fr 1fr')}>
+                            <select style={st.select} value={yieldStrategy} onChange={(e) => setYieldStrategy(Number(e.target.value))}>
+                                <option value={0}>Standard (No Yield)</option>
+                                <option value={1}>Aave V3 (MATIC Optimizer)</option>
+                                <option value={2}>Compound (USDC Yield)</option>
+                            </select>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
+                                <Info size={14} /> Funds earn interest until released to freelancer.
+                            </div>
                         </div>
                     </div>
-                )}
+                </div>
 
-                <div style={{ marginBottom: '32px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                        <label className="input-label" style={{ marginBottom: 0 }}>Project Milestones</label>
-                        <button type="button" onClick={handleAddMilestone} className="btn-ghost" style={{ padding: '6px 14px', fontSize: '0.8rem' }}>
-                            <Plus size={14} /> Add Phase
+                {/* 4. Milestones */}
+                <div className="card create-job-section" style={{ ...st.card, opacity: 0, transform: 'translateY(20px)' }}>
+                    <div style={st.section}>
+                        <div style={st.sectionTitle}>
+                            <Target size={16} style={{ color: 'var(--accent-light)' }} />
+                            <span style={st.sectionLabel}>Milestones</span>
+                        </div>
+                        {milestones.map((m, i) => (
+                            <div key={i} style={{ ...st.row('120px 1fr 40px'), marginBottom: 10 }}>
+                                <input type="number" style={st.input} placeholder="Amount" value={m.amount} onChange={(e) => handleMilestoneChange(i, 'amount', e.target.value)} />
+                                <input type="text" style={st.input} placeholder="Description" value={m.description} onChange={(e) => handleMilestoneChange(i, 'description', e.target.value)} />
+                                <button type="button" onClick={() => handleRemoveMilestone(i)} style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer' }}><Trash2 size={18} /></button>
+                            </div>
+                        ))}
+                        <button type="button" onClick={handleAddMilestone} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--accent-light)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700 }}>
+                            <Plus size={14} /> Add Milestone
                         </button>
                     </div>
-                    {milestones.map((m, index) => (
-                        <div key={index} style={{ display: 'grid', gridTemplateColumns: '1fr 2fr auto', gap: '12px', marginBottom: '12px' }}>
-                            <input
-                                type="number"
-                                placeholder="Amount"
-                                className="input-field"
-                                value={m.amount}
-                                onChange={(e) => handleMilestoneChange(index, 'amount', e.target.value)}
-                            />
-                            <input
-                                type="text"
-                                placeholder="Objective / Phase Description"
-                                className="input-field"
-                                value={m.description}
-                                onChange={(e) => handleMilestoneChange(index, 'description', e.target.value)}
-                            />
-                            {milestones.length > 1 && (
-                                <button type="button" onClick={() => handleRemoveMilestone(index)} className="btn-ghost" style={{ color: 'var(--danger)', padding: '12px' }}>
-                                    <Trash2 size={18} />
-                                </button>
-                            )}
-                        </div>
-                    ))}
                 </div>
 
-                <div className="input-group">
-                    <label className="input-label">Project Brief (Stored on IPFS)</label>
-                    <textarea
-                        placeholder="Define scope, requirements, and deliverables..."
-                        className="input-field"
-                        style={{ minHeight: '160px', borderRadius: '20px' }}
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                    />
-                </div>
-
-                <div className="flex flex-col md:flex-row gap-4 mt-10">
-                    <button
-                        type="button"
-                        className="btn-ghost"
-                        style={{ flex: 1, gap: '12px' }}
-                        onClick={() => setIsStripeModalOpen(true)}
-                    >
-                        <CreditCard size={20} /> Fiat Onramp
-                    </button>
-                    <button
-                        type="submit"
-                        className="btn-primary"
-                        style={{ flex: 2, justifyContent: 'center' }}
-                        disabled={isPending || isConfirming || isProcessingGasless}
-                    >
-                        {isPending || isConfirming || isProcessingGasless ? (
-                            <><Loader2 className="animate-spin" size={20} /> Processing On-Chain...</>
-                        ) : (
-                            <><Cpu size={20} /> Deploy Escrow Contract</>
-                        )}
+                {/* Actions */}
+                <div className="create-job-section" style={{ display: 'flex', gap: 16, justifyContent: 'flex-end', opacity: 0, transform: 'translateY(20px)' }}>
+                    <button type="submit" disabled={isPending || isProcessingGasless} className="btn btn-primary" style={{ flex: 1, height: 48, borderRadius: 12, justifyContent: 'center' }}>
+                        {isPending || isProcessingGasless ? <Loader2 size={18} className="animate-spin" /> : <><Send size={18} /> Post Escrow</>}
                     </button>
                 </div>
-            </form >
-
-            <StripeOnrampModal
-                address={address}
-                isOpen={isStripeModalOpen}
-                onClose={() => setIsStripeModalOpen(false)}
-            />
-        </div >
+            </form>
+            <StripeOnrampModal isOpen={isStripeModalOpen} onClose={() => setIsStripeModalOpen(false)} address={address} />
+        </div>
     );
 }
 

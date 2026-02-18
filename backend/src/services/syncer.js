@@ -1,40 +1,48 @@
 import { createPublicClient, http, parseAbiItem } from 'viem';
-import { localhost } from 'viem/chains';
+import { localhost, polygonAmoy } from 'viem/chains';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { JobMetadata } from './models/JobMetadata.js';
-import { Profile } from './models/Profile.js';
+import dotenv from 'dotenv';
+import { JobMetadata } from '../models/JobMetadata.js';
+import { Profile } from '../models/Profile.js';
 import { sendNotification } from './notifications.js';
+
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const IS_AMOY = process.env.NETWORK === 'amoy';
+
 // Try to load deployment addresses dynamically
-let CONTRACT_ADDRESS = '0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9';
-let CROSS_CHAIN_MANAGER_ADDRESS = '0x5C4aF960570bFc0861198A699435b54FC9012345';
+let CONTRACT_ADDRESS = IS_AMOY ? '0x25F6C8ed995C811E6c0ADb1D66A60830E8115e9A' : '0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9';
+let CROSS_CHAIN_MANAGER_ADDRESS = IS_AMOY ? '0x5C4aF960570bFc0861198A699435b54FC9012345' : '0x5C4aF960570bFc0861198A699435b54FC9012345';
 
 try {
-    const deployPath = path.join(__dirname, '../../contracts/scripts/deployment_addresses.json');
+    const deployPath = path.join(__dirname, '../../../contracts/scripts/deployment_addresses.json');
     if (fs.existsSync(deployPath)) {
         const deployData = JSON.parse(fs.readFileSync(deployPath, 'utf8'));
-        CONTRACT_ADDRESS = deployData.FreelanceEscrow;
-        CROSS_CHAIN_MANAGER_ADDRESS = deployData.CrossChainEscrowManager || CROSS_CHAIN_MANAGER_ADDRESS;
+        // Only override if the file network matches our environment network
+        if (deployData.network === (IS_AMOY ? 'amoy' : 'localhost')) {
+            CONTRACT_ADDRESS = deployData.FreelanceEscrow;
+            CROSS_CHAIN_MANAGER_ADDRESS = deployData.CrossChainEscrowManager || CROSS_CHAIN_MANAGER_ADDRESS;
+        }
     }
 } catch (err) {
     console.warn('Could not load dynamic contract addresses, using defaults');
 }
 
 // Load ABIs
-const abiPath = path.join(__dirname, 'contracts', 'FreelanceEscrow.json');
-const crossChainAbiPath = path.join(__dirname, 'contracts', 'CrossChainEscrowManager.json');
+const abiPath = path.join(__dirname, '../contracts', 'FreelanceEscrow.json');
+const crossChainAbiPath = path.join(__dirname, '../contracts', 'CrossChainEscrowManager.json');
 
 const abi = JSON.parse(fs.readFileSync(abiPath, 'utf8')).abi;
 const crossChainAbi = JSON.parse(fs.readFileSync(crossChainAbiPath, 'utf8')).abi;
 
 const client = createPublicClient({
-    chain: localhost,
-    transport: http(),
+    chain: IS_AMOY ? polygonAmoy : localhost,
+    transport: http(IS_AMOY ? (process.env.RPC_URL || 'https://rpc-amoy.polygon.technology') : 'http://localhost:8545'),
 });
 
 export async function startSyncer() {
@@ -89,7 +97,7 @@ export async function startSyncer() {
         onLogs: async (logs) => {
             for (const log of logs) {
                 try {
-                    const { freelancer, amount } = log.args;
+                    const { jobId, freelancer, amount } = log.args;
                     const maticAmount = Number(amount) / 1e18;
                     console.log(`Job Completed! Updating reputation for ${freelancer}: +${maticAmount} MATIC`);
 

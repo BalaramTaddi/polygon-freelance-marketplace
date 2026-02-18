@@ -1,5 +1,5 @@
 import * as PushAPI from "@pushprotocol/restapi";
-import * as ethers from "ethers";
+import { Wallet } from "ethers";
 
 const PUSH_CHANNEL_PRIVATE_KEY = process.env.PUSH_CHANNEL_PRIVATE_KEY;
 const PUSH_CHANNEL_ADDRESS = process.env.PUSH_CHANNEL_ADDRESS;
@@ -14,7 +14,7 @@ export const sendNotification = async (recipient, title, body) => {
     }
 
     try {
-        const signer = new ethers.Wallet(PUSH_CHANNEL_PRIVATE_KEY);
+        const signer = new Wallet(PUSH_CHANNEL_PRIVATE_KEY);
 
         const apiResponse = await PushAPI.payloads.sendNotification({
             signer,
@@ -48,7 +48,7 @@ export const broadcastNotification = async (title, body) => {
     if (!PUSH_CHANNEL_PRIVATE_KEY || !PUSH_CHANNEL_ADDRESS) return;
 
     try {
-        const signer = new ethers.Wallet(PUSH_CHANNEL_PRIVATE_KEY);
+        const signer = new Wallet(PUSH_CHANNEL_PRIVATE_KEY);
 
         await PushAPI.payloads.sendNotification({
             signer,

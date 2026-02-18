@@ -54,7 +54,7 @@ export const uploadFileToIPFS = async (fileBuffer, fileName) => {
             'https://api.pinata.cloud/pinning/pinFileToIPFS',
             formData,
             {
-                maxBodyLength: 'Infinity',
+                maxBodyLength: Infinity,
                 headers: {
                     'Content-Type': `multipart/form-data; boundary=${formData._boundary}`,
                     pinata_api_key: PINATA_API_KEY,

@@ -4,10 +4,6 @@ import { Sparkles, TrendingUp, AlertCircle, Zap } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://localhost:3001/api';
 
-/**
- * AiMatchRating Component
- * Displays a beautiful, AI-powered match score and reasoning for a specific job/freelancer pair.
- */
 const AiMatchRating = ({ jobId, freelancerAddress }) => {
     const [match, setMatch] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -16,86 +12,90 @@ const AiMatchRating = ({ jobId, freelancerAddress }) => {
     useEffect(() => {
         const fetchMatch = async () => {
             try {
-                // Fetch direct synergy score between freelancer and job via Gemini 2.0
                 const response = await axios.get(`${API_BASE_URL}/match/${jobId}/${freelancerAddress}`);
                 setMatch(response.data);
             } catch (err) {
                 console.error('AI Match Fetch Error:', err);
                 setError('AI Match unavailable');
-            } finally {
-                setLoading(false);
-            }
+            } finally { setLoading(false); }
         };
-
-        if (jobId && freelancerAddress) {
-            fetchMatch();
-        }
+        if (jobId && freelancerAddress) fetchMatch();
     }, [jobId, freelancerAddress]);
 
     if (loading) return (
-        <div className="flex items-center space-x-2 text-sm text-gray-500 animate-pulse">
-            <Sparkles size={14} className="text-purple-500" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.85rem', color: 'var(--text-tertiary)', opacity: 0.7 }}>
+            <Sparkles size={14} style={{ color: 'var(--accent-light)' }} />
             <span>AI Analyzing...</span>
         </div>
     );
 
     if (error || !match) return null;
 
-    const getScoreColor = (score) => {
-        if (score >= 0.8) return 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20';
-        if (score >= 0.5) return 'text-amber-400 bg-amber-400/10 border-amber-400/20';
-        return 'text-rose-400 bg-rose-400/10 border-rose-400/20';
+    const getScoreStyle = (score) => {
+        if (score >= 0.8) return { color: '#34d399', bg: 'rgba(52,211,153,0.08)', border: 'rgba(52,211,153,0.2)' };
+        if (score >= 0.5) return { color: '#fbbf24', bg: 'rgba(251,191,36,0.08)', border: 'rgba(251,191,36,0.2)' };
+        return { color: '#f87171', bg: 'rgba(248,113,113,0.08)', border: 'rgba(248,113,113,0.2)' };
     };
+    const s = getScoreStyle(match.score);
+    const dimLabel = { fontSize: '0.58rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.6, marginBottom: 4 };
 
     return (
-        <div className={`mt-3 p-4 rounded-xl border transition-all duration-300 ${getScoreColor(match.score)}`}>
-            <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center space-x-2">
-                    <div className="p-1.5 rounded-lg bg-white/10">
+        <div style={{
+            marginTop: 12, padding: 16, borderRadius: 14, border: `1px solid ${s.border}`,
+            background: s.bg, color: s.color, transition: 'all 0.3s ease',
+        }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ padding: 6, borderRadius: 8, background: 'rgba(255,255,255,0.1)' }}>
                         <Sparkles size={16} />
                     </div>
                     <div>
-                        <span className="text-[10px] font-black uppercase tracking-widest block opacity-70">Gemini Strategic Match</span>
-                        <span className="text-xs font-bold leading-none">{match.riskLevel} Risk Profile</span>
+                        <span style={{ ...dimLabel, display: 'block' }}>Gemini Strategic Match</span>
+                        <span style={{ fontSize: '0.78rem', fontWeight: 700 }}>{match.riskLevel} Risk Profile</span>
                     </div>
                 </div>
-                <div className="text-2xl font-black">
+                <div style={{ fontSize: '1.5rem', fontWeight: 900 }}>
                     {Math.round(match.score * 100)}%
                 </div>
             </div>
 
-            <p className="text-xs mb-4 leading-relaxed font-medium">
-                "{match.reason}"
+            <p style={{ fontSize: '0.78rem', marginBottom: 16, lineHeight: 1.6, fontWeight: 500 }}>
+                &quot;{match.reason}&quot;
             </p>
 
-            <div className="grid grid-cols-2 gap-4 mb-4">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
                 {match.strengths?.length > 0 && (
                     <div>
-                        <span className="text-[9px] font-black uppercase tracking-tighter block mb-1 opacity-60">Strengths</span>
-                        <ul className="text-[10px] space-y-0.5 list-disc list-inside font-bold">
-                            {match.strengths.slice(0, 2).map((s, i) => <li key={i}>{s}</li>)}
+                        <span style={dimLabel}>Strengths</span>
+                        <ul style={{ fontSize: '0.72rem', fontWeight: 700, listStyleType: 'disc', paddingLeft: 16, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                            {match.strengths.slice(0, 2).map((st, i) => <li key={i}>{st}</li>)}
                         </ul>
                     </div>
                 )}
                 {match.gaps?.length > 0 && (
                     <div>
-                        <span className="text-[9px] font-black uppercase tracking-tighter block mb-1 opacity-60">Gaps</span>
-                        <ul className="text-[10px] space-y-0.5 list-disc list-inside font-bold opacity-80">
+                        <span style={dimLabel}>Gaps</span>
+                        <ul style={{ fontSize: '0.72rem', fontWeight: 700, listStyleType: 'disc', paddingLeft: 16, display: 'flex', flexDirection: 'column', gap: 2, opacity: 0.8 }}>
                             {match.gaps.slice(0, 2).map((g, i) => <li key={i}>{g}</li>)}
                         </ul>
                     </div>
                 )}
             </div>
 
-            <div className="pt-3 border-t border-white/10">
-                <div className="flex items-center gap-2 text-[10px]">
-                    <Zap size={10} className="text-primary fill-primary" />
-                    <span className="font-black uppercase">Pro-Tip:</span>
-                    <span className="opacity-90">{match.proTip}</span>
+            <div style={{ paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.72rem' }}>
+                    <Zap size={10} style={{ fill: 'currentColor' }} />
+                    <span style={{ fontWeight: 900, textTransform: 'uppercase' }}>Pro-Tip:</span>
+                    <span style={{ opacity: 0.9 }}>{match.proTip}</span>
                 </div>
                 {match.agentNotes && (
-                    <div className="mt-4 p-3 rounded-lg bg-white/5 border border-white/5 text-[10px] font-mono text-text-dim uppercase tracking-tighter italic">
-                        <span className="text-primary mr-2">AGENT_LOG:</span>
+                    <div style={{
+                        marginTop: 16, padding: 12, borderRadius: 10,
+                        background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.05)',
+                        fontSize: '0.72rem', fontFamily: 'monospace', fontStyle: 'italic',
+                        textTransform: 'uppercase', letterSpacing: '-0.02em', color: 'var(--text-tertiary)',
+                    }}>
+                        <span style={{ color: 'var(--accent-light)', marginRight: 8 }}>AGENT_LOG:</span>
                         {match.agentNotes}
                     </div>
                 )}

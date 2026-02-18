@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAccount, useContractRead, useContractWrite } from 'wagmi';
+
 import './SpecialistMarketplace.css';
 
 /**
@@ -7,7 +7,6 @@ import './SpecialistMarketplace.css';
  * Browse and hire Web3 specialists by category
  */
 const SpecialistMarketplace = () => {
-    const { address } = useAccount();
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [specialists, setSpecialists] = useState([]);
     const [categoryStats, setCategoryStats] = useState({});
@@ -117,12 +116,12 @@ const SpecialistMarketplace = () => {
 
     useEffect(() => {
         if (selectedCategory !== null) {
-            fetchSpecialists(selectedCategory);
-            fetchCategoryStats(selectedCategory);
+            fetchSpecialists();
+            fetchCategoryStats();
         }
     }, [selectedCategory]);
 
-    const fetchSpecialists = async (categoryId) => {
+    const fetchSpecialists = async () => {
         // In production, fetch from smart contract or subgraph
         // Mock data for demonstration
         const mockSpecialists = [
@@ -176,7 +175,7 @@ const SpecialistMarketplace = () => {
         setSpecialists(mockSpecialists);
     };
 
-    const fetchCategoryStats = async (categoryId) => {
+    const fetchCategoryStats = async () => {
         // Mock stats
         setCategoryStats({
             activeSpecialists: 234,

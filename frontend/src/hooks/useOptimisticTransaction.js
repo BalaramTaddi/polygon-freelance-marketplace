@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
-import { usePublicClient, useWalletClient } from 'wagmi';
-import { toast } from 'react-hot-toast';
+import { usePublicClient } from 'wagmi';
+import { toast } from 'react-toastify';
 
 /**
  * useOptimisticTransaction Hook
@@ -25,10 +25,10 @@ export function useOptimisticTransaction() {
         // 1. Instantly update UI with optimistic data
         if (optimisticData) {
             setOptimisticState(prev => ({ ...prev, ...optimisticData }));
-            toast.success(`${transactionLabel} submitted!`, {
-                id: 'optimistic-toast',
-                icon: '⚡',
-                duration: 2000
+            toast.info(`⚡ ${transactionLabel} submitted!`, {
+                toastId: 'optimistic-toast',
+                autoClose: 2000,
+                theme: 'dark'
             });
         }
 
@@ -48,8 +48,11 @@ export function useOptimisticTransaction() {
 
             if (receipt.status === 'success') {
                 if (onConfirmed) onConfirmed(receipt);
-                toast.success(`${transactionLabel} confirmed on-chain!`, {
-                    id: 'optimistic-toast',
+                toast.update('optimistic-toast', {
+                    render: `${transactionLabel} confirmed on-chain!`,
+                    type: 'success',
+                    isLoading: false,
+                    autoClose: 5000
                 });
             } else {
                 throw new Error("Transaction reverted on-chain");
@@ -67,8 +70,11 @@ export function useOptimisticTransaction() {
                 });
             }
 
-            toast.error(`${transactionLabel} failed: ${error.message}`, {
-                id: 'optimistic-toast',
+            toast.update('optimistic-toast', {
+                render: `${transactionLabel} failed: ${error.message}`,
+                type: 'error',
+                isLoading: false,
+                autoClose: 5000
             });
 
             if (onError) onError(error);

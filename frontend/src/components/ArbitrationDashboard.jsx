@@ -9,7 +9,6 @@ import { CONTRACT_ADDRESS, CROSS_CHAIN_ESCROW_MANAGER_ADDRESS } from '../constan
 import { api } from '../services/api';
 import { toast } from 'react-toastify';
 import { useAnimeAnimations } from '../hooks/useAnimeAnimations';
-import { animate, stagger } from 'animejs';
 
 const ArbitrationDashboard = () => {
     const { address } = useAccount();
@@ -18,50 +17,30 @@ const ArbitrationDashboard = () => {
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [loading, setLoading] = useState(true);
 
-    // Anime.js hooks
-    const { staggerFadeIn, slideInLeft, slideInRight, scaleIn, float, glitch, bounceIn, revealOnScroll } = useAnimeAnimations();
+    const { staggerFadeIn, slideInLeft, revealOnScroll } = useAnimeAnimations();
     const headerRef = useRef(null);
-    const statsRef = useRef(null);
 
     const { data: arbitratorRole } = useReadContract({
-        address: CONTRACT_ADDRESS,
-        abi: FreelanceEscrowABI.abi,
+        address: CONTRACT_ADDRESS, abi: FreelanceEscrowABI.abi,
         functionName: 'hasRole',
-        args: ['0x16ceee8289685dd2a02b9c8ae81d2df373176ce53519e6284e2a2950d6546ffa', address], // ARBITRATOR_ROLE
+        args: ['0x16ceee8289685dd2a02b9c8ae81d2df373176ce53519e6284e2a2950d6546ffa', address],
     });
 
     const isAdmin = arbitratorRole || false;
-
     const { writeContract } = useWriteContract();
 
     useEffect(() => {
         fetchDisputes();
-
-        // Animate header on mount
-        if (headerRef.current) {
-            slideInLeft(headerRef.current);
-        }
-
-        // Animate dispute cards with stagger
-        setTimeout(() => {
-            staggerFadeIn('.dispute-card', 100);
-        }, 300);
-
-        // Setup scroll-based reveals
+        if (headerRef.current) slideInLeft(headerRef.current);
+        setTimeout(() => staggerFadeIn('.dispute-card', 100), 300);
         const cleanup = revealOnScroll('.glass-card');
-
         return cleanup;
     }, []);
 
     const fetchDisputes = async () => {
-        try {
-            const data = await api.getDisputes();
-            setDisputes(data);
-        } catch (err) {
-            console.error('Failed to fetch disputes:', err);
-        } finally {
-            setLoading(false);
-        }
+        try { const data = await api.getDisputes(); setDisputes(data); }
+        catch (err) { console.error('Failed to fetch disputes:', err); }
+        finally { setLoading(false); }
     };
 
     const handleAnalyze = async (jobId) => {
@@ -70,55 +49,36 @@ const ArbitrationDashboard = () => {
             const analysis = await api.analyzeDispute(jobId);
             setSelectedJob(prev => ({ ...prev, disputeData: analysis }));
             toast.success("AI Arbitration Analysis Complete");
-        } catch (err) {
-            toast.error("AI Analysis Failed");
-        } finally {
-            setIsAnalyzing(false);
-        }
+        } catch { toast.error("AI Analysis Failed"); }
+        finally { setIsAnalyzing(false); }
     };
 
     const handleResolution = async (jobId, bps, isCrossChain = false) => {
         try {
-            const ruling = bps === 100 ? 3 : (bps === 0 ? 2 : 1); // 1: Split, 2: Client, 3: Freelancer
+            const ruling = bps === 100 ? 3 : (bps === 0 ? 2 : 1);
+            const contractAddr = isCrossChain ? CROSS_CHAIN_ESCROW_MANAGER_ADDRESS : CONTRACT_ADDRESS;
+            const contractAbi = isCrossChain ? CrossChainEscrowManagerABI.abi : FreelanceEscrowABI.abi;
+            const fn = isCrossChain ? 'resolveCrossChainDispute' : 'resolveDisputeManual';
+            const args = isCrossChain ? [BigInt(jobId), BigInt(ruling)] : [BigInt(jobId), BigInt(bps * 100)];
 
-            if (isCrossChain) {
-                writeContract({
-                    address: CROSS_CHAIN_ESCROW_MANAGER_ADDRESS,
-                    abi: CrossChainEscrowManagerABI.abi,
-                    functionName: 'resolveCrossChainDispute',
-                    args: [BigInt(jobId), BigInt(ruling)],
-                }, {
-                    onSuccess: async () => {
-                        await api.resolveDispute(jobId, { ruling, reasoning: selectedJob.disputeData?.reasoning || 'Manual Resolution' });
-                        toast.success("Cross-Chain Dispute Resolved");
-                        fetchDisputes();
-                    }
-                });
-            } else {
-                writeContract({
-                    address: CONTRACT_ADDRESS,
-                    abi: FreelanceEscrowABI.abi,
-                    functionName: 'resolveDisputeManual',
-                    args: [BigInt(jobId), BigInt(bps * 100)],
-                }, {
-                    onSuccess: async () => {
-                        await api.resolveDispute(jobId, { ruling, reasoning: selectedJob.disputeData?.reasoning || 'Manual Resolution' });
-                        toast.success("Dispute Resolved Successfully");
-                        fetchDisputes();
-                    }
-                });
-            }
-        } catch (err) {
-            toast.error("Resolution Failed: " + err.message);
-        }
+            writeContract({ address: contractAddr, abi: contractAbi, functionName: fn, args }, {
+                onSuccess: async () => {
+                    await api.resolveDispute(jobId, { ruling, reasoning: selectedJob.disputeData?.reasoning || 'Manual Resolution' });
+                    toast.success(isCrossChain ? "Cross-Chain Dispute Resolved" : "Dispute Resolved Successfully");
+                    fetchDisputes();
+                }
+            });
+        } catch (err) { toast.error("Resolution Failed: " + err.message); }
     };
 
     if (!isAdmin) {
         return (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-                <ShieldCheck size={80} className="text-white/10 mb-6" />
-                <h2 className="text-3xl font-black mb-2 uppercase tracking-tighter">Access <span className="text-rose-500">Denied</span></h2>
-                <p className="text-text-muted max-w-md font-medium">
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 20px', textAlign: 'center' }}>
+                <ShieldCheck size={80} style={{ color: 'rgba(255,255,255,0.08)', marginBottom: 24 }} />
+                <h2 style={{ fontSize: '1.6rem', fontWeight: 900, marginBottom: 8 }}>
+                    Access <span style={{ color: 'var(--danger)' }}>Denied</span>
+                </h2>
+                <p style={{ color: 'var(--text-secondary)', maxWidth: 400, lineHeight: 1.6 }}>
                     Only verified Protocol Arbitrators are authorized to access the Justice Module.
                     Stake $PLN to apply for a community jury position.
                 </p>
@@ -126,172 +86,218 @@ const ArbitrationDashboard = () => {
         );
     }
 
+    const cardBg = { padding: 16, borderRadius: 14, background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)' };
+    const dimLabel = { fontSize: '0.62rem', fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 };
+
     return (
-        <div className="container !p-0">
-            <header className="mb-12" ref={headerRef}>
-                <div className="flex items-center gap-4 mb-4">
-                    <div className="p-3 rounded-2xl bg-rose-500/10 text-rose-500">
-                        <Gavel size={32} />
+        <div>
+            <header ref={headerRef} style={{ marginBottom: 36 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 6 }}>
+                    <div style={{ padding: 12, borderRadius: 14, background: 'rgba(239,68,68,0.08)', color: 'var(--danger)' }}>
+                        <Gavel size={28} />
                     </div>
                     <div>
-                        <h1 className="text-5xl font-black tracking-tighter uppercase italic">Zenith <span className="text-rose-500">Justice</span></h1>
-                        <p className="text-text-muted font-bold tracking-widest text-[10px] uppercase">Decentralized Court & AI Arbitration</p>
+                        <h1 style={{ fontSize: '2rem', fontWeight: 900, letterSpacing: '-0.03em' }}>
+                            Zenith <span style={{ color: 'var(--danger)' }}>Justice</span>
+                        </h1>
+                        <p style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--text-tertiary)' }}>
+                            Decentralized Court & AI Arbitration
+                        </p>
                     </div>
                 </div>
             </header>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 28 }}>
                 {/* Dispute List */}
-                <div className="lg:col-span-1 space-y-4">
-                    <h3 className="text-xs font-black uppercase tracking-widest text-text-dim mb-6">Active Cases ({disputes.length})</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <h3 style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-tertiary)', marginBottom: 12 }}>
+                        Active Cases ({disputes.length})
+                    </h3>
                     {loading ? (
-                        <div className="skeleton h-60 w-full rounded-3xl" />
+                        <div className="skeleton" style={{ height: 240, borderRadius: 16 }} />
                     ) : disputes.length === 0 ? (
-                        <div className="glass-card !bg-white/5 border-dashed border-white/10 p-12 text-center text-text-dim">
-                            <Scale size={40} className="mx-auto mb-4 opacity-20" />
-                            <p className="font-bold text-sm">Perfect Compliance: No Active Disputes</p>
+                        <div style={{ ...cardBg, padding: 48, textAlign: 'center', borderStyle: 'dashed' }}>
+                            <Scale size={40} style={{ opacity: 0.15, marginBottom: 12 }} />
+                            <p style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-tertiary)' }}>Perfect Compliance: No Active Disputes</p>
                         </div>
                     ) : (
                         disputes.map(job => (
-                            <motion.div
-                                key={job.jobId}
-                                whileHover={{ x: 5 }}
-                                onClick={() => setSelectedJob(job)}
-                                className={`dispute-card glass-card !p-5 cursor-pointer transition-all border-white/5 ${selectedJob?.jobId === job.jobId ? '!border-rose-500/50 bg-rose-500/5' : ''}`}
-                            >
-                                <div className="flex justify-between items-start mb-2">
-                                    <span className="text-[10px] font-black p-1 bg-rose-500/20 text-rose-500 rounded uppercase">Case #{job.jobId}</span>
-                                    <AlertTriangle size={14} className="text-rose-500" />
+                            <motion.div key={job.jobId} whileHover={{ x: 5 }} onClick={() => setSelectedJob(job)}
+                                className="dispute-card"
+                                style={{
+                                    ...cardBg, cursor: 'pointer', transition: 'border-color 0.2s ease',
+                                    borderColor: selectedJob?.jobId === job.jobId ? 'rgba(239,68,68,0.4)' : 'var(--border)',
+                                    background: selectedJob?.jobId === job.jobId ? 'rgba(239,68,68,0.03)' : 'rgba(255,255,255,0.03)',
+                                }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                                    <span style={{ fontSize: '0.62rem', fontWeight: 800, padding: '2px 8px', background: 'rgba(239,68,68,0.12)', color: 'var(--danger)', borderRadius: 4, textTransform: 'uppercase' }}>
+                                        Case #{job.jobId}
+                                    </span>
+                                    <AlertTriangle size={14} style={{ color: 'var(--danger)' }} />
                                 </div>
-                                <h4 className="font-bold text-sm mb-1">{job.title}</h4>
-                                <div className="flex items-center justify-between mt-4">
-                                    <span className="text-[10px] text-text-dim font-bold uppercase tracking-widest">Budget: {job.amount ? `${formatEther(job.amount)} POL` : '0'}</span>
-                                    <ChevronRight size={14} className="text-text-dim" />
+                                <h4 style={{ fontWeight: 700, fontSize: '0.88rem', marginBottom: 4 }}>{job.title}</h4>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
+                                    <span style={{ fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-tertiary)' }}>
+                                        Budget: {job.amount ? `${formatEther(job.amount)} POL` : '0'}
+                                    </span>
+                                    <ChevronRight size={14} style={{ color: 'var(--text-tertiary)' }} />
                                 </div>
                             </motion.div>
                         ))
                     )}
                 </div>
 
-                {/* Case Details & AI Analysis */}
-                <div className="lg:col-span-2">
+                {/* Case Details */}
+                <div>
                     <AnimatePresence mode="wait">
                         {selectedJob ? (
-                            <motion.div
-                                key={selectedJob.jobId}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, scale: 0.95 }}
-                                className="glass-card !p-8"
-                            >
-                                <div className="flex justify-between items-center mb-8 pb-6 border-b border-white/5">
+                            <motion.div key={selectedJob.jobId}
+                                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
+                                style={{ ...cardBg, padding: 32 }}>
+                                {/* Header */}
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28, paddingBottom: 20, borderBottom: '1px solid var(--border)' }}>
                                     <div>
-                                        <h2 className="text-2xl font-black mb-1">{selectedJob.title}</h2>
-                                        <p className="text-xs text-text-muted">Parties: <span className="text-white">{selectedJob.client}</span> ↔ <span className="text-white">{selectedJob.freelancer}</span></p>
+                                        <h2 style={{ fontSize: '1.3rem', fontWeight: 800, marginBottom: 4 }}>{selectedJob.title}</h2>
+                                        <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
+                                            Parties: <span style={{ color: 'var(--text-primary)' }}>{selectedJob.client}</span>
+                                            {' ↔ '}<span style={{ color: 'var(--text-primary)' }}>{selectedJob.freelancer}</span>
+                                        </p>
                                     </div>
-                                    <div className="text-right">
-                                        <div className="text-[10px] font-black text-text-dim uppercase tracking-widest mb-1">
+                                    <div style={{ textAlign: 'right' }}>
+                                        <div style={{ ...dimLabel, justifyContent: 'flex-end' }}>
                                             {selectedJob.disputeData?.arbitrator === 'Internal' ? 'Internal Jury' : 'External Court'}
                                         </div>
-                                        <span className={`badge ${selectedJob.disputeData?.arbitrator === 'Internal' ? '!bg-rose-500/20 !text-rose-400' : '!bg-blue-500/20 !text-blue-400'}`}>
+                                        <span style={{
+                                            fontSize: '0.65rem', fontWeight: 700, padding: '3px 10px', borderRadius: 6,
+                                            background: selectedJob.disputeData?.arbitrator === 'Internal' ? 'rgba(239,68,68,0.12)' : 'rgba(59,130,246,0.12)',
+                                            color: selectedJob.disputeData?.arbitrator === 'Internal' ? 'var(--danger)' : 'var(--info)',
+                                        }}>
                                             {selectedJob.disputeData?.arbitrator === 'Internal' ? 'Protocol Arbitrator' : 'Kleros Layer Waiting'}
                                         </span>
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
-                                    <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
-                                        <div className="text-[10px] font-black text-text-dim uppercase tracking-widest mb-1 flex items-center gap-1.5"><Banknote size={10} /> Budget</div>
-                                        <div className="text-sm font-bold text-primary">{selectedJob.amount ? `${formatEther(selectedJob.amount)} POL` : '0'}</div>
-                                    </div>
-                                    <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
-                                        <div className="text-[10px] font-black text-text-dim uppercase tracking-widest mb-1 flex items-center gap-1.5"><Clock size={10} /> Deadline</div>
-                                        <div className="text-sm font-bold">{selectedJob.deadline ? new Date(selectedJob.deadline * 1000).toLocaleDateString() : 'N/A'}</div>
-                                    </div>
-                                    <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
-                                        <div className="text-[10px] font-black text-text-dim uppercase tracking-widest mb-1 flex items-center gap-1.5"><ShieldCheck size={10} /> Status</div>
-                                        <div className="text-sm font-bold text-rose-500">Disputed</div>
-                                    </div>
-                                    <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
-                                        <div className="text-[10px] font-black text-text-dim uppercase tracking-widest mb-1 flex items-center gap-1.5"><Scale size={10} /> Dispute ID</div>
-                                        <div className="text-sm font-bold">#{selectedJob.disputeData?.disputeId || 'N/A'}</div>
-                                    </div>
+                                {/* Stats */}
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 32 }}>
+                                    {[
+                                        { icon: <Banknote size={10} />, label: 'Budget', value: selectedJob.amount ? `${formatEther(selectedJob.amount)} POL` : '0', color: 'var(--accent-light)' },
+                                        { icon: <Clock size={10} />, label: 'Deadline', value: selectedJob.deadline ? new Date(selectedJob.deadline * 1000).toLocaleDateString() : 'N/A' },
+                                        { icon: <ShieldCheck size={10} />, label: 'Status', value: 'Disputed', color: 'var(--danger)' },
+                                        { icon: <Scale size={10} />, label: 'Dispute ID', value: `#${selectedJob.disputeData?.disputeId || 'N/A'}` },
+                                    ].map((s, i) => (
+                                        <div key={i} style={cardBg}>
+                                            <div style={dimLabel}>{s.icon} {s.label}</div>
+                                            <div style={{ fontSize: '0.88rem', fontWeight: 700, color: s.color || 'var(--text-primary)' }}>{s.value}</div>
+                                        </div>
+                                    ))}
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-                                    <div className="space-y-6">
+                                {/* Details + AI */}
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 28, marginBottom: 32 }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                                        {/* Description */}
                                         <div>
-                                            <h4 className="text-xs font-black uppercase tracking-widest text-text-dim mb-3 flex items-center gap-2">
-                                                <FileText size={14} /> Claim Description
-                                            </h4>
-                                            <p className="text-sm leading-relaxed opacity-80">{selectedJob.description}</p>
+                                            <h4 style={{ ...dimLabel, marginBottom: 10 }}><FileText size={14} /> Claim Description</h4>
+                                            <p style={{ fontSize: '0.88rem', lineHeight: 1.7, opacity: 0.8 }}>{selectedJob.description}</p>
                                         </div>
+                                        {/* Evidence */}
                                         <div>
-                                            <h4 className="text-xs font-black uppercase tracking-widest text-text-dim mb-3 flex items-center gap-2">
+                                            <h4 style={{ ...dimLabel, marginBottom: 10 }}>
                                                 <Search size={14} /> Evidence Log ({selectedJob.evidence?.length || 0})
                                             </h4>
-                                            <div className="space-y-2">
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                                                 {selectedJob.evidence?.map((e, i) => (
-                                                    <a href={`https://gateway.pinata.cloud/ipfs/${e.hash}`} target="_blank" rel="noreferrer" key={i} className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5 hover:border-primary/50 transition-all text-xs">
-                                                        <span className="font-bold truncate max-w-[150px]">{e.hash}</span>
-                                                        <span className="text-[9px] uppercase font-black opacity-40">{e.party === selectedJob.client ? 'Client' : 'Freelancer'}</span>
+                                                    <a key={i} href={`https://gateway.pinata.cloud/ipfs/${e.hash}`} target="_blank" rel="noreferrer"
+                                                        style={{
+                                                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                                            padding: 10, borderRadius: 10, background: 'rgba(255,255,255,0.03)',
+                                                            border: '1px solid var(--border)', fontSize: '0.78rem', textDecoration: 'none', color: 'inherit',
+                                                            transition: 'border-color 0.2s ease',
+                                                        }}>
+                                                        <span style={{ fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 150 }}>{e.hash}</span>
+                                                        <span style={{ fontSize: '0.58rem', textTransform: 'uppercase', fontWeight: 800, opacity: 0.4 }}>
+                                                            {e.party === selectedJob.client ? 'Client' : 'Freelancer'}
+                                                        </span>
                                                     </a>
                                                 ))}
                                             </div>
                                         </div>
                                     </div>
 
-                                    {/* AI Agent Analysis */}
-                                    <div className="glass-card !bg-primary/10 border-primary/20 p-6 relative overflow-hidden group">
-                                        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+                                    {/* AI Analysis */}
+                                    <div style={{
+                                        padding: 24, borderRadius: 14,
+                                        background: 'rgba(124,92,252,0.06)', border: '1px solid rgba(124,92,252,0.15)',
+                                        position: 'relative', overflow: 'hidden',
+                                    }}>
+                                        <div style={{ position: 'absolute', top: 0, right: 0, padding: 16, opacity: 0.06 }}>
                                             <Cpu size={60} />
                                         </div>
-                                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary mb-4 flex items-center gap-2">
+                                        <h4 style={{ ...dimLabel, color: 'var(--accent-light)', marginBottom: 16 }}>
                                             <Cpu size={14} /> Gemini 2.0 Verdict
                                         </h4>
 
                                         {selectedJob.disputeData?.aiVerdict ? (
-                                            <div className="space-y-4">
-                                                <div className="p-4 bg-black/40 rounded-2xl border border-white/5">
-                                                    <p className="text-xs font-medium leading-relaxed italic mb-4">"{selectedJob.disputeData.reasoning}"</p>
-                                                    <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
+                                            <div>
+                                                <div style={{ padding: 14, borderRadius: 12, background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border)', marginBottom: 14 }}>
+                                                    <p style={{ fontSize: '0.78rem', lineHeight: 1.7, fontStyle: 'italic', marginBottom: 14 }}>
+                                                        "{selectedJob.disputeData.reasoning}"
+                                                    </p>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', ...dimLabel }}>
                                                         <span>Suggested Split:</span>
-                                                        <span className="text-primary">{selectedJob.disputeData.aiSplit}% Freelancer</span>
+                                                        <span style={{ color: 'var(--accent-light)' }}>{selectedJob.disputeData.aiSplit}% Freelancer</span>
                                                     </div>
                                                 </div>
-                                                <div className="grid grid-cols-2 gap-2">
-                                                    <button onClick={() => handleResolution(selectedJob.jobId, selectedJob.disputeData.aiSplit)} className="btn-primary !py-2 text-[10px] !bg-primary/20">Accept AI Split</button>
-                                                    <button onClick={() => handleAnalyze(selectedJob.jobId)} className="btn-ghost !py-2 text-[10px]">Re-Analyze</button>
+                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                                                    <button onClick={() => handleResolution(selectedJob.jobId, selectedJob.disputeData.aiSplit)}
+                                                        className="btn btn-primary btn-sm" style={{ borderRadius: 8 }}>Accept AI Split</button>
+                                                    <button onClick={() => handleAnalyze(selectedJob.jobId)}
+                                                        className="btn btn-ghost btn-sm" style={{ borderRadius: 8 }}>Re-Analyze</button>
                                                 </div>
                                             </div>
                                         ) : (
-                                            <div className="py-8 text-center">
-                                                <p className="text-xs text-text-muted mb-6">Neural analysis required to determine fair split.</p>
-                                                <button
-                                                    onClick={() => handleAnalyze(selectedJob.jobId)}
-                                                    disabled={isAnalyzing}
-                                                    className="btn-primary flex items-center gap-2 mx-auto"
-                                                >
-                                                    {isAnalyzing ? <span className="animate-pulse">Analyzing...</span> : <><Cpu size={16} /> Run Neural Audit</>}
+                                            <div style={{ textAlign: 'center', padding: '28px 0' }}>
+                                                <p style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)', marginBottom: 20 }}>
+                                                    Neural analysis required to determine fair split.
+                                                </p>
+                                                <button onClick={() => handleAnalyze(selectedJob.jobId)} disabled={isAnalyzing}
+                                                    className="btn btn-primary" style={{ borderRadius: 10, gap: 8 }}>
+                                                    {isAnalyzing ? 'Analyzing...' : <><Cpu size={16} /> Run Neural Audit</>}
                                                 </button>
                                             </div>
                                         )}
                                     </div>
                                 </div>
 
-                                <div className="border-t border-white/5 pt-8">
-                                    <h4 className="text-xs font-black uppercase tracking-widest text-text-dim mb-6">Manual Overwrite</h4>
-                                    <div className="grid grid-cols-3 gap-4">
-                                        <button onClick={() => handleResolution(selectedJob.jobId, 0, selectedJob.isCrossChain)} className="btn-ghost !bg-rose-500/10 !text-rose-500 border-rose-500/20 hover:!bg-rose-500 hover:!text-white">Rule for Client</button>
-                                        <button onClick={() => handleResolution(selectedJob.jobId, 50, selectedJob.isCrossChain)} className="btn-ghost border-white/10">Split 50/50</button>
-                                        <button onClick={() => handleResolution(selectedJob.jobId, 100, selectedJob.isCrossChain)} className="btn-ghost !bg-emerald-500/10 !text-emerald-500 border-emerald-500/20 hover:!bg-emerald-500 hover:!text-white">Rule for Freelancer</button>
+                                {/* Manual Override */}
+                                <div style={{ borderTop: '1px solid var(--border)', paddingTop: 24 }}>
+                                    <h4 style={{ ...dimLabel, marginBottom: 18 }}>Manual Overwrite</h4>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+                                        <button onClick={() => handleResolution(selectedJob.jobId, 0, selectedJob.isCrossChain)}
+                                            className="btn btn-ghost" style={{ borderRadius: 10, background: 'rgba(239,68,68,0.06)', color: 'var(--danger)', borderColor: 'rgba(239,68,68,0.15)' }}>
+                                            Rule for Client
+                                        </button>
+                                        <button onClick={() => handleResolution(selectedJob.jobId, 50, selectedJob.isCrossChain)}
+                                            className="btn btn-ghost" style={{ borderRadius: 10 }}>
+                                            Split 50/50
+                                        </button>
+                                        <button onClick={() => handleResolution(selectedJob.jobId, 100, selectedJob.isCrossChain)}
+                                            className="btn btn-ghost" style={{ borderRadius: 10, background: 'rgba(52,211,153,0.06)', color: 'var(--success)', borderColor: 'rgba(52,211,153,0.15)' }}>
+                                            Rule for Freelancer
+                                        </button>
                                     </div>
                                 </div>
                             </motion.div>
                         ) : (
-                            <div className="flex flex-col items-center justify-center py-40 border-2 border-dashed border-white/5 rounded-[40px] text-text-dim">
-                                <Scale size={60} className="mb-6 opacity-10" />
-                                <p className="font-bold text-sm uppercase tracking-widest">Select a case to begin arbitration</p>
+                            <div style={{
+                                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                                padding: '100px 40px', border: '2px dashed var(--border)', borderRadius: 20,
+                                color: 'var(--text-tertiary)',
+                            }}>
+                                <Scale size={60} style={{ opacity: 0.08, marginBottom: 20 }} />
+                                <p style={{ fontWeight: 700, fontSize: '0.88rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                                    Select a case to begin arbitration
+                                </p>
                             </div>
                         )}
                     </AnimatePresence>

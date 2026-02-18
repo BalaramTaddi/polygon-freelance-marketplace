@@ -1,11 +1,4 @@
-import { ethers } from 'ethers';
 
-const EIP712Domain = [
-    { name: 'name', type: 'string' },
-    { name: 'version', type: 'string' },
-    { name: 'chainId', type: 'uint256' },
-    { name: 'verifyingContract', type: 'address' },
-];
 
 const ForwardRequest = [
     { name: 'from', type: 'address' },

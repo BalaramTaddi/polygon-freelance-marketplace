@@ -8,7 +8,6 @@ export function UserLink({ address, style }) {
     const { data: ensAvatar } = useEnsAvatar({ name: ensName || undefined, chainId: mainnet.id });
 
     const [name, setName] = useState(null);
-    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         if (!address) return;
@@ -20,8 +19,6 @@ export function UserLink({ address, style }) {
                 }
             } catch (err) {
                 console.error('Failed to fetch profile:', err);
-            } finally {
-                setLoading(false);
             }
         };
         fetchProfile();

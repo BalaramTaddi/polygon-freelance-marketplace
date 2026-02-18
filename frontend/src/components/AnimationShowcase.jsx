@@ -1,300 +1,205 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useAnimeAnimations } from '../hooks/useAnimeAnimations';
 import { Sparkles, Zap, Layers, MousePointer, Eye, Code } from 'lucide-react';
-import { animate, remove, stagger } from 'animejs';
+import { remove } from 'animejs';
+
+const cardBg = { padding: 32, borderRadius: 14, background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)' };
+const dimLabel = { fontSize: '0.78rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-tertiary)', marginBottom: 24 };
+const demoColors = { primary: 'var(--accent-light)', secondary: '#a855f7', accent: '#ec4899' };
+const demoGradient = (c) => `linear-gradient(135deg, ${c}, ${c}88)`;
 
 const AnimationShowcase = () => {
     const {
-        staggerFadeIn,
-        slideInLeft,
-        slideInRight,
-        scaleIn,
-        rotateIn,
-        float,
-        glitch,
-        bounceIn,
-        pulse,
-        magneticButton,
-        revealOnScroll,
+        staggerFadeIn, slideInLeft, slideInRight, scaleIn, rotateIn,
+        float, glitch, bounceIn, magneticButton, revealOnScroll,
     } = useAnimeAnimations();
 
-    const [activeDemo, setActiveDemo] = useState(null);
     const magneticRef = useRef(null);
     const floatingRef = useRef(null);
     const glitchRef = useRef(null);
 
     useEffect(() => {
-        // Initialize animations on mount
         slideInLeft('.showcase-header');
-        setTimeout(() => {
-            staggerFadeIn('.demo-card', 150);
-        }, 300);
-
-        // Floating animation
-        if (floatingRef.current) {
-            float(floatingRef.current, 15);
-        }
-
-        // Magnetic button effect
-        if (magneticRef.current) {
-            const cleanup = magneticButton(magneticRef);
-            return cleanup;
-        }
-
-        // Setup scroll reveals
+        setTimeout(() => { staggerFadeIn('.demo-card', 150); }, 300);
+        if (floatingRef.current) float(floatingRef.current, 15);
+        if (magneticRef.current) { const cleanup = magneticButton(magneticRef); return cleanup; }
         const cleanupScroll = revealOnScroll('.reveal-item');
         return cleanupScroll;
     }, []);
 
     const runAnimation = (type) => {
-        setActiveDemo(type);
         const target = `.demo-target-${type}`;
-
         switch (type) {
             case 'stagger':
                 remove(target);
-                document.querySelectorAll(target).forEach(el => {
-                    el.style.opacity = '0';
-                    el.style.transform = 'translateY(20px)';
-                });
+                document.querySelectorAll(target).forEach(el => { el.style.opacity = '0'; el.style.transform = 'translateY(20px)'; });
                 setTimeout(() => staggerFadeIn(target, 100), 100);
                 break;
-
             case 'scale':
-                remove(target);
-                document.querySelector(target).style.opacity = '0';
-                document.querySelector(target).style.transform = 'scale(0.8)';
-                setTimeout(() => scaleIn(target), 100);
-                break;
-
+                remove(target); document.querySelector(target).style.opacity = '0'; document.querySelector(target).style.transform = 'scale(0.8)';
+                setTimeout(() => scaleIn(target), 100); break;
             case 'bounce':
-                remove(target);
-                document.querySelector(target).style.opacity = '0';
-                document.querySelector(target).style.transform = 'scale(0)';
-                setTimeout(() => bounceIn(target), 100);
-                break;
-
+                remove(target); document.querySelector(target).style.opacity = '0'; document.querySelector(target).style.transform = 'scale(0)';
+                setTimeout(() => bounceIn(target), 100); break;
             case 'rotate':
-                remove(target);
-                document.querySelector(target).style.opacity = '0';
-                document.querySelector(target).style.transform = 'rotate(-90deg)';
-                setTimeout(() => rotateIn(target), 100);
-                break;
-
+                remove(target); document.querySelector(target).style.opacity = '0'; document.querySelector(target).style.transform = 'rotate(-90deg)';
+                setTimeout(() => rotateIn(target), 100); break;
             case 'slide-left':
-                remove(target);
-                document.querySelector(target).style.opacity = '0';
-                document.querySelector(target).style.transform = 'translateX(-50px)';
-                setTimeout(() => slideInLeft(target), 100);
-                break;
-
+                remove(target); document.querySelector(target).style.opacity = '0'; document.querySelector(target).style.transform = 'translateX(-50px)';
+                setTimeout(() => slideInLeft(target), 100); break;
             case 'slide-right':
-                remove(target);
-                document.querySelector(target).style.opacity = '0';
-                document.querySelector(target).style.transform = 'translateX(50px)';
-                setTimeout(() => slideInRight(target), 100);
-                break;
-
+                remove(target); document.querySelector(target).style.opacity = '0'; document.querySelector(target).style.transform = 'translateX(50px)';
+                setTimeout(() => slideInRight(target), 100); break;
             case 'glitch':
-                if (glitchRef.current) {
-                    glitch(glitchRef.current);
-                }
-                break;
-
-            default:
-                break;
+                if (glitchRef.current) glitch(glitchRef.current); break;
+            default: break;
         }
     };
 
     const demos = [
-        {
-            id: 'stagger',
-            title: 'Stagger Fade In',
-            description: 'Elements fade in sequentially with a delay',
-            icon: Layers,
-            color: 'primary',
-        },
-        {
-            id: 'scale',
-            title: 'Scale In',
-            description: 'Element scales from small to full size',
-            icon: Zap,
-            color: 'secondary',
-        },
-        {
-            id: 'bounce',
-            title: 'Bounce In',
-            description: 'Elastic bounce effect on entry',
-            icon: Sparkles,
-            color: 'accent',
-        },
-        {
-            id: 'rotate',
-            title: 'Rotate In',
-            description: 'Element rotates into view',
-            icon: Code,
-            color: 'primary',
-        },
-        {
-            id: 'slide-left',
-            title: 'Slide Left',
-            description: 'Slides in from the left',
-            icon: MousePointer,
-            color: 'secondary',
-        },
-        {
-            id: 'slide-right',
-            title: 'Slide Right',
-            description: 'Slides in from the right',
-            icon: Eye,
-            color: 'accent',
-        },
+        { id: 'stagger', title: 'Stagger Fade In', description: 'Elements fade in sequentially with a delay', icon: Layers, color: demoColors.primary },
+        { id: 'scale', title: 'Scale In', description: 'Element scales from small to full size', icon: Zap, color: demoColors.secondary },
+        { id: 'bounce', title: 'Bounce In', description: 'Elastic bounce effect on entry', icon: Sparkles, color: demoColors.accent },
+        { id: 'rotate', title: 'Rotate In', description: 'Element rotates into view', icon: Code, color: demoColors.primary },
+        { id: 'slide-left', title: 'Slide Left', description: 'Slides in from the left', icon: MousePointer, color: demoColors.secondary },
+        { id: 'slide-right', title: 'Slide Right', description: 'Slides in from the right', icon: Eye, color: demoColors.accent },
     ];
 
     return (
-        <div className="container">
-            <header className="showcase-header mb-20">
-                <div className="flex items-center gap-4 mb-6">
-                    <div className="p-4 rounded-2xl bg-primary/10 text-primary">
+        <div>
+            {/* Header */}
+            <header className="showcase-header" style={{ marginBottom: 80 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
+                    <div style={{ padding: 16, borderRadius: 16, background: 'rgba(124,92,252,0.08)', color: 'var(--accent-light)' }}>
                         <Sparkles size={40} />
                     </div>
                     <div>
-                        <h1 className="text-6xl font-black tracking-tighter uppercase">
-                            Animation <span className="gradient-text">Showcase</span>
+                        <h1 style={{ fontSize: '3rem', fontWeight: 900, letterSpacing: '-0.04em', textTransform: 'uppercase' }}>
+                            Animation <span style={{
+                                background: 'linear-gradient(135deg, var(--accent-light), #ec4899)',
+                                WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                            }}>Showcase</span>
                         </h1>
-                        <p className="text-text-muted font-bold text-sm mt-2">
+                        <p style={{ color: 'var(--text-secondary)', fontWeight: 700, fontSize: '0.88rem', marginTop: 8 }}>
                             Powered by Anime.js • 20+ Premium Effects
                         </p>
                     </div>
                 </div>
             </header>
 
-            {/* Interactive Demos Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-20">
-                {demos.map((demo, index) => (
-                    <div
-                        key={demo.id}
-                        className="demo-card glass-card p-8 hover-lift cursor-pointer"
+            {/* Demos Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 32, marginBottom: 80 }}>
+                {demos.map((demo) => (
+                    <div key={demo.id} className="demo-card"
                         onClick={() => runAnimation(demo.id)}
-                    >
-                        <div className={`p-3 rounded-2xl bg-${demo.color}/10 text-${demo.color} w-fit mb-4`}>
+                        style={{ ...cardBg, cursor: 'pointer', transition: 'transform 0.3s ease, border-color 0.3s ease' }}
+                        onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.borderColor = 'rgba(124,92,252,0.3)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = 'var(--border)'; }}>
+
+                        <div style={{ padding: 12, borderRadius: 16, background: `${demo.color}15`, color: demo.color, width: 'fit-content', marginBottom: 16 }}>
                             <demo.icon size={24} />
                         </div>
-                        <h3 className="text-xl font-black mb-2">{demo.title}</h3>
-                        <p className="text-text-dim text-sm mb-6">{demo.description}</p>
+                        <h3 style={{ fontSize: '1.2rem', fontWeight: 900, marginBottom: 8 }}>{demo.title}</h3>
+                        <p style={{ color: 'var(--text-tertiary)', fontSize: '0.88rem', marginBottom: 24 }}>{demo.description}</p>
 
-                        {/* Demo Target */}
-                        <div className="border border-white/10 rounded-2xl p-6 bg-white/5 min-h-[120px] flex items-center justify-center">
+                        {/* Demo target */}
+                        <div style={{
+                            border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: 24,
+                            background: 'rgba(255,255,255,0.03)', minHeight: 120, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>
                             {demo.id === 'stagger' ? (
-                                <div className="flex gap-3">
+                                <div style={{ display: 'flex', gap: 12 }}>
                                     {[1, 2, 3, 4].map(i => (
-                                        <div
-                                            key={i}
-                                            className={`demo-target-${demo.id} w-12 h-12 rounded-xl bg-gradient-to-br from-${demo.color} to-${demo.color}/50`}
-                                        />
+                                        <div key={i} className={`demo-target-${demo.id}`}
+                                            style={{ width: 48, height: 48, borderRadius: 12, background: demoGradient(demo.color) }} />
                                     ))}
                                 </div>
                             ) : (
-                                <div
-                                    className={`demo-target-${demo.id} w-20 h-20 rounded-2xl bg-gradient-to-br from-${demo.color} to-${demo.color}/50 flex items-center justify-center`}
-                                >
-                                    <demo.icon size={32} className="text-white" />
+                                <div className={`demo-target-${demo.id}`}
+                                    style={{
+                                        width: 80, height: 80, borderRadius: 16, background: demoGradient(demo.color),
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    }}>
+                                    <demo.icon size={32} style={{ color: '#fff' }} />
                                 </div>
                             )}
                         </div>
 
-                        <button className="btn-ghost w-full mt-4 !py-2 text-xs">
+                        <button className="btn btn-ghost" style={{ width: '100%', marginTop: 16, padding: '8px 0', fontSize: '0.78rem' }}>
                             Run Animation
                         </button>
                     </div>
                 ))}
             </div>
 
-            {/* Special Effects Section */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-20">
-                {/* Floating Animation */}
-                <div className="glass-card p-8">
-                    <h3 className="text-sm font-black uppercase tracking-widest text-text-dim mb-6">
-                        Floating Effect
-                    </h3>
-                    <div className="flex justify-center py-12">
-                        <div
-                            ref={floatingRef}
-                            className="w-24 h-24 rounded-3xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-2xl"
-                        >
-                            <Sparkles size={40} className="text-white" />
+            {/* Special Effects */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 32, marginBottom: 80 }}>
+                {/* Floating */}
+                <div style={cardBg}>
+                    <h3 style={dimLabel}>Floating Effect</h3>
+                    <div style={{ display: 'flex', justifyContent: 'center', padding: '48px 0' }}>
+                        <div ref={floatingRef} style={{
+                            width: 96, height: 96, borderRadius: 24,
+                            background: 'linear-gradient(135deg, var(--accent-light), #a855f7)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            boxShadow: '0 25px 50px -12px rgba(124,92,252,0.3)',
+                        }}>
+                            <Sparkles size={40} style={{ color: '#fff' }} />
                         </div>
                     </div>
-                    <p className="text-xs text-text-dim text-center">
-                        Continuous floating animation
-                    </p>
+                    <p style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)', textAlign: 'center' }}>Continuous floating animation</p>
                 </div>
 
-                {/* Magnetic Button */}
-                <div className="glass-card p-8">
-                    <h3 className="text-sm font-black uppercase tracking-widest text-text-dim mb-6">
-                        Magnetic Button
-                    </h3>
-                    <div className="flex justify-center py-12">
-                        <button
-                            ref={magneticRef}
-                            className="btn-primary !px-8 !py-4 magnetic-button"
-                        >
-                            <MousePointer size={20} />
-                            Hover Me
+                {/* Magnetic */}
+                <div style={cardBg}>
+                    <h3 style={dimLabel}>Magnetic Button</h3>
+                    <div style={{ display: 'flex', justifyContent: 'center', padding: '48px 0' }}>
+                        <button ref={magneticRef} className="btn btn-primary"
+                            style={{ padding: '16px 32px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <MousePointer size={20} /> Hover Me
                         </button>
                     </div>
-                    <p className="text-xs text-text-dim text-center">
-                        Follows your cursor on hover
-                    </p>
+                    <p style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)', textAlign: 'center' }}>Follows your cursor on hover</p>
                 </div>
 
-                {/* Glitch Effect */}
-                <div className="glass-card p-8">
-                    <h3 className="text-sm font-black uppercase tracking-widest text-text-dim mb-6">
-                        Glitch Effect
-                    </h3>
-                    <div className="flex justify-center py-12">
-                        <div
-                            ref={glitchRef}
-                            className="text-4xl font-black gradient-text"
-                            onClick={() => runAnimation('glitch')}
-                        >
+                {/* Glitch */}
+                <div style={cardBg}>
+                    <h3 style={dimLabel}>Glitch Effect</h3>
+                    <div style={{ display: 'flex', justifyContent: 'center', padding: '48px 0' }}>
+                        <div ref={glitchRef} onClick={() => runAnimation('glitch')}
+                            style={{
+                                fontSize: '2rem', fontWeight: 900, cursor: 'pointer',
+                                background: 'linear-gradient(135deg, var(--accent-light), #ec4899)',
+                                WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                            }}>
                             ZENITH
                         </div>
                     </div>
-                    <p className="text-xs text-text-dim text-center">
-                        Click to trigger glitch
-                    </p>
+                    <p style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)', textAlign: 'center' }}>Click to trigger glitch</p>
                 </div>
             </div>
 
-            {/* Scroll Reveal Demo */}
-            <div className="mb-20">
-                <h2 className="text-3xl font-black mb-8 text-center">
-                    Scroll <span className="text-primary">Reveal</span> Animation
+            {/* Scroll Reveal */}
+            <div style={{ marginBottom: 80 }}>
+                <h2 style={{ fontSize: '1.8rem', fontWeight: 900, marginBottom: 32, textAlign: 'center' }}>
+                    Scroll <span style={{ color: 'var(--accent-light)' }}>Reveal</span> Animation
                 </h2>
-                <p className="text-text-muted text-center mb-12 max-w-2xl mx-auto">
+                <p style={{ color: 'var(--text-secondary)', textAlign: 'center', marginBottom: 48, maxWidth: 560, margin: '0 auto 48px' }}>
                     Elements below will animate into view as you scroll down
                 </p>
-
-                <div className="space-y-8">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
                     {[1, 2, 3, 4].map(i => (
-                        <div
-                            key={i}
-                            className="reveal-item glass-card p-12"
-                        >
-                            <div className="flex items-center gap-6">
-                                <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
-                                    <Zap size={32} className="text-primary" />
+                        <div key={i} className="reveal-item" style={{ ...cardBg, padding: 48 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+                                <div style={{
+                                    width: 64, height: 64, borderRadius: 16, background: 'rgba(124,92,252,0.08)',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                }}>
+                                    <Zap size={32} style={{ color: 'var(--accent-light)' }} />
                                 </div>
                                 <div>
-                                    <h3 className="text-2xl font-black mb-2">
-                                        Scroll Reveal Item {i}
-                                    </h3>
-                                    <p className="text-text-dim">
-                                        This element animates when it enters the viewport
-                                    </p>
+                                    <h3 style={{ fontSize: '1.5rem', fontWeight: 900, marginBottom: 8 }}>Scroll Reveal Item {i}</h3>
+                                    <p style={{ color: 'var(--text-tertiary)' }}>This element animates when it enters the viewport</p>
                                 </div>
                             </div>
                         </div>
@@ -302,33 +207,27 @@ const AnimationShowcase = () => {
                 </div>
             </div>
 
-            {/* Animation Stats */}
-            <div className="glass-card p-12 bg-gradient-to-r from-primary/5 to-secondary/5 border-primary/20">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-8 text-center">
-                    <div>
-                        <div className="text-5xl font-black mb-2 shimmer-text">20+</div>
-                        <div className="text-xs font-black uppercase tracking-widest text-text-dim">
-                            Animation Types
+            {/* Stats */}
+            <div style={{
+                ...cardBg, padding: 48,
+                background: 'linear-gradient(135deg, rgba(124,92,252,0.04), rgba(168,85,247,0.04))',
+                borderColor: 'rgba(124,92,252,0.15)',
+            }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 32, textAlign: 'center' }}>
+                    {[
+                        { value: '20+', label: 'Animation Types' },
+                        { value: '60fps', label: 'Performance' },
+                        { value: 'GPU', label: 'Accelerated' },
+                        { value: '∞', label: 'Possibilities' },
+                    ].map((s, i) => (
+                        <div key={i}>
+                            <div style={{ fontSize: '3rem', fontWeight: 900, marginBottom: 8 }}>{s.value}</div>
+                            <div style={{
+                                fontSize: '0.72rem', fontWeight: 900, textTransform: 'uppercase',
+                                letterSpacing: '0.12em', color: 'var(--text-tertiary)',
+                            }}>{s.label}</div>
                         </div>
-                    </div>
-                    <div>
-                        <div className="text-5xl font-black mb-2 shimmer-text">60fps</div>
-                        <div className="text-xs font-black uppercase tracking-widest text-text-dim">
-                            Performance
-                        </div>
-                    </div>
-                    <div>
-                        <div className="text-5xl font-black mb-2 shimmer-text">GPU</div>
-                        <div className="text-xs font-black uppercase tracking-widest text-text-dim">
-                            Accelerated
-                        </div>
-                    </div>
-                    <div>
-                        <div className="text-5xl font-black mb-2 shimmer-text">∞</div>
-                        <div className="text-xs font-black uppercase tracking-widest text-text-dim">
-                            Possibilities
-                        </div>
-                    </div>
+                    ))}
                 </div>
             </div>
         </div>

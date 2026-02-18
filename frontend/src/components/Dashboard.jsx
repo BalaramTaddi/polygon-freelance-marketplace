@@ -1,7 +1,12 @@
-import React, { useEffect, useRef } from 'react';
-import { useAccount, useReadContract, useSignMessage } from 'wagmi';
+import React, { useRef, useEffect } from 'react';
+import { useAccount, useReadContract } from 'wagmi';
 import { useConnectModal } from '@rainbow-me/rainbowkit';
-import { Wallet, Briefcase, CheckCircle, Clock, Save, User, Award, PlusCircle, Sparkles, Send, Activity, Terminal } from 'lucide-react';
+import {
+    Wallet, Briefcase, CheckCircle, Clock, Save, User, Award,
+    Sparkles, Send, Activity, Terminal, Shield, Zap, TrendingUp,
+    Globe, BarChart3, Lock, Star, Layers,
+    Cpu, Rocket, Target, Flame, Diamond
+} from 'lucide-react';
 import FreelanceEscrowABI from '../contracts/FreelanceEscrow.json';
 import { CONTRACT_ADDRESS } from '../constants';
 import { api } from '../services/api';
@@ -10,44 +15,206 @@ import AiRecommendations from './AiRecommendations';
 import WithdrawButton from './WithdrawButton';
 import YieldManagerDashboard from './YieldManagerDashboard';
 import { useAnimeAnimations } from '../hooks/useAnimeAnimations';
-import { animate, stagger } from 'animejs';
+
+/* ─── Inline Styles ─── */
+const s = {
+    page: {
+        display: 'flex', flexDirection: 'column', gap: 24,
+        animation: 'fadeIn 0.4s ease',
+    },
+    // Hero
+    heroWrap: {
+        position: 'relative',
+        borderRadius: 20, overflow: 'hidden',
+        background: 'linear-gradient(135deg, #111128 0%, #0d0d22 50%, #15102e 100%)',
+        border: '1px solid rgba(124, 92, 252, 0.12)',
+        padding: '36px 32px',
+    },
+    heroGlow: {
+        position: 'absolute', top: -80, right: -80,
+        width: 300, height: 300, borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(124,92,252,0.18) 0%, transparent 70%)',
+        pointerEvents: 'none',
+    },
+    heroGlow2: {
+        position: 'absolute', bottom: -60, left: -40,
+        width: 200, height: 200, borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(236,72,153,0.1) 0%, transparent 70%)',
+        pointerEvents: 'none',
+    },
+    heroContent: { position: 'relative', zIndex: 1 },
+    heroBadge: {
+        display: 'inline-flex', alignItems: 'center', gap: 5,
+        padding: '5px 12px', borderRadius: 8,
+        background: 'rgba(124, 92, 252, 0.08)',
+        border: '1px solid rgba(124, 92, 252, 0.2)',
+        color: '#a78bfa', fontSize: '0.68rem', fontWeight: 700,
+        textTransform: 'uppercase', letterSpacing: '0.06em',
+        marginBottom: 16,
+    },
+    heroTitle: {
+        fontSize: '2.2rem', fontWeight: 900, letterSpacing: '-0.035em',
+        lineHeight: 1.15, marginBottom: 8,
+    },
+    heroSub: {
+        color: 'var(--text-secondary)', fontSize: '0.95rem',
+        maxWidth: 500, lineHeight: 1.6,
+    },
+    // Stats grid
+    statsGrid: {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(4, 1fr)',
+        gap: 16,
+    },
+    // Section header
+    sectionHead: {
+        display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18,
+    },
+    sectionIcon: {
+        width: 32, height: 32, borderRadius: 10,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+    },
+    sectionTitle: {
+        fontSize: '0.95rem', fontWeight: 700,
+    },
+    // Command center
+    cmdGrid: {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+        gap: 12, marginTop: 20, paddingTop: 16,
+        borderTop: '1px solid var(--border)',
+    },
+    cmdItem: {
+        display: 'flex', flexDirection: 'column', gap: 3,
+    },
+    cmdLabel: {
+        fontSize: '0.62rem', fontWeight: 700,
+        color: 'var(--text-tertiary)', textTransform: 'uppercase',
+        letterSpacing: '0.06em',
+    },
+    cmdValue: (color) => ({
+        fontSize: '0.78rem', fontWeight: 600, color,
+        display: 'flex', alignItems: 'center', gap: 5,
+    }),
+    // Two column
+    twoCol: {
+        display: 'grid',
+        gridTemplateColumns: '1fr 360px',
+        gap: 20,
+    },
+    // Analytics
+    analyticsGrid: {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+        gap: 24,
+    },
+    analyticLabel: {
+        fontSize: '0.68rem', fontWeight: 600,
+        color: 'var(--text-tertiary)', textTransform: 'uppercase',
+        letterSpacing: '0.05em', marginBottom: 4,
+    },
+    analyticValue: {
+        fontSize: '1.4rem', fontWeight: 800, letterSpacing: '-0.02em',
+    },
+    // Profile form
+    formGrid: {
+        display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14,
+    },
+    formActions: {
+        display: 'flex', gap: 10, alignItems: 'center', marginTop: 4,
+    },
+    // Live status dot
+    liveDot: (color) => ({
+        width: 7, height: 7, borderRadius: '50%',
+        background: color,
+        boxShadow: `0 0 8px ${color}80`,
+    }),
+    // Connect screen
+    connectWrap: {
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        minHeight: '75vh',
+    },
+    connectCard: {
+        textAlign: 'center', padding: 56, maxWidth: 480,
+        background: 'linear-gradient(145deg, #111128 0%, #0d0d22 100%)',
+        border: '1px solid var(--border)',
+        borderRadius: 24, position: 'relative', overflow: 'hidden',
+    },
+    connectGlow: {
+        position: 'absolute', top: '50%', left: '50%',
+        transform: 'translate(-50%, -50%)',
+        width: 300, height: 300, borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(124,92,252,0.12) 0%, transparent 70%)',
+        pointerEvents: 'none',
+    },
+    connectIcon: {
+        width: 72, height: 72, borderRadius: 20,
+        background: 'linear-gradient(135deg, rgba(124,92,252,0.2), rgba(236,72,153,0.1))',
+        border: '1px solid rgba(124,92,252,0.25)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        margin: '0 auto 28px',
+        boxShadow: '0 0 30px rgba(124,92,252,0.15)',
+    },
+};
 
 function Dashboard({ address: propAddress }) {
-    const { address: wagmiAddress, isConnected: isWagmiConnected } = useAccount();
+    const { address: wagmiAddress } = useAccount();
     const address = propAddress || wagmiAddress;
     const isConnected = !!address;
-
     const { openConnectModal } = useConnectModal();
-    const { signMessageAsync } = useSignMessage();
 
-    // Anime.js hooks
-    const { staggerFadeIn, scaleIn, float, countUp, bounceIn, magneticButton } = useAnimeAnimations();
-    const statsCardRef = useRef(null);
-    const reputationCardRef = useRef(null);
-    const commandCenterRef = useRef(null);
-    const primaryButtonRef = useRef(null);
 
     const [isLoadingProfile, setIsLoadingProfile] = React.useState(true);
-    const [isLoadingAnalytics, setIsLoadingAnalytics] = React.useState(true);
     const [isSaving, setIsSaving] = React.useState(false);
-    const [portfolioAddress, setPortfolioAddress] = React.useState(null);
     const [profile, setProfile] = React.useState({
-        name: '',
-        bio: '',
-        skills: '',
-        category: 'Development',
-        reputationScore: 0,
-        totalEarned: 0
+        name: '', bio: '', skills: '', category: 'Development',
+        reputationScore: 0, totalEarned: 0,
     });
     const [analytics, setAnalytics] = React.useState({
-        totalJobs: 0,
-        totalVolume: 0,
-        avgReputation: 0,
-        totalUsers: 0
+        totalJobs: 0, totalVolume: 0, avgReputation: 0, totalUsers: 0,
     });
     const [isPolishing, setIsPolishing] = React.useState(false);
 
-    const { data: jobCount, isLoading: isLoadingJobCount } = useReadContract({
+    // Anime.js refs and hooks
+    const heroRef = useRef(null);
+    const statsRef = useRef(null);
+    const analyticsRef = useRef(null);
+    const profileRef = useRef(null);
+    const sidebarRef = useRef(null);
+    const connectCardRef = useRef(null);
+    const statValueRefs = useRef([]);
+    const { staggerFadeIn, slideInLeft, float, countUp, revealOnScroll } = useAnimeAnimations();
+
+    // Run entrance animations after data loads
+    useEffect(() => {
+        if (!isLoadingProfile && isConnected) {
+            // Hero slide in from left
+            if (heroRef.current) slideInLeft(heroRef.current, 40);
+            // Stagger stat cards
+            setTimeout(() => staggerFadeIn('.stat-card', 80), 200);
+            // Reveal analytics and profile with scroll observer
+            if (analyticsRef.current) revealOnScroll('.anime-reveal');
+            // Count up numeric stat values
+            setTimeout(() => {
+                statValueRefs.current.forEach(el => {
+                    if (el) {
+                        const raw = el.getAttribute('data-target');
+                        const target = parseFloat(raw);
+                        if (!isNaN(target) && target > 0) countUp(el, target, 1800);
+                    }
+                });
+            }, 400);
+        }
+    }, [isLoadingProfile, isConnected]);
+
+    // Float the hero badge
+    useEffect(() => {
+        if (isConnected && !isLoadingProfile) {
+            float('.hero-badge-float', 6);
+        }
+    }, [isConnected, isLoadingProfile]);
+
+    const { data: jobCount } = useReadContract({
         address: CONTRACT_ADDRESS,
         abi: FreelanceEscrowABI.abi,
         functionName: 'jobCount',
@@ -56,32 +223,15 @@ function Dashboard({ address: propAddress }) {
     React.useEffect(() => {
         if (isConnected && address) {
             setIsLoadingProfile(true);
-            setIsLoadingAnalytics(true);
-            api.getProfile(address).then(data => {
-                if (data && data.address) setProfile(data);
-            }).catch(err => console.warn('Profile fetch failed (backend may be down):', err.message))
+
+            api.getProfile(address)
+                .then(d => { if (d?.address) setProfile(d); })
+                .catch(e => console.warn('Profile:', e.message))
                 .finally(() => setIsLoadingProfile(false));
+            api.getAnalytics()
+                .then(d => { if (d?.totalJobs !== undefined) setAnalytics(d); })
+                .catch(e => console.warn('Analytics:', e.message))
 
-            api.getAnalytics().then(data => {
-                if (data && data.totalJobs !== undefined) setAnalytics(data);
-            }).catch(err => console.warn('Analytics fetch failed (backend may be down):', err.message))
-                .finally(() => setIsLoadingAnalytics(false));
-
-            // Animate stats cards
-            setTimeout(() => {
-                if (statsCardRef.current) {
-                    scaleIn(statsCardRef.current);
-                }
-                if (reputationCardRef.current) {
-                    scaleIn(reputationCardRef.current);
-                }
-                staggerFadeIn('.stat-item', 150);
-            }, 300);
-
-            // Animate command center
-            if (commandCenterRef.current) {
-                bounceIn(commandCenterRef.current);
-            }
         }
     }, [isConnected, address]);
 
@@ -90,56 +240,42 @@ function Dashboard({ address: propAddress }) {
         setIsSaving(true);
         try {
             const { nonce } = await api.getNonce(address);
-            if (!nonce) throw new Error('Could not get nonce');
+            if (!nonce) throw new Error('No nonce');
             const message = `Login to PolyLance: ${nonce}`;
             const signature = await signMessageAsync({ message });
             await api.updateProfile({ address, ...profile, signature, message });
-            // Should integration with toast system here
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setIsSaving(false);
-        }
+        } catch (err) { console.error(err); }
+        finally { setIsSaving(false); }
     };
 
     const handleAiPolish = async () => {
         if (!profile.skills || !profile.bio) return;
         setIsPolishing(true);
         try {
-            const result = await api.polishBio({
-                name: profile.name,
-                category: profile.category,
-                skills: profile.skills,
-                bio: profile.bio
-            });
-            if (result.polishedBio) {
-                setProfile(prev => ({ ...prev, bio: result.polishedBio }));
-            }
-        } catch (err) {
-            console.error('AI Polish failed:', err);
-        } finally {
-            setIsPolishing(false);
-        }
+            const r = await api.polishBio({ name: profile.name, category: profile.category, skills: profile.skills, bio: profile.bio });
+            if (r.polishedBio) setProfile(prev => ({ ...prev, bio: r.polishedBio }));
+        } catch (err) { console.error('AI Polish:', err); }
+        finally { setIsPolishing(false); }
     };
 
+    /* ─── CONNECT SCREEN ─── */
     if (!isConnected) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] text-center animate-fade">
-                <div className="glass-card max-w-lg p-12 overflow-visible">
-                    <div className="bg-glow absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-20" />
-                    <div className="relative z-10">
-                        <div className="w-24 h-24 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-[2rem] flex items-center justify-center mx-auto mb-8 border border-white/10 active-pulse shadow-2xl">
-                            <Wallet size={44} className="text-white" />
+            <div style={s.connectWrap}>
+                <div ref={connectCardRef} className="anime-connect-card" style={s.connectCard}>
+                    <div style={s.connectGlow} />
+                    <div style={{ position: 'relative', zIndex: 1 }}>
+                        <div style={s.connectIcon} className="anime-connect-icon">
+                            <Rocket size={32} style={{ color: '#a78bfa' }} />
                         </div>
-                        <h2 className="text-4xl font-black mb-4 tracking-tight">Connect to the Future</h2>
-                        <p className="text-text-muted text-lg mb-10 leading-relaxed font-medium">
-                            PolyLance is for the bold. Connect your wallet to manage your decentralized career, track earnings, and explore global opportunities.
+                        <h2 style={{ fontSize: '1.6rem', fontWeight: 800, marginBottom: 10, letterSpacing: '-0.03em' }}>
+                            Launch Your Career
+                        </h2>
+                        <p style={{ color: 'var(--text-secondary)', marginBottom: 32, lineHeight: 1.7, fontSize: '0.92rem' }}>
+                            Connect your wallet to access your decentralized dashboard, manage contracts, and explore global opportunities.
                         </p>
-                        <button
-                            onClick={openConnectModal}
-                            className="btn-primary !px-10 !py-5 text-lg"
-                        >
-                            <User size={20} /> Get Started Now
+                        <button onClick={openConnectModal} className="btn btn-primary btn-lg anime-connect-btn" style={{ width: '100%', borderRadius: 14, padding: '16px 28px' }}>
+                            <Wallet size={18} /> Connect Wallet
                         </button>
                     </div>
                 </div>
@@ -147,287 +283,266 @@ function Dashboard({ address: propAddress }) {
         );
     }
 
+    /* ─── MAIN DASHBOARD ─── */
     return (
-        <div className="animate-fade space-y-20">
-            {/* Zenith Command Center (Deployment Option) */}
-            <div className="lg:col-span-12" ref={commandCenterRef}>
-                <div className="glass-card p-8 bg-gradient-to-r from-[#0a0a0f] to-primary/5 border border-primary/20 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 blur-[100px] -mr-32 -mt-32" />
+        <div style={s.page} className="dashboard-anime-root">
 
-                    <div className="flex flex-wrap items-center justify-between gap-6 relative z-10">
-                        <div className="flex items-center gap-5">
-                            <div className="p-4 bg-primary/20 rounded-[2rem] border border-primary/40 shadow-[0_0_20px_rgba(139,92,246,0.2)]">
-                                <Terminal size={32} className="text-primary animate-pulse" />
-                            </div>
-                            <div>
-                                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/60 mb-1">Protocol Orchestrator</div>
-                                <h2 className="text-3xl font-black tracking-tighter">Zenith Command Center</h2>
-                                <div className="flex items-center gap-3 mt-2">
-                                    <span className="flex items-center gap-1 text-[10px] font-bold text-success bg-success/10 px-2 py-1 rounded-full border border-success/20">
-                                        <Activity size={10} /> LOCAL_NODE: ACTIVE
-                                    </span>
-                                    <span className="flex items-center gap-1 text-[10px] font-bold text-text-dim bg-white/5 px-2 py-1 rounded-full border border-white/10">
-                                        AMOY_TESTNET: READY
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="flex gap-3">
-                            <button
-                                onClick={() => alert("Initializing Dry Run: Zenith Supreme Architecture (Cancun-EVM)... Checks Passed.")}
-                                className="px-6 py-4 bg-white/5 border border-white/10 rounded-2xl text-xs font-bold hover:bg-white/10 transition-all"
-                            >
-                                Staged Dry-Run
-                            </button>
-                            <button
-                                onClick={() => alert("Deployment target locked: Localhost. Run 'npm run deploy:zenith' to finalize.")}
-                                className="btn-primary px-8 py-4 flex items-center gap-2 group"
-                            >
-                                <Send size={18} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-                                Supreme Deploy
-                            </button>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-8 pt-8 border-t border-white/5 relative z-10">
-                        <div className="space-y-1">
-                            <div className="text-[9px] font-black uppercase tracking-widest opacity-40">Contract Integrity</div>
-                            <div className="text-xs font-bold flex items-center gap-2">
-                                <CheckCircle size={14} className="text-success" /> 8/8 Validated
-                            </div>
-                        </div>
-                        <div className="space-y-1">
-                            <div className="text-[9px] font-black uppercase tracking-widest opacity-40">Privacy Shield</div>
-                            <div className="text-xs font-bold flex items-center gap-2">
-                                <CheckCircle size={14} className="text-success" /> ZK-Circuits Ready
-                            </div>
-                        </div>
-                        <div className="space-y-1">
-                            <div className="text-[9px] font-black uppercase tracking-widest opacity-40">Agentic Layer</div>
-                            <div className="text-xs font-bold flex items-center gap-2">
-                                <CheckCircle size={14} className="text-success" /> Authorized
-                            </div>
-                        </div>
-                        <div className="space-y-1">
-                            <div className="text-[9px] font-black uppercase tracking-widest opacity-40">Gas Optimization</div>
-                            <div className="text-xs font-bold flex items-center gap-2">
-                                <Activity size={14} className="text-accent" /> Zenith Optimized
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Header Section */}
-            <header className="mb-20">
-                <div className="flex items-center gap-4 mb-8">
-                    {isLoadingProfile ? (
-                        <div className="skeleton h-6 w-32 rounded-full" />
-                    ) : (
-                        <span className="badge badge-info shadow-lg shadow-primary/10 border-primary/20">
-                            {profile.skills ? 'Certified Talent' : 'Employer'}
-                        </span>
-                    )}
-                </div>
-                <h1 className="text-5xl md:text-7xl font-black mb-6 leading-tight tracking-tight">
-                    Welcome, <span className="gradient-text">{isLoadingProfile ? '...' : (profile.name || 'Pioneer')}</span>
-                </h1>
-                <p className="text-text-muted text-xl max-w-2xl leading-relaxed font-medium opacity-80">
-                    Your decentralized command center. Monitor your contracts, analyze growth, and stay ahead of the curve.
-                </p>
-                {!isLoadingProfile && (
-                    <button onClick={() => setPortfolioAddress(address)} className="btn-ghost mt-8 flex items-center gap-2">
-                        <User size={18} /> View Public Portfolio
-                    </button>
-                )}
-            </header>
-
-            <div className="mb-12 max-w-md">
-                <WithdrawButton address={address} />
-            </div>
-
-            <div className="mb-20">
-                <YieldManagerDashboard address={address} />
-            </div>
-
-            {/* Stats Cards Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-20">
-                {/* Active Contracts Card */}
-                <div className="glass-card group p-12 hover-glow" ref={statsCardRef}>
-                    <div className="flex flex-col gap-6">
+            {/* ══════ HERO SECTION ══════ */}
+            <div ref={heroRef} style={{ ...s.heroWrap, opacity: 0 }}>
+                <div style={s.heroGlow} />
+                <div style={s.heroGlow2} />
+                <div style={s.heroContent}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
                         <div>
-                            <p className="text-sm font-black text-text-dim uppercase tracking-[0.2em] mb-4">Active Contracts</p>
-                            <div className="text-6xl font-black tracking-tighter mb-4">
-                                {jobCount?.toString() || '0'}
-                            </div>
-                            <div className="p-3 rounded-2xl bg-primary/10 text-primary w-fit mb-6">
-                                <Briefcase size={32} />
-                            </div>
-                        </div>
-                        <div className="text-xs font-black text-text-dim uppercase tracking-widest opacity-60">Total Job History</div>
-                    </div>
-                </div>
-
-                {/* Reputation Rank Card */}
-                <div className="glass-card group p-12 hover-glow relative overflow-hidden" ref={reputationCardRef}>
-                    {profile.reputationScore >= 10 && (
-                        <div className="absolute top-0 right-0 p-6">
-                            <div className="badge !bg-gradient-to-r !from-amber-400 !to-orange-500 !text-black !font-black !px-3 !py-1 !rounded-full shadow-2xl animate-pulse">
-                                SUPREME
-                            </div>
-                        </div>
-                    )}
-                    <div className="flex flex-col gap-6">
-                        <div>
-                            <p className="text-sm font-black text-text-dim uppercase tracking-[0.2em] mb-4">Reputation Rank</p>
-                            <div className="text-6xl font-black tracking-tighter mb-4 shimmer-text">
-                                {profile.reputationScore || 0}
-                            </div>
-                            <div className="p-3 rounded-2xl bg-warning/10 text-warning w-fit mb-6">
-                                <Award size={32} />
-                            </div>
-                        </div>
-                        <div className="text-xs font-black text-text-dim uppercase tracking-widest opacity-60">
-                            {profile.reputationScore >= 10 ? 'ELITE VETERAN • 0% FEES' : 'Top 10% World Rank'}
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Supreme Zenith Analytics Bar */}
-            <div className="glass-card p-1 pb-1 mb-20 !bg-gradient-to-r !from-primary/20 !via-purple-500/10 !to-secondary/20 !border-white/10 overflow-hidden group">
-                <div className="bg-zenith-surface p-10 rounded-[39px]">
-                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-12 items-center">
-                        <div className="lg:col-span-3">
-                            <div className="flex items-center gap-3 mb-8">
-                                <Sparkles size={16} className="text-primary animate-pulse" />
-                                <h3 className="text-xs font-black uppercase tracking-[0.3em] text-primary">Zenith Global Intelligence</h3>
-                            </div>
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-12">
-                                <div>
-                                    <p className="text-[10px] font-black text-text-dim uppercase tracking-[0.2em] mb-2">Network Liquidity</p>
-                                    <p className="text-2xl font-black tracking-tight shimmer-text">{(analytics.totalVolume || 0).toFixed(2)} <span className="text-xs text-text-dim">MATIC</span></p>
+                            {isLoadingProfile ? (
+                                <div className="skeleton" style={{ height: 22, width: 110, borderRadius: 8, marginBottom: 16 }} />
+                            ) : (
+                                <div style={s.heroBadge} className="hero-badge-float">
+                                    <Diamond size={10} />
+                                    {profile.skills ? 'Verified Talent' : 'Employer'}
                                 </div>
-                                <div>
-                                    <p className="text-[10px] font-black text-text-dim uppercase tracking-[0.2em] mb-2">Neural Job Matching</p>
-                                    <p className="text-2xl font-black tracking-tight">{analytics.totalJobs || 0} <span className="text-[10px] text-accent">+12%</span></p>
-                                </div>
-                                <div>
-                                    <p className="text-[10px] font-black text-text-dim uppercase tracking-[0.2em] mb-2">Verified Agents</p>
-                                    <p className="text-2xl font-black tracking-tight">{analytics.totalUsers || 0}</p>
-                                </div>
-                            </div>
+                            )}
+                            <h1 style={s.heroTitle}>
+                                Welcome back, <span className="text-gradient">{isLoadingProfile ? '...' : (profile.name || 'Pioneer')}</span>
+                            </h1>
+                            <p style={s.heroSub}>
+                                Your decentralized command center. Track contracts, grow your reputation, and seize new opportunities.
+                            </p>
                         </div>
-                        <div className="flex flex-col gap-4">
-                            <div className="p-4 rounded-3xl bg-white/5 border border-white/5 group-hover:border-primary/30 transition-all">
-                                <div className="text-[9px] font-black uppercase tracking-[0.2em] text-text-dim mb-1">Protection Layer</div>
-                                <div className="text-xs font-bold text-white flex items-center gap-2">
-                                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                                    ZENITH SHIELD ACTIVE
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Identity & Credentials Section */}
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-16">
-                <div className="lg:col-span-3">
-                    <div className="glass-card p-12">
-                        <div className="flex items-center gap-4 mb-12">
-                            <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center border border-primary/20">
-                                <User size={28} className="text-primary" />
-                            </div>
-                            <div>
-                                <h3 className="text-2xl font-black tracking-tight">Identity & Credentials</h3>
-                                <p className="text-sm text-text-dim font-bold">Verified on-chain professional status</p>
-                            </div>
-                        </div>
-
-                        <form onSubmit={handleSaveProfile} className="space-y-8">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                <div className="input-group-glass">
-                                    <label className="input-label">Public Alias</label>
-                                    <input
-                                        type="text"
-                                        className="input-field"
-                                        value={profile.name}
-                                        onChange={e => setProfile({ ...profile, name: e.target.value })}
-                                        placeholder="Display name"
-                                    />
-                                </div>
-                                <div className="input-group-glass">
-                                    <label className="input-label">Category</label>
-                                    <select
-                                        className="input-field"
-                                        value={profile.category}
-                                        onChange={e => setProfile({ ...profile, category: e.target.value })}
-                                    >
-                                        <option>Development</option>
-                                        <option>Design</option>
-                                        <option>Marketing</option>
-                                        <option>Writing</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div className="input-group-glass">
-                                <div className="flex justify-between items-end mb-2">
-                                    <label className="input-label !mb-0">Bio / Expertise</label>
-                                    <button
-                                        type="button"
-                                        onClick={handleAiPolish}
-                                        disabled={isPolishing || !profile.skills}
-                                        title={!profile.skills ? "Please enter skills first" : "Enhance with Gemini AI"}
-                                        className="text-xs font-bold flex items-center gap-1.5 text-primary hover:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-primary/10 px-2 py-1 rounded-lg border border-primary/20 hover:bg-primary/20"
-                                    >
-                                        <Sparkles size={14} className={isPolishing ? 'animate-spin' : ''} />
-                                        {isPolishing ? 'Optimizing...' : 'AI Enhance'}
-                                    </button>
-                                </div>
-                                <textarea
-                                    className="input-field min-h-[160px]"
-                                    value={profile.bio}
-                                    onChange={e => setProfile({ ...profile, bio: e.target.value })}
-                                    placeholder="Tell the community about your expertise..."
-                                />
-                            </div>
-
-                            <div className="input-group-glass">
-                                <label className="input-label">Skills (Comma Separated)</label>
-                                <input
-                                    type="text"
-                                    className="input-field"
-                                    value={profile.skills}
-                                    onChange={e => setProfile({ ...profile, skills: e.target.value })}
-                                    placeholder="e.g. React, Solidity, UI/UX"
-                                />
-                            </div>
-
-                            <button
-                                type="submit"
-                                className="btn-primary !py-4 !px-10 text-lg"
-                                disabled={isSaving}
-                            >
-                                <Save size={20} /> {isSaving ? 'Saving...' : 'Update Profile'}
+                        <div style={{ display: 'flex', gap: 10 }}>
+                            <button className="btn btn-primary" style={{ borderRadius: 12 }}>
+                                <Rocket size={15} /> New Job
                             </button>
-                        </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* ══════ STAT CARDS ══════ */}
+            <div ref={statsRef} style={s.statsGrid}>
+                {[
+                    {
+                        icon: <Briefcase size={22} />, value: jobCount?.toString() || '0',
+                        label: 'Active Contracts', cls: 'stat-card-purple', icls: 'stat-icon-purple',
+                    },
+                    {
+                        icon: <Award size={22} />, value: profile.reputationScore || 0,
+                        label: 'Reputation Score', cls: 'stat-card-amber', icls: 'stat-icon-amber',
+                        badge: profile.reputationScore >= 10 ? 'ELITE' : null,
+                    },
+                    {
+                        icon: <TrendingUp size={22} />, value: `${(analytics.totalVolume || 0).toFixed(1)}`,
+                        label: 'Volume (MATIC)', cls: 'stat-card-green', icls: 'stat-icon-green',
+                        suffix: <span style={{ fontSize: '0.7rem', color: 'var(--success)', marginLeft: 4 }}>↑ 12%</span>,
+                    },
+                    {
+                        icon: <Globe size={22} />, value: analytics.totalUsers || 0,
+                        label: 'Network Agents', cls: 'stat-card-blue', icls: 'stat-icon-blue',
+                    },
+                ].map((item, i) => (
+                    <div key={i} className={`stat-card ${item.cls}`} style={{ opacity: 0, transform: 'translateY(20px)' }}>
+                        <div className={`stat-icon ${item.icls}`}>
+                            {item.icon}
+                        </div>
+                        <div className="stat-value">
+                            <span ref={el => statValueRefs.current[i] = el} data-target={typeof item.value === 'string' ? parseFloat(item.value) || 0 : item.value}>{item.value}</span>{item.suffix}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span className="stat-label">{item.label}</span>
+                            {item.badge && (
+                                <span className="badge badge-warning" style={{ fontSize: '0.55rem', padding: '2px 6px' }}>
+                                    {item.badge}
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {/* ══════ COMMAND CENTER ══════ */}
+            <div className="card-accent">
+                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 16, position: 'relative', zIndex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                        <div style={{
+                            ...s.sectionIcon,
+                            width: 46, height: 46, borderRadius: 14,
+                            background: 'linear-gradient(135deg, rgba(124,92,252,0.2), rgba(124,92,252,0.05))',
+                            border: '1px solid rgba(124,92,252,0.2)',
+                            boxShadow: '0 0 20px rgba(124,92,252,0.1)',
+                        }}>
+                            <Terminal size={22} style={{ color: 'var(--accent-light)' }} />
+                        </div>
+                        <div>
+                            <div style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 2 }}>
+                                Protocol Orchestrator
+                            </div>
+                            <h3 style={{ fontSize: '1.05rem', fontWeight: 800 }}>Command Center</h3>
+                        </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                        <button onClick={() => alert("Dry run initialized...")} className="btn btn-secondary btn-sm" style={{ borderRadius: 10 }}>
+                            <Cpu size={13} /> Dry Run
+                        </button>
+                        <button onClick={() => alert("Deploy target locked.")} className="btn btn-primary btn-sm" style={{ borderRadius: 10 }}>
+                            <Send size={13} /> Deploy
+                        </button>
                     </div>
                 </div>
 
-                <div className="lg:col-span-1 border-l border-white/5 pl-8">
-                    <div className="sticky top-32 space-y-12">
+                <div style={{ ...s.cmdGrid, position: 'relative', zIndex: 1 }}>
+                    {[
+                        { icon: <CheckCircle size={13} />, label: 'Contracts', value: '8/8 Valid', color: 'var(--success)' },
+                        { icon: <Shield size={13} />, label: 'Privacy Shield', value: 'ZK Ready', color: 'var(--success)' },
+                        { icon: <Lock size={13} />, label: 'Auth Layer', value: 'Authorized', color: 'var(--success)' },
+                        { icon: <Flame size={13} />, label: 'Gas Engine', value: 'Optimized', color: 'var(--accent-light)' },
+                    ].map((item, i) => (
+                        <div key={i} style={s.cmdItem}>
+                            <span style={s.cmdLabel}>{item.label}</span>
+                            <span style={s.cmdValue(item.color)}>{item.icon} {item.value}</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* ══════ WITHDRAW + YIELD ROW ══════ */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16 }}>
+                <div className="card"><WithdrawButton address={address} /></div>
+                <div className="card"><YieldManagerDashboard address={address} /></div>
+            </div>
+
+            {/* ══════ ANALYTICS ══════ */}
+            <div ref={analyticsRef} className="card anime-reveal" style={{ position: 'relative', overflow: 'hidden', opacity: 0, transform: 'translateY(50px)' }}>
+                <div style={{ position: 'absolute', top: -60, right: -60, width: 180, height: 180, borderRadius: '50%', background: 'radial-gradient(circle, rgba(34,211,238,0.06) 0%, transparent 70%)', pointerEvents: 'none' }} />
+                <div style={{ ...s.sectionHead, position: 'relative', zIndex: 1 }}>
+                    <div style={{ ...s.sectionIcon, background: 'linear-gradient(135deg, rgba(34,211,238,0.15), rgba(34,211,238,0.03))', color: 'var(--cyan)' }}>
+                        <BarChart3 size={16} />
+                    </div>
+                    <h3 style={s.sectionTitle}>Network Intelligence</h3>
+                    <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.7rem', fontWeight: 600, color: 'var(--success)' }}>
+                        <div style={s.liveDot('var(--success)')} /> Live
+                    </div>
+                </div>
+
+                <div style={{ ...s.analyticsGrid, position: 'relative', zIndex: 1 }}>
+                    <div>
+                        <div style={s.analyticLabel}>Total Liquidity</div>
+                        <div style={s.analyticValue}>
+                            {(analytics.totalVolume || 0).toFixed(2)}
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginLeft: 4 }}>MATIC</span>
+                        </div>
+                    </div>
+                    <div>
+                        <div style={s.analyticLabel}>Jobs Matched</div>
+                        <div style={s.analyticValue}>
+                            {analytics.totalJobs || 0}
+                            <span style={{ fontSize: '0.7rem', color: 'var(--success)', marginLeft: 6 }}>+12%</span>
+                        </div>
+                    </div>
+                    <div>
+                        <div style={s.analyticLabel}>Verified Users</div>
+                        <div style={s.analyticValue}>{analytics.totalUsers || 0}</div>
+                    </div>
+                    <div>
+                        <div style={s.analyticLabel}>Shield Status</div>
+                        <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--success)', display: 'flex', alignItems: 'center', gap: 7 }}>
+                            <div style={s.liveDot('var(--success)')} />
+                            Zenith Active
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* ══════ PROFILE + SIDEBAR ══════ */}
+            <div style={s.twoCol}>
+                {/* ── Profile Card ── */}
+                <div ref={profileRef} className="card anime-reveal" style={{ position: 'relative', overflow: 'hidden', opacity: 0, transform: 'translateY(50px)' }}>
+                    <div style={{ position: 'absolute', bottom: -80, left: -60, width: 200, height: 200, borderRadius: '50%', background: 'radial-gradient(circle, rgba(124,92,252,0.06) 0%, transparent 70%)', pointerEvents: 'none' }} />
+
+                    <div style={{ ...s.sectionHead, position: 'relative', zIndex: 1 }}>
+                        <div style={{ ...s.sectionIcon, background: 'linear-gradient(135deg, rgba(124,92,252,0.15), rgba(124,92,252,0.03))', color: 'var(--accent-light)' }}>
+                            <User size={16} />
+                        </div>
+                        <div>
+                            <h3 style={s.sectionTitle}>Identity & Credentials</h3>
+                            <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: 1 }}>Your on-chain professional profile</p>
+                        </div>
+                    </div>
+
+                    <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: 16, position: 'relative', zIndex: 1 }}>
+                        <div style={s.formGrid}>
+                            <div className="input-group-glass">
+                                <label className="form-label">Public Alias</label>
+                                <input type="text" className="form-input" value={profile.name}
+                                    onChange={e => setProfile({ ...profile, name: e.target.value })}
+                                    placeholder="Your display name" />
+                            </div>
+                            <div className="input-group-glass">
+                                <label className="form-label">Category</label>
+                                <select className="form-input" value={profile.category}
+                                    onChange={e => setProfile({ ...profile, category: e.target.value })}>
+                                    <option>Development</option>
+                                    <option>Design</option>
+                                    <option>Marketing</option>
+                                    <option>Writing</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div className="input-group-glass">
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                                <label className="form-label" style={{ marginBottom: 0 }}>Bio / Expertise</label>
+                                <button type="button" onClick={handleAiPolish}
+                                    disabled={isPolishing || !profile.skills}
+                                    className="btn btn-ghost btn-sm"
+                                    style={{ padding: '4px 10px', fontSize: '0.72rem', gap: 4, borderRadius: 8, background: 'var(--accent-subtle)', color: 'var(--accent-light)', border: '1px solid var(--accent-border)' }}>
+                                    <Sparkles size={11} className={isPolishing ? 'animate-spin' : ''} />
+                                    {isPolishing ? 'Working...' : 'AI Enhance'}
+                                </button>
+                            </div>
+                            <textarea className="form-input" style={{ minHeight: 110 }}
+                                value={profile.bio}
+                                onChange={e => setProfile({ ...profile, bio: e.target.value })}
+                                placeholder="Describe your expertise and experience..." />
+                        </div>
+
+                        <div className="input-group-glass">
+                            <label className="form-label">Skills</label>
+                            <input type="text" className="form-input" value={profile.skills}
+                                onChange={e => setProfile({ ...profile, skills: e.target.value })}
+                                placeholder="e.g. React, Solidity, UI/UX" />
+                        </div>
+
+                        <div style={s.formActions}>
+                            <button type="submit" className="btn btn-primary" disabled={isSaving} style={{ borderRadius: 12 }}>
+                                <Save size={15} /> {isSaving ? 'Saving...' : 'Save Profile'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                {/* ── Right Sidebar ── */}
+                <div ref={sidebarRef} className="anime-reveal" style={{ display: 'flex', flexDirection: 'column', gap: 16, opacity: 0, transform: 'translateY(50px)' }}>
+                    <div className="card">
+                        <div style={s.sectionHead}>
+                            <div style={{ ...s.sectionIcon, background: 'linear-gradient(135deg, rgba(251,191,36,0.15), rgba(251,191,36,0.03))', color: 'var(--warning)' }}>
+                                <Target size={14} />
+                            </div>
+                            <h4 style={{ fontSize: '0.85rem', fontWeight: 700 }}>AI Recommendations</h4>
+                        </div>
                         <AiRecommendations address={address} />
+                    </div>
 
-                        <div>
-                            <div className="flex items-center gap-3 mb-8">
-                                <Clock size={20} className="text-text-dim" />
-                                <h3 className="text-sm font-black opacity-30 uppercase tracking-[0.25em]">Recent Market</h3>
+                    <div className="card">
+                        <div style={s.sectionHead}>
+                            <div style={{ ...s.sectionIcon, background: 'linear-gradient(135deg, rgba(96,165,250,0.15), rgba(96,165,250,0.03))', color: 'var(--info)' }}>
+                                <Layers size={14} />
                             </div>
-                            <LiveJobFeed />
+                            <h4 style={{ fontSize: '0.85rem', fontWeight: 700 }}>Live Activity</h4>
+                            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.65rem', fontWeight: 600, color: 'var(--success)' }}>
+                                <div style={s.liveDot('var(--success)')} /> Live
+                            </div>
                         </div>
+                        <LiveJobFeed />
                     </div>
                 </div>
             </div>

@@ -1,127 +1,232 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Mail, Wallet, ShieldCheck, Sparkles, Globe, Zap, Cpu } from 'lucide-react';
+import { Mail, Wallet, ShieldCheck, Globe, Zap, Cpu, Sparkles } from 'lucide-react';
 import { useConnectModal } from '@rainbow-me/rainbowkit';
+
+const st = {
+    page: {
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        minHeight: '80vh', padding: '40px 20px',
+    },
+    wrap: { maxWidth: 960, width: '100%' },
+    grid: {
+        display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 60,
+        alignItems: 'center',
+    },
+    // Left column
+    badge: {
+        display: 'inline-flex', alignItems: 'center', gap: 6,
+        padding: '6px 14px', borderRadius: 20,
+        background: 'rgba(124,92,252,0.08)',
+        border: '1px solid rgba(124,92,252,0.18)',
+        marginBottom: 28,
+    },
+    badgeText: {
+        fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase',
+        letterSpacing: '0.12em', color: 'var(--accent-light)',
+    },
+    heading: {
+        fontSize: '3.2rem', fontWeight: 900, lineHeight: 1,
+        letterSpacing: '-0.04em', marginBottom: 20, color: '#fff',
+    },
+    headingAccent: {
+        background: 'linear-gradient(135deg, var(--accent-light), var(--accent))',
+        WebkitBackgroundClip: 'text', backgroundClip: 'text',
+        WebkitTextFillColor: 'transparent',
+    },
+    desc: {
+        fontSize: '1rem', color: 'var(--text-secondary)', lineHeight: 1.7,
+        maxWidth: 420, marginBottom: 32,
+    },
+    features: {
+        display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20,
+    },
+    featureItem: {
+        display: 'flex', alignItems: 'center', gap: 12,
+    },
+    featureIcon: {
+        width: 44, height: 44, borderRadius: 12,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        flexShrink: 0,
+    },
+    featureLabel: {
+        fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase',
+        letterSpacing: '0.06em', color: 'var(--text-tertiary)', marginBottom: 2,
+    },
+    featureValue: {
+        fontSize: '0.85rem', fontWeight: 700, color: '#fff',
+    },
+    // Right column — auth card
+    authCard: {
+        background: 'linear-gradient(145deg, #111128, #0d0d22)',
+        border: '1px solid var(--border)',
+        borderRadius: 20, padding: 36, position: 'relative', overflow: 'hidden',
+    },
+    authGlow: {
+        position: 'absolute', top: -60, right: -60, width: 180, height: 180,
+        borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(124,92,252,0.12) 0%, transparent 70%)',
+        pointerEvents: 'none',
+    },
+    authTitle: {
+        fontSize: '1.5rem', fontWeight: 800, marginBottom: 6,
+        letterSpacing: '-0.02em', color: '#fff',
+    },
+    authSub: {
+        fontSize: '0.75rem', color: 'var(--text-tertiary)', marginBottom: 28,
+    },
+    btnGroup: {
+        display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 28,
+    },
+    authBtn: (accent) => ({
+        display: 'flex', alignItems: 'center', gap: 14, width: '100%',
+        padding: '16px 20px', borderRadius: 14,
+        background: 'rgba(255,255,255,0.03)',
+        border: `1px solid ${accent === 'purple' ? 'rgba(124,92,252,0.15)' : 'rgba(236,72,153,0.15)'}`,
+        cursor: 'pointer', transition: 'all 0.2s ease', textAlign: 'left',
+        color: '#fff', position: 'relative', overflow: 'hidden',
+    }),
+    authBtnIcon: (accent) => ({
+        width: 44, height: 44, borderRadius: 12,
+        background: accent === 'purple'
+            ? 'linear-gradient(135deg, rgba(124,92,252,0.2), rgba(124,92,252,0.05))'
+            : 'linear-gradient(135deg, rgba(236,72,153,0.2), rgba(236,72,153,0.05))',
+        border: `1px solid ${accent === 'purple' ? 'rgba(124,92,252,0.2)' : 'rgba(236,72,153,0.2)'}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        flexShrink: 0,
+    }),
+    authBtnTitle: {
+        fontSize: '0.85rem', fontWeight: 700, marginBottom: 2, color: '#fff',
+    },
+    authBtnSub: {
+        fontSize: '0.68rem', color: 'var(--text-tertiary)',
+    },
+    authFooter: {
+        borderTop: '1px solid var(--border)', paddingTop: 20,
+        textAlign: 'center',
+    },
+    statusRow: {
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        gap: 6, marginBottom: 8,
+    },
+    statusDot: {
+        width: 6, height: 6, borderRadius: '50%', background: '#34d399',
+        boxShadow: '0 0 8px rgba(52,211,153,0.5)',
+    },
+    statusText: {
+        fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase',
+        letterSpacing: '0.08em', color: 'var(--text-tertiary)',
+    },
+    securedBy: {
+        fontSize: '0.62rem', color: 'var(--text-tertiary)', opacity: 0.5,
+    },
+};
 
 const AuthPortal = ({ onSocialLogin, isLoggingIn }) => {
     const { openConnectModal } = useConnectModal();
 
     return (
-        <div className="flex flex-col items-center justify-center min-h-[80vh] px-4 py-20 lg:py-0">
+        <div style={st.page}>
             <motion.div
-                initial={{ opacity: 0, y: 40 }}
+                initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, ease: "easeOut" }}
-                className="max-w-6xl w-full"
+                transition={{ duration: 0.6, ease: 'easeOut' }}
+                style={st.wrap}
             >
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-                    {/* Left: Branding & Value Prop */}
-                    <div className="text-left space-y-10 order-2 lg:order-1">
-                        <div>
-                            <motion.div
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: 0.3 }}
-                                className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-full border border-primary/20 mb-8"
-                            >
-                                <Sparkles size={16} className="text-primary animate-pulse" />
-                                <span className="text-xs font-black uppercase tracking-[0.2em] text-primary">Zenith Protocol v1.2</span>
-                            </motion.div>
-                            <h1 className="text-6xl lg:text-8xl font-black leading-[0.9] tracking-tighter mb-8 italic uppercase">
-                                Enter the <br />
-                                <span className="gradient-text">Supreme</span> <br />
-                                Economy.
-                            </h1>
-                            <p className="text-xl text-text-muted font-medium leading-relaxed max-w-md opacity-80">
-                                Secure your professional future with agentic arbitration, quantum gas relays, and global cross-chain payouts.
-                            </p>
+                <div style={st.grid}>
+                    {/* ── Left: Branding ── */}
+                    <div>
+                        <div style={st.badge}>
+                            <Sparkles size={13} style={{ color: 'var(--accent-light)' }} />
+                            <span style={st.badgeText}>PolyLance Protocol</span>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 pt-4">
-                            <div className="flex items-center gap-4 group">
-                                <div className="p-3 bg-white/5 rounded-2xl border border-white/10 group-hover:border-primary/50 transition-all">
-                                    <ShieldCheck size={24} className="text-primary" />
+                        <h1 style={st.heading}>
+                            The Freelance<br />
+                            <span style={st.headingAccent}>Marketplace</span><br />
+                            for Web3.
+                        </h1>
+
+                        <p style={st.desc}>
+                            Connect your wallet to access decentralized escrow, on-chain reputation, and global cross-chain payments.
+                        </p>
+
+                        <div style={st.features}>
+                            <div style={st.featureItem}>
+                                <div style={{ ...st.featureIcon, background: 'rgba(124,92,252,0.08)', border: '1px solid rgba(124,92,252,0.12)' }}>
+                                    <ShieldCheck size={20} style={{ color: 'var(--accent-light)' }} />
                                 </div>
                                 <div>
-                                    <div className="text-xs font-black text-text-dim uppercase tracking-widest mb-1">Privacy Level</div>
-                                    <div className="text-sm font-bold text-white">Neural Cryptography</div>
+                                    <div style={st.featureLabel}>Security</div>
+                                    <div style={st.featureValue}>On-chain Escrow</div>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-4 group">
-                                <div className="p-3 bg-white/5 rounded-2xl border border-white/10 group-hover:border-secondary/50 transition-all">
-                                    <Globe size={24} className="text-secondary" />
+                            <div style={st.featureItem}>
+                                <div style={{ ...st.featureIcon, background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.12)' }}>
+                                    <Globe size={20} style={{ color: 'var(--success)' }} />
                                 </div>
                                 <div>
-                                    <div className="text-xs font-black text-text-dim uppercase tracking-widest mb-1">Market Scope</div>
-                                    <div className="text-sm font-bold text-white">Global Edge Nodes</div>
+                                    <div style={st.featureLabel}>Network</div>
+                                    <div style={st.featureValue}>Multi-Chain</div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Right: Auth Card */}
-                    <div className="lg:order-2 order-1">
-                        <div className="glass-card !p-12 relative group overflow-visible">
-                            {/* Decorative background effects */}
-                            <div className="absolute -top-10 -right-10 w-40 h-40 bg-primary/20 blur-[80px] rounded-full pointer-events-none" />
-                            <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-secondary/20 blur-[80px] rounded-full pointer-events-none" />
+                    {/* ── Right: Auth Card ── */}
+                    <div style={st.authCard}>
+                        <div style={st.authGlow} />
 
-                            <div className="relative z-10 space-y-10">
-                                <div className="text-center lg:text-left">
-                                    <h3 className="text-3xl font-black mb-3 tracking-tight italic">Initialize Connection</h3>
-                                    <p className="text-[10px] text-text-muted font-black uppercase tracking-[0.3em]">Access the decentralized grid</p>
-                                </div>
+                        <div style={{ position: 'relative', zIndex: 1 }}>
+                            <h3 style={st.authTitle}>Get Started</h3>
+                            <p style={st.authSub}>Choose how you'd like to connect</p>
 
-                                <div className="space-y-6">
-                                    <motion.button
-                                        whileHover={{ scale: 1.02, y: -4 }}
-                                        whileTap={{ scale: 0.98 }}
-                                        onClick={onSocialLogin}
-                                        disabled={isLoggingIn}
-                                        className="w-full flex items-center justify-between p-6 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-primary/50 rounded-[2.5rem] transition-all group relative overflow-hidden"
-                                    >
-                                        <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                        <div className="flex items-center gap-5 relative z-10">
-                                            <div className="p-4 bg-primary/20 rounded-2xl group-hover:scale-110 transition-transform border border-primary/20 shadow-lg shadow-primary/10">
-                                                {isLoggingIn ? <div className="loading-spinner h-6 w-6" /> : <Mail size={24} className="text-primary" />}
-                                            </div>
-                                            <div className="text-left">
-                                                <div className="text-sm font-black uppercase tracking-widest text-white mb-0.5">Google & Email</div>
-                                                <div className="text-[10px] font-bold text-text-dim italic">Supreme Social Bridge • Zero Gas</div>
-                                            </div>
-                                        </div>
-                                        <Zap size={20} className="text-primary opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0 relative z-10" />
-                                    </motion.button>
-
-                                    <motion.button
-                                        whileHover={{ scale: 1.02, y: -4 }}
-                                        whileTap={{ scale: 0.98 }}
-                                        onClick={openConnectModal}
-                                        className="w-full flex items-center justify-between p-6 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-secondary/50 rounded-[2.5rem] transition-all group relative overflow-hidden"
-                                    >
-                                        <div className="absolute inset-0 bg-secondary/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                        <div className="flex items-center gap-5 relative z-10">
-                                            <div className="p-4 bg-secondary/20 rounded-2xl group-hover:scale-110 transition-transform border border-secondary/20 shadow-lg shadow-secondary/10">
-                                                <Wallet size={24} className="text-secondary" />
-                                            </div>
-                                            <div className="text-left">
-                                                <div className="text-sm font-black uppercase tracking-widest text-white mb-0.5">Native Wallet</div>
-                                                <div className="text-[10px] font-bold text-text-dim italic">Metamask • Ledger • Phantom</div>
-                                            </div>
-                                        </div>
-                                        <Cpu size={20} className="text-secondary opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0 relative z-10" />
-                                    </motion.button>
-                                </div>
-
-                                <div className="pt-10 border-t border-white/5 text-center flex flex-col items-center gap-4">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-text-dim">Node Status: Operational</span>
+                            <div style={st.btnGroup}>
+                                <motion.button
+                                    whileHover={{ scale: 1.01, y: -2 }}
+                                    whileTap={{ scale: 0.99 }}
+                                    onClick={onSocialLogin}
+                                    disabled={isLoggingIn}
+                                    style={st.authBtn('purple')}
+                                    onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(124,92,252,0.35)'; e.currentTarget.style.background = 'rgba(124,92,252,0.06)'; }}
+                                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(124,92,252,0.15)'; e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}
+                                >
+                                    <div style={st.authBtnIcon('purple')}>
+                                        {isLoggingIn
+                                            ? <div className="loading-spinner" style={{ width: 20, height: 20 }} />
+                                            : <Mail size={20} style={{ color: 'var(--accent-light)' }} />
+                                        }
                                     </div>
-                                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-text-dim/40 max-w-[200px]">
-                                        Validated by <span className="text-primary">PolyShield</span> AI Orchestration
-                                    </p>
+                                    <div>
+                                        <div style={st.authBtnTitle}>Google & Email</div>
+                                        <div style={st.authBtnSub}>Social login · No wallet needed</div>
+                                    </div>
+                                </motion.button>
+
+                                <motion.button
+                                    whileHover={{ scale: 1.01, y: -2 }}
+                                    whileTap={{ scale: 0.99 }}
+                                    onClick={openConnectModal}
+                                    style={st.authBtn('pink')}
+                                    onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(236,72,153,0.35)'; e.currentTarget.style.background = 'rgba(236,72,153,0.06)'; }}
+                                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(236,72,153,0.15)'; e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}
+                                >
+                                    <div style={st.authBtnIcon('pink')}>
+                                        <Wallet size={20} style={{ color: '#ec4899' }} />
+                                    </div>
+                                    <div>
+                                        <div style={st.authBtnTitle}>Connect Wallet</div>
+                                        <div style={st.authBtnSub}>MetaMask · Ledger · WalletConnect</div>
+                                    </div>
+                                </motion.button>
+                            </div>
+
+                            <div style={st.authFooter}>
+                                <div style={st.statusRow}>
+                                    <div style={st.statusDot} />
+                                    <span style={st.statusText}>All systems operational</span>
                                 </div>
+                                <p style={st.securedBy}>Secured by Polygon Network</p>
                             </div>
                         </div>
                     </div>
