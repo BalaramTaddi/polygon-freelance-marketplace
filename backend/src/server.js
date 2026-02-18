@@ -709,7 +709,14 @@ try {
 
 // Only start the server if running directly (not imported by Vercel)
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-    if (httpsOptions) {
+    // In production (Render/Heroku), let the platform handle SSL termination
+    if (process.env.NODE_ENV === 'production') {
+        app.listen(PORT, '0.0.0.0', () => {
+            console.log(`HTTP Server running on port ${PORT} (Production Mode)`);
+            console.log(`CORS allowed from: ${process.env.FRONTEND_URL}`);
+            startSyncer().catch(console.error);
+        });
+    } else if (httpsOptions) {
         https.createServer(httpsOptions, app).listen(PORT, '0.0.0.0', () => {
             console.log(`HTTPS Server running on port ${PORT}`);
             console.log(`CORS allowed from: ${process.env.FRONTEND_URL || 'https://localhost:5173'}`);
