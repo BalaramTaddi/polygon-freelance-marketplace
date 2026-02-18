@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import logo from './assets/logo.png';
-import { Briefcase, PlusCircle, LayoutDashboard, Ticket, MessageSquare, Trophy, User, Gavel, Cpu, Activity, Globe, BarChart3, Menu, X, Award, Zap } from 'lucide-react';
+import { Briefcase, PlusCircle, LayoutDashboard, Ticket, MessageSquare, Trophy, User, Gavel, Cpu, Activity, Globe, BarChart3, Menu, X, Award, Zap, CreditCard } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Dashboard from './components/Dashboard';
 import CreateJob from './components/CreateJob';
@@ -23,6 +23,7 @@ import AnalyticsDashboard from './components/AnalyticsDashboard';
 import AnimationShowcase from './components/AnimationShowcase';
 import { NotificationManager } from './components/NotificationManager';
 import AuthPortal from './components/AuthPortal';
+import FiatOnramp from './components/FiatOnramp';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useAccount, useBalance, useWalletClient } from 'wagmi';
@@ -149,6 +150,7 @@ function App() {
       case 'terms': return <TermsOfService />;
       case 'privacy': return <PrivacyCenter address={effectiveAddress} />;
       case 'showcase': return <AnimationShowcase />;
+      case 'onramp': return <FiatOnramp address={effectiveAddress} />;
       default: return <Dashboard address={effectiveAddress} />;
     }
   };
@@ -230,6 +232,7 @@ function App() {
             { id: 'sbt', icon: Award, label: 'Identity Vault' },
             { id: 'privacy', icon: Shield, label: 'Privacy Center' },
             { id: 'showcase', icon: Zap, label: 'Animations' },
+            { id: 'onramp', icon: CreditCard, label: 'Buy Crypto' },
           ].map(item => (
             <button
               key={item.id}
