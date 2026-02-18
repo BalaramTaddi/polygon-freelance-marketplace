@@ -1,6 +1,7 @@
 # PolyLance Zenith: The Supreme Decentralized Marketplace
 **Founding Architect:** Akhil Muvva
 
+
 PolyLance Zenith is a state-of-the-art, professional freelance ecosystem achieving the "Supreme Level" of decentralization on Polygon. It integrates advanced governance, AI-agentic autonomy, social-layer connectivity, and **groundbreaking Real-World Asset (RWA) tokenization** to create the world's most robust freelance coordination engine.
 
 ## 🆕 RWA Tokenization Module
@@ -136,3 +137,8 @@ If deploying to a new network, verify contracts using Hardhat:
 npx hardhat verify --network polygon_amoy <CONTRACT_ADDRESS> <CONSTRUCTOR_ARGS>
 ```
 *Ensure `POLYGONSCAN_API_KEY` is set in your `.env` file.*
+## 👥 Contributors
+| Name | GitHub |
+| :--- | :--- |
+| **Muvva Akhil Yadav** | [@akhilmuvva](https://github.com/akhilmuvva) |
+| **Jhansi Kupireddy** | [@jhansikupireddy-lang](https://github.com/jhansikupireddy-lang) |
