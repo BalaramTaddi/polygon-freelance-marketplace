@@ -146,4 +146,4 @@ npx hardhat verify --network polygon_amoy <CONTRACT_ADDRESS> <CONSTRUCTOR_ARGS>
 | :--- | :--- |
 | **Muvva Akhil Yadav** | [@akhilmuvva](https://github.com/akhilmuvva) |
 | **Jhansi Kupireddy** | [@jhansikupireddy-lang](https://github.com/jhansikupireddy-lang) |
-|** Taddi Balram**|
+|** Taddi Balram**|[@balrantaddi](https://github.com/balramtaddi)|
