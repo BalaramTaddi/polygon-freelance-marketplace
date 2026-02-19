@@ -3,8 +3,8 @@ services:
     name: polylance-backend
     env: node
     rootDir: backend
-    buildCommand: cd backend && npm install
-    startCommand: cd backend && node src/server.js
+    buildCommand: npm install
+    startCommand: node src/server.js
     plan: free
     branch: master
     envVars:
@@ -12,6 +12,10 @@ services:
         value: production
       - key: NODE_VERSION
         value: 20.11.0
+      - key: NETWORK
+        value: amoy
+      - key: RPC_URL
+        value: https://rpc-amoy.polygon.technology
       - key: PORT
         value: 10000
       - key: MONGODB_URI
@@ -27,3 +31,20 @@ services:
         sync: false
       - key: FRONTEND_URL
         value: https://polygon-freelance-marketplace-onf5efcpb.vercel.app
+
+  - type: web
+    name: polylance-frontend
+    env: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    publishPath: dist
+    plan: free
+    branch: master
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

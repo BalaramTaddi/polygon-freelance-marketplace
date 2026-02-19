@@ -54,7 +54,7 @@ app.use(helmet({
             defaultSrc: ["'self'"],
             scriptSrc: ["'self'", "https://js.stripe.com", "'unsafe-inline'", "'unsafe-eval'", "blob:"],
             frameSrc: ["'self'", "https://js.stripe.com", "https://hooks.stripe.com"],
-            connectSrc: ["'self'", "https://api.stripe.com", "https://localhost:3001", "wss://localhost:3001", "https://rpc-amoy.polygon.technology", "https://rpc.ankr.com", "https://polygon-amoy-bor-rpc.publicnode.com"],
+            connectSrc: ["'self'", "https://api.stripe.com", "https://*.render.com", "wss://*.render.com", "https://localhost:3001", "wss://localhost:3001", "https://rpc-amoy.polygon.technology", "https://rpc.ankr.com", "https://polygon-amoy-bor-rpc.publicnode.com"],
             imgSrc: ["'self'", "data:", "blob:", "https://gateway.pinata.cloud"],
         },
     },
@@ -78,8 +78,33 @@ app.use(express.json({ limit: '10kb' })); // Body limiting to prevent DoS
 
 // Database Connection
 mongoose.connect(MONGODB_URI)
-    .then(() => console.log('Connected to MongoDB Atlas'))
+    .then(() => {
+        console.log('Connected to MongoDB Atlas');
+        // Start server only after DB is ready
+        if (process.argv[1] === fileURLToPath(import.meta.url)) {
+            startServer();
+        }
+    })
     .catch(err => console.error('MongoDB connection error:', err));
+
+function startServer() {
+    if (process.env.NODE_ENV === 'production') {
+        app.listen(PORT, '0.0.0.0', () => {
+            console.log(`HTTP Server running on port ${PORT} (Production Mode)`);
+            startSyncer().catch(console.error);
+        });
+    } else if (httpsOptions) {
+        https.createServer(httpsOptions, app).listen(PORT, '0.0.0.0', () => {
+            console.log(`HTTPS Server running on port ${PORT}`);
+            startSyncer().catch(console.error);
+        });
+    } else {
+        app.listen(PORT, '0.0.0.0', () => {
+            console.log(`HTTP Server running on port ${PORT}`);
+            startSyncer().catch(console.error);
+        });
+    }
+}
 
 // Auth Routes
 app.get('/api/auth/nonce/:address', async (req, res) => {
@@ -708,25 +733,5 @@ try {
 }
 
 // Only start the server if running directly (not imported by Vercel)
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
-    // In production (Render/Heroku), let the platform handle SSL termination
-    if (process.env.NODE_ENV === 'production') {
-        app.listen(PORT, '0.0.0.0', () => {
-            console.log(`HTTP Server running on port ${PORT} (Production Mode)`);
-            console.log(`CORS allowed from: ${process.env.FRONTEND_URL}`);
-            startSyncer().catch(console.error);
-        });
-    } else if (httpsOptions) {
-        https.createServer(httpsOptions, app).listen(PORT, '0.0.0.0', () => {
-            console.log(`HTTPS Server running on port ${PORT}`);
-            console.log(`CORS allowed from: ${process.env.FRONTEND_URL || 'https://localhost:5173'}`);
-            startSyncer().catch(console.error);
-        });
-    } else {
-        app.listen(PORT, '0.0.0.0', () => {
-            console.log(`HTTP Server running on port ${PORT}`);
-            startSyncer().catch(console.error);
-        });
-    }
-}
+// Handled in mongoose.connect loop now for better sync
 export default app;

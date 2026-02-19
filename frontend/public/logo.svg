@@ -1,0 +1,12 @@
+<svg width="500" height="500" viewBox="0 0 500 500" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Professional Logo for PolyLance -->
+  <rect width="500" height="500" rx="60" fill="#0F172A"/>
+  <path d="M250 80L397.224 165V335L250 420L102.776 335V165L250 80Z" fill="url(#paint0_linear)"/>
+  <path d="M190 180V360H235V290H300C333.137 290 360 263.137 360 230C360 196.863 333.137 170 300 170H190V180ZM235 215H300C308.284 215 315 221.716 315 230C315 238.284 308.284 245 300 245H235V215Z" fill="white"/>
+  <defs>
+    <linearGradient id="paint0_linear" x1="102.776" y1="80" x2="397.224" y2="420" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8247E5"/>
+      <stop offset="1" stop-color="#6366F1"/>
+    </linearGradient>
+  </defs>
+</svg>

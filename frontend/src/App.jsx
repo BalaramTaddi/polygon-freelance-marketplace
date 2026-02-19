@@ -411,9 +411,10 @@ function App() {
                 width: 32, height: 32, borderRadius: 8,
                 background: 'linear-gradient(135deg, var(--accent), #9b6dff)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 0 12px rgba(124,92,252,0.4)',
+                boxShadow: '0 0 16px rgba(124,92,252,0.3)',
+                overflow: 'hidden'
               }}>
-                <Zap size={18} color="#fff" fill="#fff" />
+                <img src="/logo.png" alt="PolyLance" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               </div>
               <div>
                 <div style={styles.logoText}>POLY<span style={styles.logoAccent}>LANCE</span></div>

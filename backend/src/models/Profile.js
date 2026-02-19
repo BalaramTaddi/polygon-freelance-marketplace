@@ -17,4 +17,7 @@ const profileSchema = new mongoose.Schema({
     nonce: { type: String },
 }, { timestamps: true });
 
+profileSchema.index({ reputationScore: -1 });
+profileSchema.index({ nonce: 1 });
+
 export const Profile = mongoose.model('Profile', profileSchema);

@@ -90,7 +90,7 @@ export async function determineSearchIntent(userInput) {
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
         const prompt = `
             Convert this user search query into structured search filters.
-            Query: "${userInput}"
+            Query: "${sanitizeForPrompt(userInput)}"
             
             Categories: [Development, Design, Marketing, Writing]
             
@@ -123,7 +123,7 @@ export async function calculateJobRecommendations(freelancerProfile, jobsList) {
 
         const prompt = `
             Recommend the top 3 jobs for this freelancer.
-            Profile: ${freelancerProfile.skills}, Reputation ${freelancerProfile.reputationScore}
+            Profile: ${sanitizeForPrompt(freelancerProfile.skills)}, Reputation ${freelancerProfile.reputationScore}
             
             Jobs:
             ${jobsSummary}
@@ -178,10 +178,10 @@ export async function polishProfileBio(name, category, skills, roughBio) {
             You are a professional brand consultant for high-end Web3 freelancers.
             Enhance this user's bio to be elite, persuasive, and professional.
             
-            NAME: ${name}
-            CATEGORY: ${category}
-            SKILLS: ${skills}
-            CURRENT BIO: "${roughBio}"
+            NAME: ${sanitizeForPrompt(name)}
+            CATEGORY: ${sanitizeForPrompt(category)}
+            SKILLS: ${sanitizeForPrompt(skills)}
+            CURRENT BIO: "${sanitizeForPrompt(roughBio)}"
 
             TASK:
             1. Rewrite the bio to highlight their strengths.
@@ -216,9 +216,9 @@ export async function analyzeDispute(jobData, chatHistory, workMetadata) {
             # LEGAL AGENT: POLY-ESCROW ARBITRATION
             Evaluate a dispute between Client and Freelancer.
 
-            JOB DESC: "${jobData.description}"
-            WORK SUBMITTED: "${JSON.stringify(workMetadata)}"
-            CHAT LOGS: "${JSON.stringify(chatHistory)}"
+            JOB DESC: "${sanitizeForPrompt(jobData.description)}"
+            WORK SUBMITTED: "${sanitizeForPrompt(JSON.stringify(workMetadata))}"
+            CHAT LOGS: "${sanitizeForPrompt(JSON.stringify(chatHistory))}"
 
             # OBJECTIVE:
             1. Identify the 'Defaulting' party.

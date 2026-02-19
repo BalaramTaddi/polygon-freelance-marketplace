@@ -309,10 +309,13 @@ function Dashboard({ address: propAddress }) {
                                 Your decentralized command center. Track contracts, grow your reputation, and seize new opportunities.
                             </p>
                         </div>
-                        <div style={{ display: 'flex', gap: 10 }}>
-                            <button className="btn btn-primary" style={{ borderRadius: 12 }}>
-                                <Rocket size={15} /> New Job
-                            </button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                            <img src="/logo.png" alt="PolyLance" style={{ width: 80, height: 80, borderRadius: 16, boxShadow: '0 8px 32px rgba(124,92,252,0.25)', border: '1px solid rgba(124,92,252,0.2)' }} />
+                            <div style={{ display: 'flex', gap: 10 }}>
+                                <button className="btn btn-primary" style={{ borderRadius: 12 }}>
+                                    <Rocket size={15} /> New Job
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

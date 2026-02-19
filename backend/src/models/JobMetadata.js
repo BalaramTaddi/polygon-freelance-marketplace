@@ -41,4 +41,8 @@ const jobMetadataSchema = new mongoose.Schema({
     destinationChain: String
 }, { timestamps: true });
 
+jobMetadataSchema.index({ client: 1 });
+jobMetadataSchema.index({ freelancer: 1 });
+jobMetadataSchema.index({ jobId: 1 });
+
 export const JobMetadata = mongoose.model('JobMetadata', jobMetadataSchema);
